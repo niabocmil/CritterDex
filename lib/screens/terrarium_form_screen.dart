@@ -114,25 +114,68 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
       if (_placement == _Placement.individual) {
         final sequence = await db.nextIndividualSequence();
         if (_isEditing) {
-          await db.updateTerrarium(widget.existing!.copyWith(
-            shape: _shape,
-            lengthCm: Value(length),
-            widthCm: Value(width),
-            diameterCm: Value(diameter),
-            heightCm: height,
-            volumeLitres: volume,
-            shelfId: const Value(null),
-            level: const Value(null),
-            positionXCm: const Value(null),
-            stackOrder: const Value(null),
-            purpose: _purpose.name,
-            location: Value(_locationController.text.trim().isEmpty
-                ? null
-                : _locationController.text.trim()),
-            individualSequence: Value(
-                widget.existing!.individualSequence ?? sequence),
-          ));
-          if (mounted) Navigator.of(context).pop(widget.existing!.id);
+          final existing = widget.existing!;
+
+          Future<void> convert() => db.updateTerrarium(existing.copyWith(
+                shape: _shape,
+                lengthCm: Value(length),
+                widthCm: Value(width),
+                diameterCm: Value(diameter),
+                heightCm: height,
+                volumeLitres: volume,
+                shelfId: const Value(null),
+                level: const Value(null),
+                positionXCm: const Value(null),
+                supportId: const Value(null),
+                supportKind: const Value(null),
+                purpose: _purpose.name,
+                location: Value(_locationController.text.trim().isEmpty
+                    ? null
+                    : _locationController.text.trim()),
+                individualSequence:
+                    Value(existing.individualSequence ?? sequence),
+              ));
+
+          // Anything resting directly on this terrarium drops to the floor
+          // instead of blocking the individual-conversion.
+          if (existing.shelfId != null) {
+            final shelf = await db.getShelfById(existing.shelfId!);
+            final shelfTerrariums =
+                await db.getTerrariumsForShelf(existing.shelfId!);
+            final shelfTools = await db.getToolsForShelf(existing.shelfId!);
+            final shelfItems = <ShelfItem>[
+              ...shelfTerrariums.map(TerrariumShelfItem.new),
+              ...shelfTools.map(ToolShelfItem.new),
+            ];
+            final detachUpdates = planDetach(
+              removed: TerrariumShelfItem(existing),
+              shelf: shelf,
+              shelfItems: shelfItems,
+            );
+            await db.transaction(() async {
+              for (final u in detachUpdates) {
+                if (u.kind == ShelfItemKind.terrarium) {
+                  final t = shelfTerrariums.firstWhere((t) => t.id == u.id);
+                  await db.updateTerrarium(t.copyWith(
+                    positionXCm: Value(u.positionXCm),
+                    supportId: const Value(null),
+                    supportKind: const Value(null),
+                  ));
+                } else {
+                  final tool = shelfTools.firstWhere((t) => t.id == u.id);
+                  await db.updateTool(tool.copyWith(
+                    positionXCm: u.positionXCm,
+                    supportId: const Value(null),
+                    supportKind: const Value(null),
+                  ));
+                }
+              }
+              await convert();
+            });
+          } else {
+            await convert();
+          }
+          if (mounted) Navigator.of(context).pop(existing.id);
         } else {
           final id = await db.insertTerrarium(TerrariumsCompanion.insert(
             shape: _shape,
@@ -167,7 +210,9 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
 
         int level;
         double positionXCm;
-        int stackOrder;
+        int? supportId;
+        String? supportKind;
+        var siblingUpdates = const <ShelfPlacementUpdate>[];
         if (_useAutoPlace) {
           try {
             final placement = findAutoPlacement(
@@ -178,7 +223,6 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             );
             level = placement.level;
             positionXCm = placement.positionXCm;
-            stackOrder = 0;
           } on PlacementException catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context)
@@ -195,48 +239,70 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
           }
           level = choice.level;
           positionXCm = choice.positionXCm;
-          if (choice.stackOnTarget != null) {
-            final target = choice.stackOnTarget!;
-            final stackHeight = columnsForLevel(existingOnShelf, level)
-                .firstWhere((col) =>
-                    col.any((i) => i.id == target.id && i.kind == target.kind))
-                .length;
-            stackOrder = stackHeight;
-          } else {
-            stackOrder = 0;
+          supportId = choice.supportId;
+          supportKind = choice.supportKind;
+          siblingUpdates = choice.siblingUpdates;
+        }
+
+        Future<void> applySiblingUpdates() async {
+          for (final u in siblingUpdates) {
+            if (u.kind == ShelfItemKind.terrarium) {
+              final t = existingTerrariums.firstWhere((t) => t.id == u.id);
+              await db.updateTerrarium(t.copyWith(
+                positionXCm: Value(u.positionXCm),
+                supportId: Value(u.supportId),
+                supportKind: Value(u.supportKind),
+              ));
+            } else {
+              final tool = existingTools.firstWhere((t) => t.id == u.id);
+              await db.updateTool(tool.copyWith(
+                positionXCm: u.positionXCm,
+                supportId: Value(u.supportId),
+                supportKind: Value(u.supportKind),
+              ));
+            }
           }
         }
 
         if (_isEditing) {
-          await db.updateTerrarium(widget.existing!.copyWith(
-            shape: _shape,
-            lengthCm: Value(length),
-            widthCm: Value(width),
-            diameterCm: Value(diameter),
-            heightCm: height,
-            volumeLitres: volume,
-            shelfId: Value(shelfId),
-            level: Value(level),
-            positionXCm: Value(positionXCm),
-            stackOrder: Value(stackOrder),
-            purpose: _purpose.name,
-            location: const Value(null),
-          ));
+          await db.transaction(() async {
+            await applySiblingUpdates();
+            await db.updateTerrarium(widget.existing!.copyWith(
+              shape: _shape,
+              lengthCm: Value(length),
+              widthCm: Value(width),
+              diameterCm: Value(diameter),
+              heightCm: height,
+              volumeLitres: volume,
+              shelfId: Value(shelfId),
+              level: Value(level),
+              positionXCm: Value(positionXCm),
+              supportId: Value(supportId),
+              supportKind: Value(supportKind),
+              purpose: _purpose.name,
+              location: const Value(null),
+            ));
+          });
           if (mounted) Navigator.of(context).pop(widget.existing!.id);
         } else {
-          final id = await db.insertTerrarium(TerrariumsCompanion.insert(
-            shape: _shape,
-            lengthCm: Value(length),
-            widthCm: Value(width),
-            diameterCm: Value(diameter),
-            heightCm: height,
-            volumeLitres: volume,
-            shelfId: Value(shelfId),
-            level: Value(level),
-            positionXCm: Value(positionXCm),
-            stackOrder: Value(stackOrder),
-            purpose: Value(_purpose.name),
-          ));
+          var id = -1;
+          await db.transaction(() async {
+            await applySiblingUpdates();
+            id = await db.insertTerrarium(TerrariumsCompanion.insert(
+              shape: _shape,
+              lengthCm: Value(length),
+              widthCm: Value(width),
+              diameterCm: Value(diameter),
+              heightCm: height,
+              volumeLitres: volume,
+              shelfId: Value(shelfId),
+              level: Value(level),
+              positionXCm: Value(positionXCm),
+              supportId: Value(supportId),
+              supportKind: Value(supportKind),
+              purpose: Value(_purpose.name),
+            ));
+          });
           if (mounted) Navigator.of(context).pop(id);
         }
       }

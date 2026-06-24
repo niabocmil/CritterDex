@@ -596,6 +596,28 @@ class $TerrariumsTable extends Terrariums
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _supportIdMeta = const VerificationMeta(
+    'supportId',
+  );
+  @override
+  late final GeneratedColumn<int> supportId = GeneratedColumn<int>(
+    'support_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _supportKindMeta = const VerificationMeta(
+    'supportKind',
+  );
+  @override
+  late final GeneratedColumn<String> supportKind = GeneratedColumn<String>(
+    'support_kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _locationMeta = const VerificationMeta(
     'location',
   );
@@ -666,6 +688,8 @@ class $TerrariumsTable extends Terrariums
     positionInLevel,
     positionXCm,
     stackOrder,
+    supportId,
+    supportKind,
     location,
     individualSequence,
     purpose,
@@ -768,6 +792,21 @@ class $TerrariumsTable extends Terrariums
         stackOrder.isAcceptableOrUnknown(data['stack_order']!, _stackOrderMeta),
       );
     }
+    if (data.containsKey('support_id')) {
+      context.handle(
+        _supportIdMeta,
+        supportId.isAcceptableOrUnknown(data['support_id']!, _supportIdMeta),
+      );
+    }
+    if (data.containsKey('support_kind')) {
+      context.handle(
+        _supportKindMeta,
+        supportKind.isAcceptableOrUnknown(
+          data['support_kind']!,
+          _supportKindMeta,
+        ),
+      );
+    }
     if (data.containsKey('location')) {
       context.handle(
         _locationMeta,
@@ -858,6 +897,14 @@ class $TerrariumsTable extends Terrariums
         DriftSqlType.int,
         data['${effectivePrefix}stack_order'],
       ),
+      supportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}support_id'],
+      ),
+      supportKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}support_kind'],
+      ),
       location: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}location'],
@@ -900,6 +947,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
   final int? positionInLevel;
   final double? positionXCm;
   final int? stackOrder;
+  final int? supportId;
+  final String? supportKind;
   final String? location;
   final int? individualSequence;
   final String purpose;
@@ -918,6 +967,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     this.positionInLevel,
     this.positionXCm,
     this.stackOrder,
+    this.supportId,
+    this.supportKind,
     this.location,
     this.individualSequence,
     required this.purpose,
@@ -954,6 +1005,12 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     }
     if (!nullToAbsent || stackOrder != null) {
       map['stack_order'] = Variable<int>(stackOrder);
+    }
+    if (!nullToAbsent || supportId != null) {
+      map['support_id'] = Variable<int>(supportId);
+    }
+    if (!nullToAbsent || supportKind != null) {
+      map['support_kind'] = Variable<String>(supportKind);
     }
     if (!nullToAbsent || location != null) {
       map['location'] = Variable<String>(location);
@@ -999,6 +1056,12 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       stackOrder: stackOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(stackOrder),
+      supportId: supportId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supportId),
+      supportKind: supportKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supportKind),
       location: location == null && nullToAbsent
           ? const Value.absent()
           : Value(location),
@@ -1031,6 +1094,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       positionInLevel: serializer.fromJson<int?>(json['positionInLevel']),
       positionXCm: serializer.fromJson<double?>(json['positionXCm']),
       stackOrder: serializer.fromJson<int?>(json['stackOrder']),
+      supportId: serializer.fromJson<int?>(json['supportId']),
+      supportKind: serializer.fromJson<String?>(json['supportKind']),
       location: serializer.fromJson<String?>(json['location']),
       individualSequence: serializer.fromJson<int?>(json['individualSequence']),
       purpose: serializer.fromJson<String>(json['purpose']),
@@ -1054,6 +1119,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       'positionInLevel': serializer.toJson<int?>(positionInLevel),
       'positionXCm': serializer.toJson<double?>(positionXCm),
       'stackOrder': serializer.toJson<int?>(stackOrder),
+      'supportId': serializer.toJson<int?>(supportId),
+      'supportKind': serializer.toJson<String?>(supportKind),
       'location': serializer.toJson<String?>(location),
       'individualSequence': serializer.toJson<int?>(individualSequence),
       'purpose': serializer.toJson<String>(purpose),
@@ -1075,6 +1142,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     Value<int?> positionInLevel = const Value.absent(),
     Value<double?> positionXCm = const Value.absent(),
     Value<int?> stackOrder = const Value.absent(),
+    Value<int?> supportId = const Value.absent(),
+    Value<String?> supportKind = const Value.absent(),
     Value<String?> location = const Value.absent(),
     Value<int?> individualSequence = const Value.absent(),
     String? purpose,
@@ -1095,6 +1164,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
         : this.positionInLevel,
     positionXCm: positionXCm.present ? positionXCm.value : this.positionXCm,
     stackOrder: stackOrder.present ? stackOrder.value : this.stackOrder,
+    supportId: supportId.present ? supportId.value : this.supportId,
+    supportKind: supportKind.present ? supportKind.value : this.supportKind,
     location: location.present ? location.value : this.location,
     individualSequence: individualSequence.present
         ? individualSequence.value
@@ -1127,6 +1198,10 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       stackOrder: data.stackOrder.present
           ? data.stackOrder.value
           : this.stackOrder,
+      supportId: data.supportId.present ? data.supportId.value : this.supportId,
+      supportKind: data.supportKind.present
+          ? data.supportKind.value
+          : this.supportKind,
       location: data.location.present ? data.location.value : this.location,
       individualSequence: data.individualSequence.present
           ? data.individualSequence.value
@@ -1152,6 +1227,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           ..write('positionInLevel: $positionInLevel, ')
           ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
+          ..write('supportId: $supportId, ')
+          ..write('supportKind: $supportKind, ')
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
           ..write('purpose: $purpose, ')
@@ -1175,6 +1252,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     positionInLevel,
     positionXCm,
     stackOrder,
+    supportId,
+    supportKind,
     location,
     individualSequence,
     purpose,
@@ -1197,6 +1276,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           other.positionInLevel == this.positionInLevel &&
           other.positionXCm == this.positionXCm &&
           other.stackOrder == this.stackOrder &&
+          other.supportId == this.supportId &&
+          other.supportKind == this.supportKind &&
           other.location == this.location &&
           other.individualSequence == this.individualSequence &&
           other.purpose == this.purpose &&
@@ -1217,6 +1298,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
   final Value<int?> positionInLevel;
   final Value<double?> positionXCm;
   final Value<int?> stackOrder;
+  final Value<int?> supportId;
+  final Value<String?> supportKind;
   final Value<String?> location;
   final Value<int?> individualSequence;
   final Value<String> purpose;
@@ -1235,6 +1318,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.positionInLevel = const Value.absent(),
     this.positionXCm = const Value.absent(),
     this.stackOrder = const Value.absent(),
+    this.supportId = const Value.absent(),
+    this.supportKind = const Value.absent(),
     this.location = const Value.absent(),
     this.individualSequence = const Value.absent(),
     this.purpose = const Value.absent(),
@@ -1254,6 +1339,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.positionInLevel = const Value.absent(),
     this.positionXCm = const Value.absent(),
     this.stackOrder = const Value.absent(),
+    this.supportId = const Value.absent(),
+    this.supportKind = const Value.absent(),
     this.location = const Value.absent(),
     this.individualSequence = const Value.absent(),
     this.purpose = const Value.absent(),
@@ -1275,6 +1362,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Expression<int>? positionInLevel,
     Expression<double>? positionXCm,
     Expression<int>? stackOrder,
+    Expression<int>? supportId,
+    Expression<String>? supportKind,
     Expression<String>? location,
     Expression<int>? individualSequence,
     Expression<String>? purpose,
@@ -1294,6 +1383,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       if (positionInLevel != null) 'position_in_level': positionInLevel,
       if (positionXCm != null) 'position_x_cm': positionXCm,
       if (stackOrder != null) 'stack_order': stackOrder,
+      if (supportId != null) 'support_id': supportId,
+      if (supportKind != null) 'support_kind': supportKind,
       if (location != null) 'location': location,
       if (individualSequence != null) 'individual_sequence': individualSequence,
       if (purpose != null) 'purpose': purpose,
@@ -1315,6 +1406,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Value<int?>? positionInLevel,
     Value<double?>? positionXCm,
     Value<int?>? stackOrder,
+    Value<int?>? supportId,
+    Value<String?>? supportKind,
     Value<String?>? location,
     Value<int?>? individualSequence,
     Value<String>? purpose,
@@ -1334,6 +1427,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       positionInLevel: positionInLevel ?? this.positionInLevel,
       positionXCm: positionXCm ?? this.positionXCm,
       stackOrder: stackOrder ?? this.stackOrder,
+      supportId: supportId ?? this.supportId,
+      supportKind: supportKind ?? this.supportKind,
       location: location ?? this.location,
       individualSequence: individualSequence ?? this.individualSequence,
       purpose: purpose ?? this.purpose,
@@ -1381,6 +1476,12 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     if (stackOrder.present) {
       map['stack_order'] = Variable<int>(stackOrder.value);
     }
+    if (supportId.present) {
+      map['support_id'] = Variable<int>(supportId.value);
+    }
+    if (supportKind.present) {
+      map['support_kind'] = Variable<String>(supportKind.value);
+    }
     if (location.present) {
       map['location'] = Variable<String>(location.value);
     }
@@ -1414,6 +1515,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
           ..write('positionInLevel: $positionInLevel, ')
           ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
+          ..write('supportId: $supportId, ')
+          ..write('supportKind: $supportKind, ')
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
           ..write('purpose: $purpose, ')
@@ -3637,6 +3740,28 @@ class $ToolsTable extends Tools with TableInfo<$ToolsTable, Tool> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _supportIdMeta = const VerificationMeta(
+    'supportId',
+  );
+  @override
+  late final GeneratedColumn<int> supportId = GeneratedColumn<int>(
+    'support_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _supportKindMeta = const VerificationMeta(
+    'supportKind',
+  );
+  @override
+  late final GeneratedColumn<String> supportKind = GeneratedColumn<String>(
+    'support_kind',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3660,6 +3785,8 @@ class $ToolsTable extends Tools with TableInfo<$ToolsTable, Tool> {
     level,
     positionXCm,
     stackOrder,
+    supportId,
+    supportKind,
     createdAt,
   ];
   @override
@@ -3744,6 +3871,21 @@ class $ToolsTable extends Tools with TableInfo<$ToolsTable, Tool> {
     } else if (isInserting) {
       context.missing(_stackOrderMeta);
     }
+    if (data.containsKey('support_id')) {
+      context.handle(
+        _supportIdMeta,
+        supportId.isAcceptableOrUnknown(data['support_id']!, _supportIdMeta),
+      );
+    }
+    if (data.containsKey('support_kind')) {
+      context.handle(
+        _supportKindMeta,
+        supportKind.isAcceptableOrUnknown(
+          data['support_kind']!,
+          _supportKindMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3795,6 +3937,14 @@ class $ToolsTable extends Tools with TableInfo<$ToolsTable, Tool> {
         DriftSqlType.int,
         data['${effectivePrefix}stack_order'],
       )!,
+      supportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}support_id'],
+      ),
+      supportKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}support_kind'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3818,6 +3968,8 @@ class Tool extends DataClass implements Insertable<Tool> {
   final int level;
   final double positionXCm;
   final int stackOrder;
+  final int? supportId;
+  final String? supportKind;
   final DateTime createdAt;
   const Tool({
     required this.id,
@@ -3829,6 +3981,8 @@ class Tool extends DataClass implements Insertable<Tool> {
     required this.level,
     required this.positionXCm,
     required this.stackOrder,
+    this.supportId,
+    this.supportKind,
     required this.createdAt,
   });
   @override
@@ -3843,6 +3997,12 @@ class Tool extends DataClass implements Insertable<Tool> {
     map['level'] = Variable<int>(level);
     map['position_x_cm'] = Variable<double>(positionXCm);
     map['stack_order'] = Variable<int>(stackOrder);
+    if (!nullToAbsent || supportId != null) {
+      map['support_id'] = Variable<int>(supportId);
+    }
+    if (!nullToAbsent || supportKind != null) {
+      map['support_kind'] = Variable<String>(supportKind);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3858,6 +4018,12 @@ class Tool extends DataClass implements Insertable<Tool> {
       level: Value(level),
       positionXCm: Value(positionXCm),
       stackOrder: Value(stackOrder),
+      supportId: supportId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supportId),
+      supportKind: supportKind == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supportKind),
       createdAt: Value(createdAt),
     );
   }
@@ -3877,6 +4043,8 @@ class Tool extends DataClass implements Insertable<Tool> {
       level: serializer.fromJson<int>(json['level']),
       positionXCm: serializer.fromJson<double>(json['positionXCm']),
       stackOrder: serializer.fromJson<int>(json['stackOrder']),
+      supportId: serializer.fromJson<int?>(json['supportId']),
+      supportKind: serializer.fromJson<String?>(json['supportKind']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3893,6 +4061,8 @@ class Tool extends DataClass implements Insertable<Tool> {
       'level': serializer.toJson<int>(level),
       'positionXCm': serializer.toJson<double>(positionXCm),
       'stackOrder': serializer.toJson<int>(stackOrder),
+      'supportId': serializer.toJson<int?>(supportId),
+      'supportKind': serializer.toJson<String?>(supportKind),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3907,6 +4077,8 @@ class Tool extends DataClass implements Insertable<Tool> {
     int? level,
     double? positionXCm,
     int? stackOrder,
+    Value<int?> supportId = const Value.absent(),
+    Value<String?> supportKind = const Value.absent(),
     DateTime? createdAt,
   }) => Tool(
     id: id ?? this.id,
@@ -3918,6 +4090,8 @@ class Tool extends DataClass implements Insertable<Tool> {
     level: level ?? this.level,
     positionXCm: positionXCm ?? this.positionXCm,
     stackOrder: stackOrder ?? this.stackOrder,
+    supportId: supportId.present ? supportId.value : this.supportId,
+    supportKind: supportKind.present ? supportKind.value : this.supportKind,
     createdAt: createdAt ?? this.createdAt,
   );
   Tool copyWithCompanion(ToolsCompanion data) {
@@ -3935,6 +4109,10 @@ class Tool extends DataClass implements Insertable<Tool> {
       stackOrder: data.stackOrder.present
           ? data.stackOrder.value
           : this.stackOrder,
+      supportId: data.supportId.present ? data.supportId.value : this.supportId,
+      supportKind: data.supportKind.present
+          ? data.supportKind.value
+          : this.supportKind,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3951,6 +4129,8 @@ class Tool extends DataClass implements Insertable<Tool> {
           ..write('level: $level, ')
           ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
+          ..write('supportId: $supportId, ')
+          ..write('supportKind: $supportKind, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3967,6 +4147,8 @@ class Tool extends DataClass implements Insertable<Tool> {
     level,
     positionXCm,
     stackOrder,
+    supportId,
+    supportKind,
     createdAt,
   );
   @override
@@ -3982,6 +4164,8 @@ class Tool extends DataClass implements Insertable<Tool> {
           other.level == this.level &&
           other.positionXCm == this.positionXCm &&
           other.stackOrder == this.stackOrder &&
+          other.supportId == this.supportId &&
+          other.supportKind == this.supportKind &&
           other.createdAt == this.createdAt);
 }
 
@@ -3995,6 +4179,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
   final Value<int> level;
   final Value<double> positionXCm;
   final Value<int> stackOrder;
+  final Value<int?> supportId;
+  final Value<String?> supportKind;
   final Value<DateTime> createdAt;
   const ToolsCompanion({
     this.id = const Value.absent(),
@@ -4006,6 +4192,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
     this.level = const Value.absent(),
     this.positionXCm = const Value.absent(),
     this.stackOrder = const Value.absent(),
+    this.supportId = const Value.absent(),
+    this.supportKind = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ToolsCompanion.insert({
@@ -4018,6 +4206,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
     required int level,
     required double positionXCm,
     required int stackOrder,
+    this.supportId = const Value.absent(),
+    this.supportKind = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name),
        lengthCm = Value(lengthCm),
@@ -4037,6 +4227,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
     Expression<int>? level,
     Expression<double>? positionXCm,
     Expression<int>? stackOrder,
+    Expression<int>? supportId,
+    Expression<String>? supportKind,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -4049,6 +4241,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
       if (level != null) 'level': level,
       if (positionXCm != null) 'position_x_cm': positionXCm,
       if (stackOrder != null) 'stack_order': stackOrder,
+      if (supportId != null) 'support_id': supportId,
+      if (supportKind != null) 'support_kind': supportKind,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -4063,6 +4257,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
     Value<int>? level,
     Value<double>? positionXCm,
     Value<int>? stackOrder,
+    Value<int?>? supportId,
+    Value<String?>? supportKind,
     Value<DateTime>? createdAt,
   }) {
     return ToolsCompanion(
@@ -4075,6 +4271,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
       level: level ?? this.level,
       positionXCm: positionXCm ?? this.positionXCm,
       stackOrder: stackOrder ?? this.stackOrder,
+      supportId: supportId ?? this.supportId,
+      supportKind: supportKind ?? this.supportKind,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -4109,6 +4307,12 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
     if (stackOrder.present) {
       map['stack_order'] = Variable<int>(stackOrder.value);
     }
+    if (supportId.present) {
+      map['support_id'] = Variable<int>(supportId.value);
+    }
+    if (supportKind.present) {
+      map['support_kind'] = Variable<String>(supportKind.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4127,6 +4331,8 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
           ..write('level: $level, ')
           ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
+          ..write('supportId: $supportId, ')
+          ..write('supportKind: $supportKind, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -4892,6 +5098,8 @@ typedef $$TerrariumsTableCreateCompanionBuilder =
       Value<int?> positionInLevel,
       Value<double?> positionXCm,
       Value<int?> stackOrder,
+      Value<int?> supportId,
+      Value<String?> supportKind,
       Value<String?> location,
       Value<int?> individualSequence,
       Value<String> purpose,
@@ -4912,6 +5120,8 @@ typedef $$TerrariumsTableUpdateCompanionBuilder =
       Value<int?> positionInLevel,
       Value<double?> positionXCm,
       Value<int?> stackOrder,
+      Value<int?> supportId,
+      Value<String?> supportKind,
       Value<String?> location,
       Value<int?> individualSequence,
       Value<String> purpose,
@@ -5020,6 +5230,16 @@ class $$TerrariumsTableFilterComposer
 
   ColumnFilters<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get supportId => $composableBuilder(
+    column: $table.supportId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5161,6 +5381,16 @@ class $$TerrariumsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get supportId => $composableBuilder(
+    column: $table.supportId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get location => $composableBuilder(
     column: $table.location,
     builder: (column) => ColumnOrderings(column),
@@ -5259,6 +5489,14 @@ class $$TerrariumsTableAnnotationComposer
 
   GeneratedColumn<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get supportId =>
+      $composableBuilder(column: $table.supportId, builder: (column) => column);
+
+  GeneratedColumn<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
     builder: (column) => column,
   );
 
@@ -5368,6 +5606,8 @@ class $$TerrariumsTableTableManager
                 Value<int?> positionInLevel = const Value.absent(),
                 Value<double?> positionXCm = const Value.absent(),
                 Value<int?> stackOrder = const Value.absent(),
+                Value<int?> supportId = const Value.absent(),
+                Value<String?> supportKind = const Value.absent(),
                 Value<String?> location = const Value.absent(),
                 Value<int?> individualSequence = const Value.absent(),
                 Value<String> purpose = const Value.absent(),
@@ -5386,6 +5626,8 @@ class $$TerrariumsTableTableManager
                 positionInLevel: positionInLevel,
                 positionXCm: positionXCm,
                 stackOrder: stackOrder,
+                supportId: supportId,
+                supportKind: supportKind,
                 location: location,
                 individualSequence: individualSequence,
                 purpose: purpose,
@@ -5406,6 +5648,8 @@ class $$TerrariumsTableTableManager
                 Value<int?> positionInLevel = const Value.absent(),
                 Value<double?> positionXCm = const Value.absent(),
                 Value<int?> stackOrder = const Value.absent(),
+                Value<int?> supportId = const Value.absent(),
+                Value<String?> supportKind = const Value.absent(),
                 Value<String?> location = const Value.absent(),
                 Value<int?> individualSequence = const Value.absent(),
                 Value<String> purpose = const Value.absent(),
@@ -5424,6 +5668,8 @@ class $$TerrariumsTableTableManager
                 positionInLevel: positionInLevel,
                 positionXCm: positionXCm,
                 stackOrder: stackOrder,
+                supportId: supportId,
+                supportKind: supportKind,
                 location: location,
                 individualSequence: individualSequence,
                 purpose: purpose,
@@ -7371,6 +7617,8 @@ typedef $$ToolsTableCreateCompanionBuilder =
       required int level,
       required double positionXCm,
       required int stackOrder,
+      Value<int?> supportId,
+      Value<String?> supportKind,
       Value<DateTime> createdAt,
     });
 typedef $$ToolsTableUpdateCompanionBuilder =
@@ -7384,6 +7632,8 @@ typedef $$ToolsTableUpdateCompanionBuilder =
       Value<int> level,
       Value<double> positionXCm,
       Value<int> stackOrder,
+      Value<int?> supportId,
+      Value<String?> supportKind,
       Value<DateTime> createdAt,
     });
 
@@ -7454,6 +7704,16 @@ class $$ToolsTableFilterComposer extends Composer<_$AppDatabase, $ToolsTable> {
 
   ColumnFilters<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get supportId => $composableBuilder(
+    column: $table.supportId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7535,6 +7795,16 @@ class $$ToolsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get supportId => $composableBuilder(
+    column: $table.supportId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7598,6 +7868,14 @@ class $$ToolsTableAnnotationComposer
 
   GeneratedColumn<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get supportId =>
+      $composableBuilder(column: $table.supportId, builder: (column) => column);
+
+  GeneratedColumn<String> get supportKind => $composableBuilder(
+    column: $table.supportKind,
     builder: (column) => column,
   );
 
@@ -7665,6 +7943,8 @@ class $$ToolsTableTableManager
                 Value<int> level = const Value.absent(),
                 Value<double> positionXCm = const Value.absent(),
                 Value<int> stackOrder = const Value.absent(),
+                Value<int?> supportId = const Value.absent(),
+                Value<String?> supportKind = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ToolsCompanion(
                 id: id,
@@ -7676,6 +7956,8 @@ class $$ToolsTableTableManager
                 level: level,
                 positionXCm: positionXCm,
                 stackOrder: stackOrder,
+                supportId: supportId,
+                supportKind: supportKind,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -7689,6 +7971,8 @@ class $$ToolsTableTableManager
                 required int level,
                 required double positionXCm,
                 required int stackOrder,
+                Value<int?> supportId = const Value.absent(),
+                Value<String?> supportKind = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ToolsCompanion.insert(
                 id: id,
@@ -7700,6 +7984,8 @@ class $$ToolsTableTableManager
                 level: level,
                 positionXCm: positionXCm,
                 stackOrder: stackOrder,
+                supportId: supportId,
+                supportKind: supportKind,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

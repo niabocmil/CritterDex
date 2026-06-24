@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../models/replenish.dart';
 import '../widgets/specimen_card.dart';
+import 'replenish_due_screen.dart';
 import 'specimen_detail_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -31,6 +33,8 @@ class DashboardScreen extends StatelessWidget {
             stream: db.watchAllBreedingEvents(),
             builder: (context, eventSnapshot) {
               final events = eventSnapshot.data ?? const <BreedingEvent>[];
+              final replenishDueCount =
+                  terrariumIdsNeedingReplenish(specimens).length;
 
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -78,6 +82,24 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (replenishDueCount > 0) ...[
+                    const SizedBox(height: 28),
+                    Text('Notifications',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: ListTile(
+                        leading: Icon(Icons.water_drop_outlined,
+                            color: scheme.error),
+                        title: Text(
+                            '$replenishDueCount terrarium${replenishDueCount == 1 ? '' : 's'} need${replenishDueCount == 1 ? 's' : ''} replenishing today'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const ReplenishDueScreen())),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 28),
                   Text('Recently added', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),

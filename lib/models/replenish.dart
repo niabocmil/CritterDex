@@ -16,3 +16,12 @@ bool isReplenishDue(Specimen specimen) =>
     specimen.replenishIntervalDays != null &&
     specimen.lastReplenishedAt != null &&
     replenishDaysLeft(specimen) <= 0;
+
+/// Terrarium ids with at least one specimen due for replenishing today.
+/// Counted per terrarium, not per specimen — a terrarium with several
+/// overdue specimens still counts once.
+Set<int> terrariumIdsNeedingReplenish(List<Specimen> specimens) => specimens
+    .where(isReplenishDue)
+    .map((s) => s.terrariumId)
+    .whereType<int>()
+    .toSet();

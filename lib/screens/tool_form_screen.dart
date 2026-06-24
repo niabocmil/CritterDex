@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
@@ -111,7 +112,9 @@ class _ToolFormScreenState extends State<ToolFormScreen> {
 
       int level;
       double positionXCm;
-      int stackOrder;
+      int? supportId;
+      String? supportKind;
+      var siblingUpdates = const <ShelfPlacementUpdate>[];
       if (_useAutoPlace) {
         try {
           final placement = findAutoPlacement(
@@ -122,7 +125,6 @@ class _ToolFormScreenState extends State<ToolFormScreen> {
           );
           level = placement.level;
           positionXCm = placement.positionXCm;
-          stackOrder = 0;
         } on PlacementException catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context)
@@ -139,40 +141,64 @@ class _ToolFormScreenState extends State<ToolFormScreen> {
         }
         level = choice.level;
         positionXCm = choice.positionXCm;
-        if (choice.stackOnTarget != null) {
-          final target = choice.stackOnTarget!;
-          stackOrder = columnsForLevel(existingOnShelf, level)
-              .firstWhere((col) =>
-                  col.any((i) => i.id == target.id && i.kind == target.kind))
-              .length;
-        } else {
-          stackOrder = 0;
+        supportId = choice.supportId;
+        supportKind = choice.supportKind;
+        siblingUpdates = choice.siblingUpdates;
+      }
+
+      Future<void> applySiblingUpdates() async {
+        for (final u in siblingUpdates) {
+          if (u.kind == ShelfItemKind.terrarium) {
+            final t = existingTerrariums.firstWhere((t) => t.id == u.id);
+            await db.updateTerrarium(t.copyWith(
+              positionXCm: Value(u.positionXCm),
+              supportId: Value(u.supportId),
+              supportKind: Value(u.supportKind),
+            ));
+          } else {
+            final tool = existingTools.firstWhere((t) => t.id == u.id);
+            await db.updateTool(tool.copyWith(
+              positionXCm: u.positionXCm,
+              supportId: Value(u.supportId),
+              supportKind: Value(u.supportKind),
+            ));
+          }
         }
       }
 
       if (_isEditing) {
-        await db.updateTool(widget.existing!.copyWith(
-          name: name,
-          lengthCm: length,
-          heightCm: height,
-          colorArgb: _color.toARGB32(),
-          shelfId: shelfId,
-          level: level,
-          positionXCm: positionXCm,
-          stackOrder: stackOrder,
-        ));
+        await db.transaction(() async {
+          await applySiblingUpdates();
+          await db.updateTool(widget.existing!.copyWith(
+            name: name,
+            lengthCm: length,
+            heightCm: height,
+            colorArgb: _color.toARGB32(),
+            shelfId: shelfId,
+            level: level,
+            positionXCm: positionXCm,
+            supportId: Value(supportId),
+            supportKind: Value(supportKind),
+          ));
+        });
         if (mounted) Navigator.of(context).pop(widget.existing!.id);
       } else {
-        final id = await db.insertTool(ToolsCompanion.insert(
-          name: name,
-          lengthCm: length,
-          heightCm: height,
-          colorArgb: _color.toARGB32(),
-          shelfId: shelfId,
-          level: level,
-          positionXCm: positionXCm,
-          stackOrder: stackOrder,
-        ));
+        var id = -1;
+        await db.transaction(() async {
+          await applySiblingUpdates();
+          id = await db.insertTool(ToolsCompanion.insert(
+            name: name,
+            lengthCm: length,
+            heightCm: height,
+            colorArgb: _color.toARGB32(),
+            shelfId: shelfId,
+            level: level,
+            positionXCm: positionXCm,
+            stackOrder: 0,
+            supportId: Value(supportId),
+            supportKind: Value(supportKind),
+          ));
+        });
         if (mounted) Navigator.of(context).pop(id);
       }
     } finally {

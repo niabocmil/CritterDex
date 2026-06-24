@@ -34,7 +34,8 @@ abstract class ShelfItem {
   double get itemHeightCm;
   int? get level;
   double? get positionXCm;
-  int? get stackOrder;
+  int? get supportId;
+  String? get supportKind;
 }
 
 class TerrariumShelfItem implements ShelfItem {
@@ -54,7 +55,9 @@ class TerrariumShelfItem implements ShelfItem {
   @override
   double? get positionXCm => terrarium.positionXCm;
   @override
-  int? get stackOrder => terrarium.stackOrder;
+  int? get supportId => terrarium.supportId;
+  @override
+  String? get supportKind => terrarium.supportKind;
 }
 
 class ToolShelfItem implements ShelfItem {
@@ -74,37 +77,147 @@ class ToolShelfItem implements ShelfItem {
   @override
   double? get positionXCm => tool.positionXCm;
   @override
-  int? get stackOrder => tool.stackOrder;
+  int? get supportId => tool.supportId;
+  @override
+  String? get supportKind => tool.supportKind;
 }
 
-/// Groups all items in [all] that sit on [level] into ordered columns (left
-/// to right, by positionXCm); each column itself ordered bottom-to-top (by
-/// stackOrder). Used both for rendering and for the move/placement
-/// algorithms.
-List<List<ShelfItem>> columnsForLevel(List<ShelfItem> all, int level) {
-  final inLevel = all.where((i) => i.level == level).toList();
-  if (inLevel.isEmpty) return [];
-  final byX = <double, List<ShelfItem>>{};
-  for (final item in inLevel) {
-    byX.putIfAbsent(item.positionXCm!, () => []).add(item);
+/// Stable identity key for a [ShelfItem], used to key maps across the
+/// layout/placement/visualization code (a plain id isn't unique on its own
+/// since terrarium ids and tool ids are independent sequences).
+String shelfItemKey(ShelfItem item) => '${item.kind.name}_${item.id}';
+
+/// An item's resolved position within its level, walked up through its
+/// support chain. [absoluteXCm] is relative to the shelf's own left edge
+/// (i.e. fully resolved, regardless of how many supports deep the item
+/// rests); [topHeightCm] is the height of the item's own top surface above
+/// the level floor (its support's top, plus its own height).
+class ResolvedItem {
+  ResolvedItem({
+    required this.item,
+    required this.absoluteXCm,
+    required this.topHeightCm,
+    required this.support,
+  });
+  final ShelfItem item;
+  final double absoluteXCm;
+  final double topHeightCm;
+  final ShelfItem? support;
+}
+
+/// Resolves every item's [ResolvedItem] within one level by walking each
+/// item's support chain (a support must be resolved before its dependents,
+/// so this recurses and memoizes). Keyed by [shelfItemKey].
+///
+/// Two independent guards against a bad support chain, since this is
+/// read-path code that must never hang or crash the UI on bad data: a
+/// `visiting` set that throws [StateError] the instant a chain revisits a
+/// node (an actual cycle — should never happen if writes are validated, so
+/// loud failure here is appropriate), and a hard recursion-depth cap as
+/// defense-in-depth backing up that same check. A *dangling* supportId
+/// (the support no longer exists at all) is a different, survivable kind of
+/// bad data — it degrades the item to resting on the floor at x=0 rather
+/// than throwing.
+Map<String, ResolvedItem> resolveLevelGeometry(List<ShelfItem> itemsAtLevel) {
+  final byKey = {for (final i in itemsAtLevel) shelfItemKey(i): i};
+  final resolved = <String, ResolvedItem>{};
+  final visiting = <String>{};
+
+  ResolvedItem resolve(ShelfItem item, int depth) {
+    final key = shelfItemKey(item);
+    final cached = resolved[key];
+    if (cached != null) return cached;
+    if (depth > itemsAtLevel.length || visiting.contains(key)) {
+      throw StateError('Cycle detected in shelf support chain at $key');
+    }
+    visiting.add(key);
+
+    final supportId = item.supportId;
+    final supportKind = item.supportKind;
+    ResolvedItem result;
+    if (supportId == null || supportKind == null) {
+      result = ResolvedItem(
+        item: item,
+        absoluteXCm: item.positionXCm ?? 0.0,
+        topHeightCm: item.itemHeightCm,
+        support: null,
+      );
+    } else {
+      final support = byKey['${supportKind}_$supportId'];
+      if (support == null) {
+        result = ResolvedItem(
+          item: item,
+          absoluteXCm: 0.0,
+          topHeightCm: item.itemHeightCm,
+          support: null,
+        );
+      } else {
+        final resolvedSupport = resolve(support, depth + 1);
+        result = ResolvedItem(
+          item: item,
+          absoluteXCm: resolvedSupport.absoluteXCm + (item.positionXCm ?? 0.0),
+          topHeightCm: resolvedSupport.topHeightCm + item.itemHeightCm,
+          support: support,
+        );
+      }
+    }
+
+    visiting.remove(key);
+    resolved[key] = result;
+    return result;
   }
-  final sortedX = byX.keys.toList()..sort();
-  return [
-    for (final x in sortedX)
-      byX[x]!
-        ..sort((a, b) => (a.stackOrder ?? 0).compareTo(b.stackOrder ?? 0)),
-  ];
+
+  for (final item in itemsAtLevel) {
+    resolve(item, 0);
+  }
+  return resolved;
 }
 
 /// G for the bottom (ground) level, then 1, 2, 3... going up.
 String levelDisplayLabel(int level) => level == 1 ? 'G' : '${level - 1}';
 
+/// Dotted sibling-path label per item within one level (e.g. `2`, `2.1`,
+/// `2.2` for two items side-by-side on top of floor item `2`). Floor items
+/// are ordered left-to-right by their (absolute, since floor positionXCm
+/// already is relative to the shelf's own edge) positionXCm; each item's
+/// direct dependents are ordered the same way by their own positionXCm
+/// (relative to that shared parent, so directly comparable among siblings),
+/// recursively.
+///
+/// Moving a floor item can re-rank it relative to its siblings, which
+/// renumbers its leading path component and cascades into relabeling its
+/// entire subtree — expected behavior, not a bug.
+Map<String, String> computePathsForLevel(List<ShelfItem> itemsAtLevel) {
+  final paths = <String, String>{};
+
+  int byPositionThenId(ShelfItem a, ShelfItem b) {
+    final cmp = (a.positionXCm ?? 0.0).compareTo(b.positionXCm ?? 0.0);
+    return cmp != 0 ? cmp : a.id.compareTo(b.id);
+  }
+
+  void assign(List<ShelfItem> siblings, String? parentPath) {
+    final sorted = [...siblings]..sort(byPositionThenId);
+    for (var i = 0; i < sorted.length; i++) {
+      final item = sorted[i];
+      final path = parentPath == null ? '${i + 1}' : '$parentPath.${i + 1}';
+      paths[shelfItemKey(item)] = path;
+      final children = itemsAtLevel
+          .where((c) =>
+              c.supportId == item.id && c.supportKind == item.kind.name)
+          .toList();
+      if (children.isNotEmpty) assign(children, path);
+    }
+  }
+
+  assign(itemsAtLevel.where((i) => i.supportId == null).toList(), null);
+  return paths;
+}
+
 String shelfLabelFor(Terrarium t, Shelf shelf, List<ShelfItem> allOnShelf) {
-  final columns = columnsForLevel(allOnShelf, t.level!);
-  final columnIndex = columns.indexWhere((col) =>
-      col.any((i) => i.id == t.id && i.kind == ShelfItemKind.terrarium));
-  final stackLetter = String.fromCharCode(97 + (t.stackOrder ?? 0)); // 0->'a'
-  return '${shelf.label}${levelDisplayLabel(t.level!)}-${columnIndex + 1}$stackLetter';
+  final itemsAtLevel = allOnShelf.where((i) => i.level == t.level).toList();
+  final paths = computePathsForLevel(itemsAtLevel);
+  final path = paths[shelfItemKey(TerrariumShelfItem(t))] ?? '?';
+  return '${shelf.label}${levelDisplayLabel(t.level!)}-$path';
 }
 
 String individualLabelFor(Terrarium t) => 'T${t.individualSequence}';
@@ -114,7 +227,7 @@ String labelFor(Terrarium t, Shelf? shelf, List<ShelfItem> allOnShelf) =>
         ? individualLabelFor(t)
         : shelfLabelFor(t, shelf!, allOnShelf);
 
-/// Computes every terrarium's display label (e.g. "A1-2a" or "T3") in one
+/// Computes every terrarium's display label (e.g. "A1-2.1" or "T3") in one
 /// pass, for pickers that need to show real labels for a whole list of
 /// terrariums at once rather than one at a time.
 Map<int, String> computeAllTerrariumLabels(

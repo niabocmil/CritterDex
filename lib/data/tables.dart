@@ -94,7 +94,20 @@ class Terrariums extends Table {
   // [positionXCm] for all placement going forward.
   IntColumn get positionInLevel => integer().nullable()();
   RealColumn get positionXCm => real().nullable()();
+  // Legacy v3 sibling-ordinal within a shared-x "column". No longer written
+  // by any code path as of v5 — kept declared only so the v4->v5 migration
+  // backfill can read it via the typed query API. Use [supportId]/
+  // [supportKind] for all stacking going forward.
   IntColumn get stackOrder => integer().nullable()();
+  // What this terrarium rests on, if anything: null means it sits directly
+  // on the shelf level's floor. Not declared with .references() — it can
+  // point at either Terrariums or Tools (see [supportKind]), a polymorphic
+  // reference drift can't express as a table constraint, so it's validated
+  // at the app layer only (same reasoning as Specimens.sourceBreedingEventId).
+  IntColumn get supportId => integer().nullable()();
+  // 'terrarium' | 'tool' (matches ShelfItemKind.name) — which table
+  // [supportId] points into. Null iff [supportId] is null.
+  TextColumn get supportKind => text().nullable()();
   TextColumn get location => text().nullable()();
   IntColumn get individualSequence => integer().nullable()();
   TextColumn get purpose => text().withDefault(const Constant('general'))();
@@ -113,7 +126,17 @@ class Tools extends Table {
   IntColumn get shelfId => integer().references(Shelves, #id)();
   IntColumn get level => integer()();
   RealColumn get positionXCm => real()();
+  // Legacy v3 sibling-ordinal within a shared-x "column". No longer
+  // meaningful as of v5 (use [supportId]/[supportKind] for stacking going
+  // forward) — kept NOT NULL (can't relax a live SQLite NOT NULL
+  // constraint without a risky table-rebuild migration) and still written
+  // as 0 on every insert/update purely to satisfy that constraint.
   IntColumn get stackOrder => integer()();
+  // What this tool rests on, if anything: null means it sits directly on
+  // the shelf level's floor. See Terrariums.supportId for why this isn't a
+  // declared .references() constraint.
+  IntColumn get supportId => integer().nullable()();
+  TextColumn get supportKind => text().nullable()();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
 }

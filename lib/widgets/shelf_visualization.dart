@@ -16,14 +16,19 @@ typedef ShelfMoveCallback = Future<void> Function({
 /// Fixed cm:px ratio (rather than scaling to fit the viewport) so a 100cm
 /// shelf renders at a readable 800px — comfortably requiring scrolling past
 /// ~45cm of shelf on a typical phone width.
-const double cmToPx = 8.0;
+const double cmToPx = 6.0;
 const _levelGapPx = 14.0;
 // Room for the level label (G / 1 / 2 / ...), baked into the canvas itself
 // so it pans together with everything else under one gesture.
 const _gutterPx = 26.0;
-const _viewportHeightPx = 420.0;
-
-String _itemKey(ShelfItem item) => '${item.kind.name}_${item.id}';
+// Reserves blank space above the topmost level so it never renders directly
+// under the floating overlay header in the immersive fullscreen shelf
+// screen. Baked into the canvas itself (rather than, say, top-padding the
+// InteractiveViewer) because InteractiveViewer won't pan past the content's
+// own edges by default — on a short shelf whose content already fits the
+// viewport, there'd be no way to scroll the top level out from under the
+// header otherwise.
+const _topInsetPx = 96.0;
 
 class ShelfVisualization extends StatefulWidget {
   const ShelfVisualization({
@@ -85,7 +90,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
     final target = _previewTarget;
     if (draggingKey == null || target == null) return base;
     final moving = base.firstWhere(
-      (i) => _itemKey(i) == draggingKey,
+      (i) => shelfItemKey(i) == draggingKey,
       orElse: () => base.first,
     );
     try {
@@ -101,11 +106,12 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
       final byKey = {for (final u in updates) '${u.kind.name}_${u.id}': u};
       return [
         for (final item in base)
-          if (byKey[_itemKey(item)] case final u?)
+          if (byKey[shelfItemKey(item)] case final u?)
             _PreviewShelfItem(item,
                 level: u.level,
                 positionXCm: u.positionXCm,
-                stackOrder: u.stackOrder)
+                supportId: u.supportId,
+                supportKind: u.supportKind)
           else
             item,
       ];
@@ -122,7 +128,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
     final dragging = _draggingKey != null;
     final geo =
         dragging ? _computeGeometry(widget.shelf, _previewItems(baseItems)) : baseGeo;
-    final baseByKey = {for (final i in baseItems) _itemKey(i): i};
+    final baseByKey = {for (final i in baseItems) shelfItemKey(i): i};
 
     final draggingRect = dragging ? baseGeo.rects[_draggingKey] : null;
 
@@ -172,7 +178,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
           // everything else animates to its live preview position.
           for (final item in baseItems)
             Builder(builder: (context) {
-              final key = _itemKey(item);
+              final key = shelfItemKey(item);
               final isDragging = key == _draggingKey;
               final rect = (isDragging ? baseGeo.rects[key] : geo.rects[key])!;
               return AnimatedPositioned(
@@ -208,8 +214,11 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
       ),
     );
 
-    return SizedBox(
-      height: baseGeo.totalHeightPx.clamp(120.0, _viewportHeightPx),
+    // Fills whatever space the parent gives it (the parent is responsible
+    // for bounding that, e.g. an Expanded/SizedBox.expand in an immersive
+    // fullscreen shelf screen) rather than clamping to a fixed height
+    // itself.
+    return SizedBox.expand(
       child: InteractiveViewer(
         panEnabled: !dragging && !_pointerDownOnItem,
         scaleEnabled: false,
@@ -255,7 +264,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
       onLongPressStart: (details) {
         final local = _globalToLocal(details.globalPosition);
         setState(() {
-          _draggingKey = _itemKey(item);
+          _draggingKey = shelfItemKey(item);
           _dragLocalPosition = local;
           _previewTarget = null;
         });
@@ -269,8 +278,8 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
         // test against a stale or already-shifted layout and resolve the
         // drop to the wrong spot.
         final baseGeo = _computeGeometry(widget.shelf, _baseItems());
-        final target =
-            _hitTest(baseGeo, local, item.footprintCm * cmToPx);
+        final target = _hitTest(
+            baseGeo, local, item.footprintCm * cmToPx, shelfItemKey(item));
         setState(() {
           _dragLocalPosition = local;
           _previewTarget = target;
@@ -296,12 +305,16 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
   }
 }
 
-/// A read-only [ShelfItem] view with [level]/[positionXCm]/[stackOrder]
-/// overridden to a prospective value, used only to drive the live preview
-/// geometry while a drag is in progress — never written to the database.
+/// A read-only [ShelfItem] view with [level]/[positionXCm]/[supportId]/
+/// [supportKind] overridden to a prospective value, used only to drive the
+/// live preview geometry while a drag is in progress — never written to
+/// the database.
 class _PreviewShelfItem implements ShelfItem {
   _PreviewShelfItem(this._inner,
-      {required this.level, required this.positionXCm, required this.stackOrder});
+      {required this.level,
+      required this.positionXCm,
+      required this.supportId,
+      required this.supportKind});
 
   final ShelfItem _inner;
 
@@ -310,7 +323,9 @@ class _PreviewShelfItem implements ShelfItem {
   @override
   final double? positionXCm;
   @override
-  final int? stackOrder;
+  final int? supportId;
+  @override
+  final String? supportKind;
 
   @override
   int get id => _inner.id;
@@ -326,16 +341,14 @@ class _ShelfGeometry {
   _ShelfGeometry({
     required this.rects,
     required this.levelRowRects,
-    required this.levelColumnRects,
-    required this.levelColumns,
+    required this.levelItems,
     required this.totalWidthPx,
     required this.totalHeightPx,
   });
 
   final Map<String, Rect> rects;
   final Map<int, Rect> levelRowRects;
-  final Map<int, List<Rect>> levelColumnRects;
-  final Map<int, List<List<ShelfItem>>> levelColumns;
+  final Map<int, List<ShelfItem>> levelItems;
   final double totalWidthPx;
   final double totalHeightPx;
 }
@@ -343,54 +356,48 @@ class _ShelfGeometry {
 _ShelfGeometry _computeGeometry(Shelf shelf, List<ShelfItem> items) {
   final rects = <String, Rect>{};
   final levelRowRects = <int, Rect>{};
-  final levelColumnRects = <int, List<Rect>>{};
-  final levelColumns = <int, List<List<ShelfItem>>>{};
+  final levelItems = <int, List<ShelfItem>>{};
   final rowWidthPx = shelf.lengthCm * cmToPx;
   final rowHeightPx = shelf.levelHeightCm * cmToPx;
 
   // Level 1 ("G", ground) renders at the BOTTOM of the stack; higher levels
   // stack upward above it — so we lay rows out from the top of the canvas
   // down, walking levels from the highest to the lowest.
-  var cursorY = 0.0;
+  var cursorY = _topInsetPx;
   for (var level = shelf.levelCount; level >= 1; level--) {
     final rowTop = cursorY;
     levelRowRects[level] =
         Rect.fromLTWH(_gutterPx, rowTop, rowWidthPx, rowHeightPx);
 
-    final columns = columnsForLevel(items, level);
-    levelColumns[level] = columns;
-    final columnRects = <Rect>[];
-    for (final column in columns) {
-      final x = column.first.positionXCm!;
-      final columnFootprint =
-          column.map((i) => i.footprintCm).reduce((a, b) => a > b ? a : b);
-      final columnWidthPx = columnFootprint * cmToPx;
-      final leftPx = _gutterPx + x * cmToPx;
-      columnRects
-          .add(Rect.fromLTWH(leftPx, rowTop, columnWidthPx, rowHeightPx));
+    final itemsAtLevel = items.where((i) => i.level == level).toList();
+    levelItems[level] = itemsAtLevel;
+    final geometry = resolveLevelGeometry(itemsAtLevel);
 
-      var heightFromBottom = 0.0;
-      for (final item in column) {
-        // Each item keeps its OWN footprint width here — not the column's
-        // shared max — so a smaller box stacked under/over a bigger one
-        // never gets visually stretched to match it.
-        final wPx = item.footprintCm * cmToPx;
-        final hPx = item.itemHeightCm * cmToPx;
-        final bottom = rowTop + rowHeightPx - heightFromBottom;
-        rects[_itemKey(item)] =
-            Rect.fromLTWH(leftPx, bottom - hPx, wPx, hPx);
-        heightFromBottom += hPx;
-      }
+    for (final item in itemsAtLevel) {
+      final resolved = geometry[shelfItemKey(item)]!;
+      // Each item keeps its OWN footprint width here — never a shared
+      // "column" width — so a smaller box resting on a bigger one (or two
+      // side-by-side on one larger box) is never stretched to match it.
+      final wPx = item.footprintCm * cmToPx;
+      final hPx = item.itemHeightCm * cmToPx;
+      final leftPx = _gutterPx + resolved.absoluteXCm * cmToPx;
+      // topHeightCm is the height of this item's own top surface above the
+      // floor; subtracting its own height gives how far its bottom sits
+      // above the floor (0 for a floor item, the support's topHeightCm for
+      // anything resting on something else).
+      final bottomFromFloorPx =
+          (resolved.topHeightCm - item.itemHeightCm) * cmToPx;
+      final bottomPx = rowTop + rowHeightPx - bottomFromFloorPx;
+      rects[shelfItemKey(item)] = Rect.fromLTWH(leftPx, bottomPx - hPx, wPx, hPx);
     }
-    levelColumnRects[level] = columnRects;
+
     cursorY += rowHeightPx + _levelGapPx;
   }
 
   return _ShelfGeometry(
     rects: rects,
     levelRowRects: levelRowRects,
-    levelColumnRects: levelColumnRects,
-    levelColumns: levelColumns,
+    levelItems: levelItems,
     totalWidthPx: _gutterPx + rowWidthPx,
     totalHeightPx: (cursorY - _levelGapPx).clamp(0, double.infinity),
   );
@@ -404,11 +411,18 @@ class _DropTarget {
 }
 
 /// [draggingWidthPx] is the width (in px) of the item being dragged — the
-/// floating ghost preview is centered on the pointer (see [build]), so a
-/// free-placement drop must use that same centered anchor when converting
-/// the pointer's raw position back into a cm offset, or the box would land
-/// somewhere visibly different from where its ghost was shown hovering.
-_DropTarget? _hitTest(_ShelfGeometry geo, Offset point, double draggingWidthPx) {
+/// floating ghost preview is centered on the pointer (see [build]), so any
+/// drop must use that same centered anchor when converting the pointer's
+/// raw position back into a cm offset, or the box would land somewhere
+/// visibly different from where its ghost was shown hovering.
+///
+/// Stacking only triggers when the point falls inside another item's
+/// *actual rendered rect* (real 2D containment) — not merely somewhere in
+/// the same column's row, which is what previously let a drop land on a
+/// stack just by being dropped anywhere near it. [excludeKey] omits the
+/// dragged item itself from being a candidate stack target.
+_DropTarget? _hitTest(_ShelfGeometry geo, Offset point, double draggingWidthPx,
+    String excludeKey) {
   int? bestLevel;
   var bestDist = double.infinity;
   for (final entry in geo.levelRowRects.entries) {
@@ -425,14 +439,18 @@ _DropTarget? _hitTest(_ShelfGeometry geo, Offset point, double draggingWidthPx) 
   }
   if (bestLevel == null) return null;
 
-  final columnRects = geo.levelColumnRects[bestLevel] ?? const [];
-  final columns = geo.levelColumns[bestLevel] ?? const [];
-  for (var i = 0; i < columnRects.length; i++) {
-    if (point.dx >= columnRects[i].left && point.dx < columnRects[i].right) {
+  final itemsAtLevel = geo.levelItems[bestLevel] ?? const [];
+  for (final item in itemsAtLevel) {
+    if (shelfItemKey(item) == excludeKey) continue;
+    final rect = geo.rects[shelfItemKey(item)];
+    if (rect != null && rect.contains(point)) {
+      final draggingWidthCm = draggingWidthPx / cmToPx;
+      final rawRelX = (point.dx - draggingWidthPx / 2 - rect.left) / cmToPx;
+      final maxStart = item.footprintCm - draggingWidthCm;
       return _DropTarget(
         level: bestLevel,
-        positionXCm: columns[i].first.positionXCm!,
-        stackOnTarget: columns[i].first,
+        positionXCm: rawRelX.clamp(0.0, maxStart < 0 ? 0.0 : maxStart),
+        stackOnTarget: item,
       );
     }
   }

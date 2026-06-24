@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -66,6 +66,13 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(specimens, specimens.deletedAt);
             await m.addColumn(terrariums, terrariums.deletedAt);
             await m.createTable(specimenLogEntries);
+          }
+          if (from < 5) {
+            await m.addColumn(terrariums, terrariums.supportId);
+            await m.addColumn(terrariums, terrariums.supportKind);
+            await m.addColumn(tools, tools.supportId);
+            await m.addColumn(tools, tools.supportKind);
+            await _backfillSupportTree();
           }
         },
       );
@@ -108,6 +115,97 @@ class AppDatabase extends _$AppDatabase {
               .write(TerrariumsCompanion(positionXCm: Value(cursorX)));
         }
         cursorX += footprint + minGapCm;
+      }
+    }
+  }
+
+  /// One-time v4 -> v5 migration helper: converts the old shared-positionXCm
+  /// "column" stacking model into the new explicit supportId/supportKind
+  /// tree. The old algorithm always left-aligned a stacked item to its
+  /// column's shared x (every item in a column had byte-identical
+  /// positionXCm), so every non-bottom item's new *relative* offset is
+  /// always exactly 0 — no arithmetic needed, just rewiring supportId.
+  Future<void> _backfillSupportTree() async {
+    final terrariumRows = await (select(terrariums)
+          ..where((t) =>
+              t.shelfId.isNotNull() &
+              t.level.isNotNull() &
+              t.positionXCm.isNotNull()))
+        .get();
+    final toolRows = await select(tools).get();
+
+    final items = [
+      for (final t in terrariumRows)
+        (
+          kind: 'terrarium',
+          id: t.id,
+          shelfId: t.shelfId!,
+          level: t.level!,
+          x: t.positionXCm!,
+          stackOrder: t.stackOrder ?? 0,
+        ),
+      for (final t in toolRows)
+        (
+          kind: 'tool',
+          id: t.id,
+          shelfId: t.shelfId,
+          level: t.level,
+          x: t.positionXCm,
+          stackOrder: t.stackOrder,
+        ),
+    ];
+
+    final byShelfAndLevel = <String,
+        List<
+            ({
+              String kind,
+              int id,
+              int shelfId,
+              int level,
+              double x,
+              int stackOrder
+            })>>{};
+    for (final item in items) {
+      byShelfAndLevel
+          .putIfAbsent('${item.shelfId}_${item.level}', () => [])
+          .add(item);
+    }
+
+    for (final levelItems in byShelfAndLevel.values) {
+      final byX = <double,
+          List<
+              ({
+                String kind,
+                int id,
+                int shelfId,
+                int level,
+                double x,
+                int stackOrder
+              })>>{};
+      for (final item in levelItems) {
+        byX.putIfAbsent(item.x, () => []).add(item);
+      }
+      for (final column in byX.values) {
+        column.sort((a, b) => a.stackOrder.compareTo(b.stackOrder));
+        for (var i = 1; i < column.length; i++) {
+          final below = column[i - 1];
+          final item = column[i];
+          if (item.kind == 'terrarium') {
+            await (update(terrariums)..where((row) => row.id.equals(item.id)))
+                .write(TerrariumsCompanion(
+              positionXCm: const Value(0.0),
+              supportId: Value(below.id),
+              supportKind: Value(below.kind),
+            ));
+          } else {
+            await (update(tools)..where((row) => row.id.equals(item.id)))
+                .write(ToolsCompanion(
+              positionXCm: const Value(0.0),
+              supportId: Value(below.id),
+              supportKind: Value(below.kind),
+            ));
+          }
+        }
       }
     }
   }

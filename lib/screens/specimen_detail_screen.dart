@@ -147,12 +147,20 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                                 avatar: const Icon(Icons.layers_outlined, size: 16),
                                 label: Text('Generation $generation'),
                               ),
-                              Chip(
-                                backgroundColor:
-                                    status.color(context).withValues(alpha: 0.15),
-                                label: Text(status.label,
-                                    style:
-                                        TextStyle(color: status.color(context))),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () =>
+                                    _showStatusPicker(context, db, specimen),
+                                child: Chip(
+                                  backgroundColor: status
+                                      .color(context)
+                                      .withValues(alpha: 0.15),
+                                  label: Text(status.label,
+                                      style: TextStyle(
+                                          color: status.color(context))),
+                                  avatar: Icon(Icons.arrow_drop_down,
+                                      size: 16, color: status.color(context)),
+                                ),
                               ),
                               if (specimen.dateAcquired != null)
                                 Chip(
@@ -371,6 +379,32 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
               ),
             ))
         .toList();
+  }
+
+  void _showStatusPicker(
+      BuildContext context, AppDatabase db, Specimen specimen) {
+    final current = SpecimenStatus.fromValue(specimen.status);
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            for (final status in SpecimenStatus.values)
+              ListTile(
+                leading: Icon(Icons.circle, color: status.color(context), size: 16),
+                title: Text(status.label),
+                trailing: status == current ? const Icon(Icons.check) : null,
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  if (status == current) return;
+                  await db.updateSpecimen(
+                      specimen.copyWith(status: status.name));
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _confirmDelete(BuildContext context, AppDatabase db, Specimen specimen) {

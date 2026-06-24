@@ -53,7 +53,8 @@ class ShelfDetailScreen extends StatelessWidget {
               shelfId: drift.Value(u.shelfId),
               level: drift.Value(u.level),
               positionXCm: drift.Value(u.positionXCm),
-              stackOrder: drift.Value(u.stackOrder),
+              supportId: drift.Value(u.supportId),
+              supportKind: drift.Value(u.supportKind),
             ));
           } else {
             final tool = tools.firstWhere((t) => t.id == u.id);
@@ -61,7 +62,8 @@ class ShelfDetailScreen extends StatelessWidget {
               shelfId: u.shelfId,
               level: u.level,
               positionXCm: u.positionXCm,
-              stackOrder: u.stackOrder,
+              supportId: drift.Value(u.supportId),
+              supportKind: drift.Value(u.supportKind),
             ));
           }
         }
@@ -106,7 +108,7 @@ class ShelfDetailScreen extends StatelessWidget {
                             icon: const Icon(Icons.delete_outline),
                             tooltip: 'Move to bin',
                             onPressed: () => _confirmDeleteTerrarium(
-                                context, db, terrarium, 0),
+                                context, db, shelf, terrarium, allOnShelf, 0),
                           ),
                         ],
                       ),
@@ -148,8 +150,8 @@ class ShelfDetailScreen extends StatelessWidget {
                         IconButton(
                           icon: const Icon(Icons.delete_outline),
                           tooltip: 'Move to bin',
-                          onPressed: () => _confirmDeleteTerrarium(
-                              context, db, terrarium, specimens.length),
+                          onPressed: () => _confirmDeleteTerrarium(context, db,
+                              shelf, terrarium, allOnShelf, specimens.length),
                         ),
                       ],
                     ),
@@ -190,8 +192,13 @@ class ShelfDetailScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDeleteTerrarium(BuildContext context, AppDatabase db,
-      Terrarium terrarium, int specimenCount) {
+  void _confirmDeleteTerrarium(
+      BuildContext context,
+      AppDatabase db,
+      Shelf shelf,
+      Terrarium terrarium,
+      List<ShelfItem> allOnShelf,
+      int specimenCount) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -210,7 +217,39 @@ class ShelfDetailScreen extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () async {
-              await db.softDeleteTerrarium(terrarium.id);
+              // Anything resting directly on this terrarium drops to the
+              // floor instead of blocking the delete.
+              final detachUpdates = planDetach(
+                removed: TerrariumShelfItem(terrarium),
+                shelf: shelf,
+                shelfItems: allOnShelf,
+              );
+              await db.transaction(() async {
+                for (final u in detachUpdates) {
+                  if (u.kind == ShelfItemKind.terrarium) {
+                    final t = allOnShelf
+                        .whereType<TerrariumShelfItem>()
+                        .firstWhere((i) => i.id == u.id)
+                        .terrarium;
+                    await db.updateTerrarium(t.copyWith(
+                      positionXCm: drift.Value(u.positionXCm),
+                      supportId: const drift.Value(null),
+                      supportKind: const drift.Value(null),
+                    ));
+                  } else {
+                    final tool = allOnShelf
+                        .whereType<ToolShelfItem>()
+                        .firstWhere((i) => i.id == u.id)
+                        .tool;
+                    await db.updateTool(tool.copyWith(
+                      positionXCm: u.positionXCm,
+                      supportId: const drift.Value(null),
+                      supportKind: const drift.Value(null),
+                    ));
+                  }
+                }
+                await db.softDeleteTerrarium(terrarium.id);
+              });
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) Navigator.of(context).pop();
             },
@@ -287,17 +326,6 @@ class ShelfDetailScreen extends StatelessWidget {
         }
         final shelf = shelfSnapshot.data!;
         return Scaffold(
-          appBar: AppBar(
-            title: Text(shelf.name),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => ShelfFormScreen(existing: shelf),
-                )),
-              ),
-            ],
-          ),
           body: StreamBuilder<List<Terrarium>>(
             stream: db.watchTerrariumsForShelf(shelfId),
             builder: (context, terrariumSnapshot) {
@@ -327,59 +355,61 @@ class ShelfDetailScreen extends StatelessWidget {
                       final replenishDueCount =
                           specimens.where(isReplenishDue).length;
 
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 16,
-                              runSpacing: 8,
-                              children: [
-                                Text(
-                                    '${terrariums.length} terrarium(s) in use'),
-                                if (replenishDueCount > 0)
-                                  Text(
-                                    '$replenishDueCount need${replenishDueCount == 1 ? 's' : ''} replenishing today',
-                                    style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .error,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            ShelfVisualization(
-                              shelf: shelf,
-                              terrariums: terrariums,
-                              tools: tools,
-                              specimensByTerrariumId: specimensByTerrariumId,
-                              onMove: ({
-                                required moving,
-                                required targetLevel,
-                                required targetPositionXCm,
-                                stackOnTarget,
-                              }) =>
-                                  _handleMove(
-                                context,
-                                shelf,
-                                terrariums,
-                                tools,
-                                moving: moving,
-                                targetLevel: targetLevel,
-                                targetPositionXCm: targetPositionXCm,
-                                stackOnTarget: stackOnTarget,
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: SizedBox.expand(
+                              child: ShelfVisualization(
+                                shelf: shelf,
+                                terrariums: terrariums,
+                                tools: tools,
+                                specimensByTerrariumId: specimensByTerrariumId,
+                                onMove: ({
+                                  required moving,
+                                  required targetLevel,
+                                  required targetPositionXCm,
+                                  stackOnTarget,
+                                }) =>
+                                    _handleMove(
+                                  context,
+                                  shelf,
+                                  terrariums,
+                                  tools,
+                                  moving: moving,
+                                  targetLevel: targetLevel,
+                                  targetPositionXCm: targetPositionXCm,
+                                  stackOnTarget: stackOnTarget,
+                                ),
+                                onTapTerrarium: (t) => _showTerrariumSheet(
+                                    context, shelf, t, allOnShelf),
+                                onTapTool: (tool) => Navigator.of(context)
+                                    .push(MaterialPageRoute(
+                                        builder: (_) => ToolFormScreen(
+                                            existing: tool))),
                               ),
-                              onTapTerrarium: (t) => _showTerrariumSheet(
-                                  context, shelf, t, allOnShelf),
-                              onTapTool: (tool) => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          ToolFormScreen(existing: tool))),
                             ),
-                          ],
-                        ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: SafeArea(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: _ShelfOverlayHeader(
+                                  shelf: shelf,
+                                  terrariumCount: terrariums.length,
+                                  replenishDueCount: replenishDueCount,
+                                  onBack: () => Navigator.of(context).pop(),
+                                  onEdit: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) => ShelfFormScreen(
+                                              existing: shelf))),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     },
                   );
@@ -395,6 +425,76 @@ class ShelfDetailScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Floating translucent pill replacing the old [AppBar] for the immersive
+/// fullscreen shelf view: back button, shelf name + compact occupancy
+/// caption, edit button.
+class _ShelfOverlayHeader extends StatelessWidget {
+  const _ShelfOverlayHeader({
+    required this.shelf,
+    required this.terrariumCount,
+    required this.replenishDueCount,
+    required this.onBack,
+    required this.onEdit,
+  });
+
+  final Shelf shelf;
+  final int terrariumCount;
+  final int replenishDueCount;
+  final VoidCallback onBack;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final caption = replenishDueCount > 0
+        ? '$terrariumCount terrarium(s) · $replenishDueCount to replenish today'
+        : '$terrariumCount terrarium(s) in use';
+    return Material(
+      color: scheme.surface.withValues(alpha: 0.9),
+      elevation: 2,
+      borderRadius: BorderRadius.circular(28),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBack,
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(shelf.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    caption,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: replenishDueCount > 0
+                          ? scheme.error
+                          : scheme.onSurfaceVariant,
+                      fontWeight:
+                          replenishDueCount > 0 ? FontWeight.w600 : null,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: onEdit,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
