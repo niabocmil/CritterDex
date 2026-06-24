@@ -21,6 +21,7 @@ class BackupService {
   Future<File> exportBackup() async {
     final shelves = await db.getAllShelves();
     final terrariums = await db.getAllTerrariums();
+    final tools = await db.getAllTools();
     final specimens = await db.getAllSpecimens();
     final breedingEvents = await db.select(db.breedingEvents).get();
     final logEntries = await db.select(db.breedingLogEntries).get();
@@ -29,6 +30,7 @@ class BackupService {
       'version': 1,
       'shelves': shelves.map((s) => s.toJson()).toList(),
       'terrariums': terrariums.map((t) => t.toJson()).toList(),
+      'tools': tools.map((t) => t.toJson()).toList(),
       'specimens': specimens.map((s) => s.toJson()).toList(),
       'breedingEvents': breedingEvents.map((b) => b.toJson()).toList(),
       'breedingLogEntries': logEntries.map((e) => e.toJson()).toList(),
@@ -77,6 +79,9 @@ class BackupService {
 
     final shelves = (data['shelves'] as List).cast<Map<String, dynamic>>();
     final terrariums = (data['terrariums'] as List).cast<Map<String, dynamic>>();
+    // Older (pre-v3) backups won't have a 'tools' key.
+    final tools =
+        (data['tools'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final specimens = (data['specimens'] as List).cast<Map<String, dynamic>>();
     final breedingEvents =
         (data['breedingEvents'] as List).cast<Map<String, dynamic>>();
@@ -88,6 +93,7 @@ class BackupService {
       await db.delete(db.breedingEvents).go();
       await db.delete(db.specimens).go();
       await db.delete(db.terrariums).go();
+      await db.delete(db.tools).go();
       await db.delete(db.shelves).go();
 
       for (final row in shelves) {
@@ -95,6 +101,9 @@ class BackupService {
       }
       for (final row in terrariums) {
         await db.into(db.terrariums).insert(Terrarium.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
+      for (final row in tools) {
+        await db.into(db.tools).insert(Tool.fromJson(row), mode: InsertMode.insertOrReplace);
       }
       for (final row in specimens) {
         await db.into(db.specimens).insert(Specimen.fromJson(row), mode: InsertMode.insertOrReplace);

@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -12,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../data/database.dart';
 import '../models/enums.dart';
 import '../widgets/specimen_avatar.dart';
+import '../widgets/specimen_icon_picker_dialog.dart';
 import 'terrarium_form_screen.dart';
 
 /// Single-flow 4-step specimen creation/editing, also reused for batch
@@ -29,6 +29,7 @@ class SpecimenFormScreen extends StatefulWidget {
     this.prefillMotherId,
     this.prefillFatherId,
     this.sourceBreedingEventId,
+    this.prefillTerrariumId,
   });
 
   final Specimen? existing;
@@ -38,6 +39,7 @@ class SpecimenFormScreen extends StatefulWidget {
   final int? prefillMotherId;
   final int? prefillFatherId;
   final int? sourceBreedingEventId;
+  final int? prefillTerrariumId;
 
   @override
   State<SpecimenFormScreen> createState() => _SpecimenFormScreenState();
@@ -61,10 +63,13 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   bool _ageUnknown = true;
   DateTime? _dateOfBirth;
   BeetleLifeStage? _lifeStage;
+  BeetleFamily? _beetleFamily;
   String? _photoPath;
   int? _motherId;
   int? _fatherId;
   int? _terrariumId;
+  final _replenishIntervalController = TextEditingController();
+  DateTime? _lastReplenishedAt;
   bool _saving = false;
 
   bool get _isEditing => widget.existing != null;
@@ -87,15 +92,20 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _weightController.text = existing.weightGrams?.toString() ?? '';
       _sizeController.text = existing.sizeCm?.toString() ?? '';
       _lifeStage = BeetleLifeStage.fromValue(existing.lifeStage);
+      _beetleFamily = BeetleFamily.fromValue(existing.beetleFamily);
       _photoPath = existing.photoPath;
       _motherId = existing.motherId;
       _fatherId = existing.fatherId;
       _terrariumId = existing.terrariumId;
+      _replenishIntervalController.text =
+          existing.replenishIntervalDays?.toString() ?? '';
+      _lastReplenishedAt = existing.lastReplenishedAt;
     } else {
       _speciesController.text = widget.prefillSpecies ?? '';
       _iconType = widget.prefillIcon ?? SpecimenIconType.other;
       _motherId = widget.prefillMotherId;
       _fatherId = widget.prefillFatherId;
+      _terrariumId = widget.prefillTerrariumId;
     }
   }
 
@@ -108,7 +118,24 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     _weightController.dispose();
     _sizeController.dispose();
     _notesController.dispose();
+    _replenishIntervalController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openIconPicker() async {
+    final result = await showDialog<SpecimenIconType>(
+      context: context,
+      builder: (_) => SpecimenIconPickerDialog(selected: _iconType),
+    );
+    if (result != null) {
+      setState(() {
+        _iconType = result;
+        if (result != SpecimenIconType.beetle) {
+          _beetleFamily = null;
+          _lifeStage = null;
+        }
+      });
+    }
   }
 
   Future<void> _pickPhoto() async {
@@ -162,6 +189,16 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
         _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
     final lifeStage =
         _iconType == SpecimenIconType.beetle ? _lifeStage?.name : null;
+    final beetleFamily =
+        _iconType == SpecimenIconType.beetle ? _beetleFamily?.name : null;
+    final replenishIntervalDays = _iconType == SpecimenIconType.beetle
+        ? int.tryParse(_replenishIntervalController.text.trim())
+        : null;
+    var lastReplenishedAt = _lastReplenishedAt;
+    if (!_isEditing && replenishIntervalDays != null && lastReplenishedAt == null) {
+      // Seed the countdown anchor immediately so it's meaningful right away.
+      lastReplenishedAt = _dateAcquired ?? DateTime.now();
+    }
     final dob = _ageUnknown ? null : _dateOfBirth;
 
     try {
@@ -179,6 +216,9 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           weightGrams: Value(weight),
           sizeCm: Value(size),
           lifeStage: Value(lifeStage),
+          beetleFamily: Value(beetleFamily),
+          replenishIntervalDays: Value(replenishIntervalDays),
+          lastReplenishedAt: Value(lastReplenishedAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
           motherId: Value(_motherId),
@@ -201,6 +241,9 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
             weightGrams: Value(weight),
             sizeCm: Value(size),
             lifeStage: Value(lifeStage),
+            beetleFamily: Value(beetleFamily),
+            replenishIntervalDays: Value(replenishIntervalDays),
+            lastReplenishedAt: Value(lastReplenishedAt),
             notes: Value(notes),
             motherId: Value(_motherId),
             fatherId: Value(_fatherId),
@@ -222,6 +265,9 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           weightGrams: Value(weight),
           sizeCm: Value(size),
           lifeStage: Value(lifeStage),
+          beetleFamily: Value(beetleFamily),
+          replenishIntervalDays: Value(replenishIntervalDays),
+          lastReplenishedAt: Value(lastReplenishedAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
           motherId: Value(_motherId),
@@ -328,43 +374,62 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!_isBatch)
-          Center(
-            child: GestureDetector(
-              onTap: _pickPhoto,
-              child: Stack(
-                children: [
-                  SpecimenAvatar(iconType: _iconType, radius: 40),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: Icon(Icons.add_a_photo,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.onPrimary),
+        Center(
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: _openIconPicker,
+                child: Stack(
+                  children: [
+                    SpecimenAvatar(
+                      iconType: _iconType,
+                      beetleFamily: _beetleFamily,
+                      lifeStage: _lifeStage,
+                      radius: 40,
                     ),
-                  ),
-                ],
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: Icon(Icons.edit,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.onPrimary),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(_iconType.label,
+                  style: Theme.of(context).textTheme.labelLarge),
+              if (!_isBatch) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _pickPhoto,
+                  icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                  label:
+                      Text(_photoPath == null ? 'Add photo' : 'Change photo'),
+                ),
+              ],
+            ],
           ),
-        if (!_isBatch) const SizedBox(height: 20),
-        Text('Species icon', style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final type in SpecimenIconType.values)
-              _IconChoiceChip(
-                type: type,
-                selected: _iconType == type,
-                onTap: () => setState(() => _iconType = type),
-              ),
-          ],
         ),
+        if (_iconType == SpecimenIconType.beetle) ...[
+          const SizedBox(height: 8),
+          Text('Family', style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 8),
+          SegmentedButton<BeetleFamily>(
+            segments: BeetleFamily.values
+                .map((f) => ButtonSegment(value: f, label: Text(f.label)))
+                .toList(),
+            selected: _beetleFamily == null ? {} : {_beetleFamily!},
+            emptySelectionAllowed: true,
+            onSelectionChanged: (s) =>
+                setState(() => _beetleFamily = s.isEmpty ? null : s.first),
+          ),
+        ],
         const SizedBox(height: 18),
         if (_isBatch) ...[
           TextFormField(
@@ -503,17 +568,50 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           const SizedBox(height: 14),
           Text('Life stage', style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
-          DropdownButtonFormField<BeetleLifeStage?>(
-            initialValue: _lifeStage,
-            decoration: const InputDecoration(labelText: 'Life stage'),
-            items: [
-              const DropdownMenuItem<BeetleLifeStage?>(
-                  value: null, child: Text('Not set')),
-              ...BeetleLifeStage.values.map((s) =>
-                  DropdownMenuItem(value: s, child: Text(s.label))),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Not set'),
+                selected: _lifeStage == null,
+                onSelected: (_) => setState(() => _lifeStage = null),
+              ),
+              for (final stage in BeetleLifeStage.values)
+                ChoiceChip(
+                  label: Text(stage.label),
+                  selected: _lifeStage == stage,
+                  onSelected: (_) => setState(() => _lifeStage = stage),
+                ),
             ],
-            onChanged: (s) => setState(() => _lifeStage = s),
           ),
+          const SizedBox(height: 14),
+          Text('Replenish (substrate/food)',
+              style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _replenishIntervalController,
+            decoration: const InputDecoration(
+                labelText: 'Replenish every (days)',
+                hintText: 'Leave blank to not track'),
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+          ),
+          if (_replenishIntervalController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Last replenished'),
+              subtitle: Text(_lastReplenishedAt == null
+                  ? 'Not started'
+                  : _formatDate(_lastReplenishedAt!)),
+              trailing: TextButton(
+                onPressed: () =>
+                    setState(() => _lastReplenishedAt = DateTime.now()),
+                child: const Text('Mark today'),
+              ),
+            ),
+          ],
         ],
         const SizedBox(height: 14),
         TextFormField(
@@ -574,28 +672,6 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
 
   String _formatDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-}
-
-class _IconChoiceChip extends StatelessWidget {
-  const _IconChoiceChip(
-      {required this.type, required this.selected, required this.onTap});
-
-  final SpecimenIconType type;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return ChoiceChip(
-      label: Text(type.label),
-      avatar: FaIcon(type.faIcon,
-          size: 16,
-          color: selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant),
-      selected: selected,
-      onSelected: (_) => onTap(),
-    );
-  }
 }
 
 class _ParentDropdown extends StatelessWidget {

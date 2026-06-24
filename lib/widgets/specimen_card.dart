@@ -28,7 +28,11 @@ class SpecimenCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              SpecimenAvatar(iconType: SpecimenIconType.fromValue(specimen.speciesIconKey)),
+              SpecimenAvatar(
+                iconType: SpecimenIconType.fromValue(specimen.speciesIconKey),
+                beetleFamily: BeetleFamily.fromValue(specimen.beetleFamily),
+                lifeStage: BeetleLifeStage.fromValue(specimen.lifeStage),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

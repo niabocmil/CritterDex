@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 enum SpecimenIconType {
   snake,
   lizard,
   frog,
   spider,
+  insect,
   beetle,
   fish,
   bird,
@@ -17,27 +17,45 @@ enum SpecimenIconType {
         SpecimenIconType.lizard => 'Lizard',
         SpecimenIconType.frog => 'Frog / Amphibian',
         SpecimenIconType.spider => 'Spider',
-        SpecimenIconType.beetle => 'Beetle / Insect',
+        SpecimenIconType.insect => 'Insect',
+        SpecimenIconType.beetle => 'Beetle',
         SpecimenIconType.fish => 'Fish',
         SpecimenIconType.bird => 'Bird',
         SpecimenIconType.mammal => 'Mammal',
         SpecimenIconType.other => 'Other',
       };
 
-  FaIconData get faIcon => switch (this) {
-        SpecimenIconType.snake => FontAwesomeIcons.worm,
-        SpecimenIconType.lizard => FontAwesomeIcons.dragon,
-        SpecimenIconType.frog => FontAwesomeIcons.frog,
-        SpecimenIconType.spider => FontAwesomeIcons.spider,
-        SpecimenIconType.beetle => FontAwesomeIcons.bug,
-        SpecimenIconType.fish => FontAwesomeIcons.fish,
-        SpecimenIconType.bird => FontAwesomeIcons.kiwiBird,
-        SpecimenIconType.mammal => FontAwesomeIcons.paw,
-        SpecimenIconType.other => FontAwesomeIcons.question,
-      };
-
   static SpecimenIconType fromValue(String value) => SpecimenIconType.values
       .firstWhere((e) => e.name == value, orElse: () => SpecimenIconType.other);
+}
+
+enum BeetleFamily {
+  stag,
+  dynastinae;
+
+  String get label => switch (this) {
+        BeetleFamily.stag => 'Stag beetle',
+        BeetleFamily.dynastinae => 'Dynastinae (rhino/scarab)',
+      };
+
+  static BeetleFamily? fromValue(String? value) {
+    if (value == null) return null;
+    return BeetleFamily.values
+        .firstWhere((e) => e.name == value, orElse: () => BeetleFamily.stag);
+  }
+}
+
+enum TerrariumPurpose {
+  general,
+  breeding;
+
+  String get label => switch (this) {
+        TerrariumPurpose.general => 'General',
+        TerrariumPurpose.breeding => 'Breeding enclosure',
+      };
+
+  static TerrariumPurpose fromValue(String value) => TerrariumPurpose.values
+      .firstWhere((e) => e.name == value, orElse: () => TerrariumPurpose.general);
 }
 
 enum BeetleLifeStage {

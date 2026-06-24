@@ -16,157 +16,185 @@ class MoveException implements Exception {
 }
 
 class PlacementResult {
-  PlacementResult({required this.level, required this.positionInLevel});
+  PlacementResult({required this.level, required this.positionXCm});
   final int level;
-  final int positionInLevel;
+  final double positionXCm;
 }
 
-/// Scans the shelf's levels in order and returns the first slot with enough
-/// remaining width (and a tall-enough level) for a new terrarium. Throws
+/// Scans the shelf's levels in order and returns the first gap with enough
+/// remaining width (and a tall-enough level) for a new item. Throws
 /// [PlacementException] if nothing fits anywhere on the shelf.
 PlacementResult findAutoPlacement({
   required Shelf shelf,
   required double newFootprintWidthCm,
   required double newHeightCm,
-  required List<Terrarium> existingOnShelf,
+  required List<ShelfItem> existingOnShelf,
 }) {
   if (newHeightCm > shelf.levelHeightCm) {
-    throw PlacementException("Terrarium is too tall for this shelf's levels.");
+    throw PlacementException("Item is too tall for this shelf's levels.");
   }
 
   for (var level = 1; level <= shelf.levelCount; level++) {
-    final slots = slotsForLevel(existingOnShelf, level);
-    final usedWidth =
-        slots.fold<double>(0.0, (sum, slot) => sum + footprintWidthCm(slot[0]));
-    final remaining = shelf.lengthCm - usedWidth;
-    if (remaining >= newFootprintWidthCm) {
-      return PlacementResult(level: level, positionInLevel: slots.length);
+    final columns = columnsForLevel(existingOnShelf, level);
+    var cursor = 0.0;
+    for (final column in columns) {
+      final start = column.first.positionXCm!;
+      if (start - cursor >= newFootprintWidthCm) {
+        return PlacementResult(level: level, positionXCm: cursor);
+      }
+      final footprint =
+          column.map((i) => i.footprintCm).reduce((a, b) => a > b ? a : b);
+      cursor = start + footprint + minGapCm;
+    }
+    if (shelf.lengthCm - cursor >= newFootprintWidthCm) {
+      return PlacementResult(level: level, positionXCm: cursor);
     }
   }
 
   throw PlacementException('Not enough space on this shelf.');
 }
 
-/// A single terrarium's placement, as a plan to be written to the DB.
-class TerrariumPlacementUpdate {
-  TerrariumPlacementUpdate({
-    required this.terrariumId,
+/// A single item's placement, as a plan to be written to the DB. [kind]
+/// tells the caller whether to dispatch to updateTerrarium or updateTool.
+class ShelfPlacementUpdate {
+  ShelfPlacementUpdate({
+    required this.kind,
+    required this.id,
     required this.shelfId,
     required this.level,
-    required this.positionInLevel,
+    required this.positionXCm,
     required this.stackOrder,
   });
-  final int terrariumId;
+  final ShelfItemKind kind;
+  final int id;
   final int shelfId;
   final int level;
-  final int positionInLevel;
+  final double positionXCm;
   final int stackOrder;
 }
 
 /// Computes the full set of placement updates needed to move [moving] to
-/// (targetShelf, targetLevel, targetPositionInLevel), either inserting it as
-/// a new slot (shifting later slots in that level) or stacking it on top of
-/// whatever already occupies that slot. Throws [MoveException] (with
-/// *nothing* written by the caller) if the move is invalid - too tall, has
-/// stacked items on top of it, or doesn't fit after shifting.
+/// (targetShelf, targetLevel, targetPositionXCm), either inserting it as a
+/// new column (cascading a rightward-only shift to later columns if needed)
+/// or stacking it on top of [stackOnTarget]'s column. Throws [MoveException]
+/// (with *nothing* written by the caller) if the move is invalid — too tall,
+/// has items stacked on top of it, stacking would exceed the level height,
+/// or it doesn't fit even after cascading.
 ///
-/// [sourceShelfTerrariums] and [targetShelfTerrariums] are all terrariums
+/// [sourceShelfItems] and [targetShelfItems] are all terrariums+tools
 /// currently on [moving]'s current shelf and on the target shelf
 /// respectively (the same list, if it's the same shelf).
-List<TerrariumPlacementUpdate> planMove({
-  required Terrarium moving,
+List<ShelfPlacementUpdate> planMove({
+  required ShelfItem moving,
   required Shelf targetShelf,
   required int targetLevel,
-  required int targetPositionInLevel,
-  required bool stackOnTarget,
-  required List<Terrarium> sourceShelfTerrariums,
-  required List<Terrarium> targetShelfTerrariums,
+  required double targetPositionXCm,
+  ShelfItem? stackOnTarget,
+  required List<ShelfItem> sourceShelfItems,
+  required List<ShelfItem> targetShelfItems,
 }) {
-  if (moving.heightCm > targetShelf.levelHeightCm) {
-    throw MoveException("Terrarium is too tall for this shelf's levels.");
+  if (moving.itemHeightCm > targetShelf.levelHeightCm) {
+    throw MoveException("Item is too tall for this shelf's levels.");
   }
 
-  final stackAboveMoving = sourceShelfTerrariums.where((t) =>
-      t.id != moving.id &&
-      t.level == moving.level &&
-      t.positionInLevel == moving.positionInLevel &&
-      t.stackOrder! > moving.stackOrder!).toList();
+  bool isMoving(ShelfItem i) => i.id == moving.id && i.kind == moving.kind;
+
+  final stackAboveMoving = sourceShelfItems
+      .where((i) =>
+          !isMoving(i) &&
+          i.level == moving.level &&
+          i.positionXCm == moving.positionXCm &&
+          (i.stackOrder ?? 0) > (moving.stackOrder ?? 0))
+      .toList();
   if (stackAboveMoving.isNotEmpty) {
-    throw MoveException(
-        'Move the terrarium(s) stacked on top of this one first.');
+    throw MoveException('Move the item(s) stacked on top of this one first.');
   }
 
-  final movingWithinSameLevel =
-      moving.shelfId == targetShelf.id && moving.level == targetLevel;
+  final updates = <ShelfPlacementUpdate>[];
 
-  final updates = <TerrariumPlacementUpdate>[];
+  if (stackOnTarget != null) {
+    final column = columnsForLevel(targetShelfItems, targetLevel).firstWhere(
+        (col) => col.any(
+            (i) => i.id == stackOnTarget.id && i.kind == stackOnTarget.kind));
+    final existingStack = column.where((i) => !isMoving(i)).toList();
+    final stackHeight =
+        existingStack.fold<double>(0.0, (sum, i) => sum + i.itemHeightCm);
+    if (stackHeight + moving.itemHeightCm > targetShelf.levelHeightCm) {
+      throw MoveException('Stacking here would exceed the level height.');
+    }
 
-  if (stackOnTarget) {
-    final allSlots = slotsForLevel(targetShelfTerrariums, targetLevel);
-    final targetSlot = targetPositionInLevel < allSlots.length
-        ? allSlots[targetPositionInLevel]
-            .where((t) => t.id != moving.id)
-            .toList()
-        : <Terrarium>[];
-
-    updates.add(TerrariumPlacementUpdate(
-      terrariumId: moving.id,
+    updates.add(ShelfPlacementUpdate(
+      kind: moving.kind,
+      id: moving.id,
       shelfId: targetShelf.id,
       level: targetLevel,
-      positionInLevel: targetPositionInLevel,
-      stackOrder: targetSlot.length,
+      positionXCm: column.first.positionXCm!,
+      stackOrder: existingStack.length,
     ));
   } else {
-    var workingSlots = slotsForLevel(targetShelfTerrariums, targetLevel)
-        .map((slot) => slot.where((t) => t.id != moving.id).toList())
-        .where((slot) => slot.isNotEmpty)
+    final existingColumns = columnsForLevel(targetShelfItems, targetLevel)
+        .map((col) => col.where((i) => !isMoving(i)).toList())
+        .where((col) => col.isNotEmpty)
         .toList();
 
-    final insertIndex = targetPositionInLevel.clamp(0, workingSlots.length);
-    workingSlots.insert(insertIndex, [moving]);
+    var movingX = targetPositionXCm.clamp(
+        0.0,
+        (targetShelf.lengthCm - moving.footprintCm)
+            .clamp(0.0, targetShelf.lengthCm));
 
-    final totalWidth = workingSlots.fold<double>(
-        0.0, (sum, slot) => sum + footprintWidthCm(slot[0]));
-    if (totalWidth > targetShelf.lengthCm) {
-      throw MoveException('Not enough space on this level.');
+    var insertIndex = existingColumns.length;
+    for (var i = 0; i < existingColumns.length; i++) {
+      if (movingX < existingColumns[i].first.positionXCm!) {
+        insertIndex = i;
+        break;
+      }
     }
 
-    for (var i = 0; i < workingSlots.length; i++) {
-      final slot = workingSlots[i];
-      for (var j = 0; j < slot.length; j++) {
-        updates.add(TerrariumPlacementUpdate(
-          terrariumId: slot[j].id,
+    if (insertIndex > 0) {
+      final prev = existingColumns[insertIndex - 1];
+      final prevFootprint =
+          prev.map((i) => i.footprintCm).reduce((a, b) => a > b ? a : b);
+      final prevEnd = prev.first.positionXCm! + prevFootprint;
+      if (movingX < prevEnd + minGapCm) movingX = prevEnd + minGapCm;
+    }
+
+    updates.add(ShelfPlacementUpdate(
+      kind: moving.kind,
+      id: moving.id,
+      shelfId: targetShelf.id,
+      level: targetLevel,
+      positionXCm: movingX,
+      stackOrder: 0,
+    ));
+
+    // Cascade a rightward-only shift to any later column the moving item's
+    // new footprint now overlaps. No leftward compaction happens here, by
+    // design — repeated drops into a crowded area can only grow total used
+    // width over time; the user can drag items left to reclaim space.
+    var lastEnd = movingX + moving.footprintCm;
+    var cursor = lastEnd + minGapCm;
+    for (var i = insertIndex; i < existingColumns.length; i++) {
+      final col = existingColumns[i];
+      final colX = col.first.positionXCm!;
+      if (colX >= cursor) break;
+      final colFootprint =
+          col.map((it) => it.footprintCm).reduce((a, b) => a > b ? a : b);
+      for (final item in col) {
+        updates.add(ShelfPlacementUpdate(
+          kind: item.kind,
+          id: item.id,
           shelfId: targetShelf.id,
           level: targetLevel,
-          positionInLevel: i,
-          stackOrder: j,
+          positionXCm: cursor,
+          stackOrder: item.stackOrder ?? 0,
         ));
       }
+      lastEnd = cursor + colFootprint;
+      cursor = lastEnd + minGapCm;
     }
-  }
 
-  // If the source slot is now empty and it's a different level/shelf than
-  // the target, compact the old level's remaining slots to stay contiguous.
-  if (!movingWithinSameLevel) {
-    final oldLevelSlots = slotsForLevel(sourceShelfTerrariums, moving.level!)
-        .map((slot) => slot.where((t) => t.id != moving.id).toList())
-        .where((slot) => slot.isNotEmpty)
-        .toList();
-    for (var i = 0; i < oldLevelSlots.length; i++) {
-      final slot = oldLevelSlots[i];
-      for (var j = 0; j < slot.length; j++) {
-        // Skip if this terrarium is already part of the target-level updates
-        // (shouldn't happen since old level != target level here, but guard
-        // against duplicate entries just in case of bad input).
-        if (updates.any((u) => u.terrariumId == slot[j].id)) continue;
-        updates.add(TerrariumPlacementUpdate(
-          terrariumId: slot[j].id,
-          shelfId: moving.shelfId!,
-          level: moving.level!,
-          positionInLevel: i,
-          stackOrder: j,
-        ));
-      }
+    if (lastEnd > targetShelf.lengthCm) {
+      throw MoveException('Not enough space on this level.');
     }
   }
 

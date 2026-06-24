@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../data/database.dart';
 import '../models/enums.dart';
 import '../models/lineage_utils.dart';
+import '../models/replenish.dart';
 import '../widgets/specimen_avatar.dart';
 import 'lineage_screen.dart';
 import 'specimen_form_screen.dart';
@@ -78,6 +80,10 @@ class SpecimenDetailScreen extends StatelessWidget {
                           child: SpecimenAvatar(
                             iconType: SpecimenIconType.fromValue(
                                 specimen.speciesIconKey),
+                            beetleFamily:
+                                BeetleFamily.fromValue(specimen.beetleFamily),
+                            lifeStage:
+                                BeetleLifeStage.fromValue(specimen.lifeStage),
                             radius: 56,
                           ),
                         ),
@@ -184,6 +190,57 @@ class SpecimenDetailScreen extends StatelessWidget {
                             icon: const Icon(Icons.account_tree_outlined),
                             label: const Text('View family tree'),
                           ),
+                          if (specimen.replenishIntervalDays != null) ...[
+                            const SizedBox(height: 24),
+                            Text('Replenish',
+                                style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 8),
+                            if (specimen.lastReplenishedAt == null)
+                              FilledButton.tonalIcon(
+                                onPressed: () => db.updateSpecimen(
+                                    specimen.copyWith(
+                                        lastReplenishedAt:
+                                            Value(DateTime.now()))),
+                                icon: const Icon(Icons.water_drop_outlined),
+                                label: const Text(
+                                    'Start tracking (mark replenished today)'),
+                              )
+                            else
+                              Builder(builder: (context) {
+                                final daysLeft = replenishDaysLeft(specimen);
+                                final due = daysLeft <= 0;
+                                return Wrap(
+                                  spacing: 12,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Chip(
+                                      avatar: Icon(
+                                          due
+                                              ? Icons.warning_amber
+                                              : Icons.water_drop_outlined,
+                                          size: 16),
+                                      backgroundColor: due
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .errorContainer
+                                          : null,
+                                      label: Text(due
+                                          ? 'Replenish now!'
+                                          : '$daysLeft day${daysLeft == 1 ? '' : 's'} left'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => db.updateSpecimen(
+                                          specimen.copyWith(
+                                              lastReplenishedAt:
+                                                  Value(DateTime.now()))),
+                                      child:
+                                          const Text('Mark replenished today'),
+                                    ),
+                                  ],
+                                );
+                              }),
+                          ],
                           if (specimen.notes?.isNotEmpty ?? false) ...[
                             const SizedBox(height: 24),
                             Text('Notes',
@@ -225,6 +282,8 @@ class SpecimenDetailScreen extends StatelessWidget {
               child: ListTile(
                 leading: SpecimenAvatar(
                   iconType: SpecimenIconType.fromValue(r.speciesIconKey),
+                  beetleFamily: BeetleFamily.fromValue(r.beetleFamily),
+                  lifeStage: BeetleLifeStage.fromValue(r.lifeStage),
                   radius: 18),
                 title: Text(r.name?.isNotEmpty == true ? r.name! : r.species),
                 subtitle: Text(r.species),

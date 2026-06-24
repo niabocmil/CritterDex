@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 enum AppThemeChoice {
   lightBlue,
-  darkGreen;
+  darkGreen,
+  custom;
 
   String get label => switch (this) {
         AppThemeChoice.lightBlue => 'Light (white & blue)',
         AppThemeChoice.darkGreen => 'Dark (black & green)',
+        AppThemeChoice.custom => 'Custom',
       };
 
   static AppThemeChoice fromValue(String value) => AppThemeChoice.values
@@ -19,7 +21,12 @@ class AppTheme {
   static ThemeData themeFor(AppThemeChoice choice) => switch (choice) {
         AppThemeChoice.lightBlue => _build(_lightBlueScheme),
         AppThemeChoice.darkGreen => _build(_darkGreenScheme),
+        AppThemeChoice.custom => _build(_lightBlueScheme),
       };
+
+  /// Shared entry point for any [ColorScheme] (preset or custom-seeded) so
+  /// every theme — built-in or user-chosen — goes through the same styling.
+  static ThemeData themeForScheme(ColorScheme scheme) => _build(scheme);
 
   static final ColorScheme _lightBlueScheme = ColorScheme.fromSeed(
     seedColor: Colors.blue,

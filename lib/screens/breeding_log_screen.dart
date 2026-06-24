@@ -138,6 +138,10 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                               ? SpecimenIconType.other
                               : SpecimenIconType.fromValue(
                                   mother.speciesIconKey),
+                          beetleFamily:
+                              BeetleFamily.fromValue(mother?.beetleFamily),
+                          lifeStage:
+                              BeetleLifeStage.fromValue(mother?.lifeStage),
                           radius: 26),
                       const SizedBox(width: 8),
                       Icon(Icons.favorite,
@@ -148,6 +152,10 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                               ? SpecimenIconType.other
                               : SpecimenIconType.fromValue(
                                   father.speciesIconKey),
+                          beetleFamily:
+                              BeetleFamily.fromValue(father?.beetleFamily),
+                          lifeStage:
+                              BeetleLifeStage.fromValue(father?.lifeStage),
                           radius: 26),
                       const SizedBox(width: 14),
                       Expanded(

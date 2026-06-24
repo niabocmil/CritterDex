@@ -79,6 +79,10 @@ class BreedingListScreen extends StatelessWidget {
                                     ? SpecimenIconType.other
                                     : SpecimenIconType.fromValue(
                                         mother.speciesIconKey),
+                                beetleFamily: BeetleFamily.fromValue(
+                                    mother?.beetleFamily),
+                                lifeStage: BeetleLifeStage.fromValue(
+                                    mother?.lifeStage),
                                 radius: 22),
                             const SizedBox(width: 4),
                             Icon(Icons.favorite,
@@ -90,6 +94,10 @@ class BreedingListScreen extends StatelessWidget {
                                     ? SpecimenIconType.other
                                     : SpecimenIconType.fromValue(
                                         father.speciesIconKey),
+                                beetleFamily: BeetleFamily.fromValue(
+                                    father?.beetleFamily),
+                                lifeStage: BeetleLifeStage.fromValue(
+                                    father?.lifeStage),
                                 radius: 22),
                             const SizedBox(width: 14),
                             Expanded(

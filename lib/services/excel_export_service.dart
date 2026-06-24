@@ -29,6 +29,9 @@ class ExcelExportService {
       TextCellValue('Sex'),
       TextCellValue('Status'),
       TextCellValue('Life stage'),
+      TextCellValue('Beetle family'),
+      TextCellValue('Replenish interval (days)'),
+      TextCellValue('Last replenished'),
       TextCellValue('Weight (g)'),
       TextCellValue('Size (cm)'),
       TextCellValue('Date of birth'),
@@ -42,6 +45,12 @@ class ExcelExportService {
         TextCellValue(SpecimenSex.fromValue(s.sex).label),
         TextCellValue(SpecimenStatus.fromValue(s.status).label),
         TextCellValue(s.lifeStage ?? ''),
+        TextCellValue(BeetleFamily.fromValue(s.beetleFamily)?.label ?? ''),
+        if (s.replenishIntervalDays != null)
+          IntCellValue(s.replenishIntervalDays!)
+        else
+          TextCellValue(''),
+        TextCellValue(s.lastReplenishedAt?.toIso8601String() ?? ''),
         if (s.weightGrams != null)
           DoubleCellValue(s.weightGrams!)
         else

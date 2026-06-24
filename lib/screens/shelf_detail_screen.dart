@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/database.dart';
+import '../models/enums.dart';
+import '../models/replenish.dart';
 import '../models/terrarium_layout.dart';
 import '../models/terrarium_placement.dart';
 import '../widgets/shelf_visualization.dart';
 import '../widgets/specimen_avatar.dart';
-import '../models/enums.dart';
 import 'shelf_form_screen.dart';
 import 'specimen_detail_screen.dart';
+import 'specimen_form_screen.dart';
 import 'terrarium_form_screen.dart';
+import 'tool_form_screen.dart';
 
 class ShelfDetailScreen extends StatelessWidget {
   const ShelfDetailScreen({super.key, required this.shelfId});
@@ -20,32 +23,47 @@ class ShelfDetailScreen extends StatelessWidget {
   Future<void> _handleMove(
     BuildContext context,
     Shelf shelf,
-    List<Terrarium> all, {
-    required Terrarium moving,
+    List<Terrarium> terrariums,
+    List<Tool> tools, {
+    required ShelfItem moving,
     required int targetLevel,
-    required int targetPositionInLevel,
-    required bool stackOnTarget,
+    required double targetPositionXCm,
+    ShelfItem? stackOnTarget,
   }) async {
     final db = context.read<AppDatabase>();
+    final allItems = <ShelfItem>[
+      ...terrariums.map(TerrariumShelfItem.new),
+      ...tools.map(ToolShelfItem.new),
+    ];
     try {
       final updates = planMove(
         moving: moving,
         targetShelf: shelf,
         targetLevel: targetLevel,
-        targetPositionInLevel: targetPositionInLevel,
+        targetPositionXCm: targetPositionXCm,
         stackOnTarget: stackOnTarget,
-        sourceShelfTerrariums: all,
-        targetShelfTerrariums: all,
+        sourceShelfItems: allItems,
+        targetShelfItems: allItems,
       );
       await db.transaction(() async {
         for (final u in updates) {
-          final t = all.firstWhere((t) => t.id == u.terrariumId);
-          await db.updateTerrarium(t.copyWith(
-            shelfId: drift.Value(u.shelfId),
-            level: drift.Value(u.level),
-            positionInLevel: drift.Value(u.positionInLevel),
-            stackOrder: drift.Value(u.stackOrder),
-          ));
+          if (u.kind == ShelfItemKind.terrarium) {
+            final t = terrariums.firstWhere((t) => t.id == u.id);
+            await db.updateTerrarium(t.copyWith(
+              shelfId: drift.Value(u.shelfId),
+              level: drift.Value(u.level),
+              positionXCm: drift.Value(u.positionXCm),
+              stackOrder: drift.Value(u.stackOrder),
+            ));
+          } else {
+            final tool = tools.firstWhere((t) => t.id == u.id);
+            await db.updateTool(tool.copyWith(
+              shelfId: u.shelfId,
+              level: u.level,
+              positionXCm: u.positionXCm,
+              stackOrder: u.stackOrder,
+            ));
+          }
         }
       });
     } on MoveException catch (e) {
@@ -56,8 +74,8 @@ class ShelfDetailScreen extends StatelessWidget {
     }
   }
 
-  void _showTerrariumSheet(
-      BuildContext context, Shelf shelf, Terrarium terrarium) {
+  void _showTerrariumSheet(BuildContext context, Shelf shelf,
+      Terrarium terrarium, List<ShelfItem> allOnShelf) {
     final db = context.read<AppDatabase>();
     showModalBottomSheet(
       context: context,
@@ -73,42 +91,125 @@ class ShelfDetailScreen extends StatelessWidget {
               stream: db.watchSpecimensForTerrarium(terrarium.id),
               builder: (context, snapshot) {
                 final specimens = snapshot.data ?? const <Specimen>[];
+                if (specimens.isEmpty) {
+                  return ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      Text('Empty terrarium',
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.link),
+                        title: const Text('Assign existing specimen'),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showAssignSpecimenSheet(context, terrarium);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.add),
+                        title: const Text('Add new specimen'),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => SpecimenFormScreen(
+                                prefillTerrariumId: terrarium.id),
+                          ));
+                        },
+                      ),
+                    ],
+                  );
+                }
                 return ListView(
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   children: [
                     Text(
-                      labelFor(terrarium, shelf),
+                      labelFor(terrarium, shelf, allOnShelf),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 4),
                     Text(
                         '${terrarium.volumeLitres.toStringAsFixed(1)} L · ${terrarium.shape}'),
                     const Divider(height: 24),
-                    if (specimens.isEmpty)
-                      const Text('No specimens assigned to this terrarium.')
-                    else
-                      for (final s in specimens)
-                        ListTile(
-                          leading: SpecimenAvatar(
-                              iconType:
-                                  SpecimenIconType.fromValue(s.speciesIconKey)),
-                          title: Text(s.name?.isNotEmpty == true ? s.name! : s.species),
-                          subtitle: Text([
-                            if (s.species.isNotEmpty) s.species,
-                            if (s.sizeCm != null)
-                              '${s.sizeCm!.toStringAsFixed(1)} cm',
-                            if (s.weightGrams != null)
-                              '${s.weightGrams!.toStringAsFixed(1)} g',
-                          ].join(' · ')),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) =>
-                                  SpecimenDetailScreen(specimenId: s.id),
-                            ));
-                          },
+                    for (final s in specimens)
+                      ListTile(
+                        leading: SpecimenAvatar(
+                          iconType: SpecimenIconType.fromValue(s.speciesIconKey),
+                          beetleFamily: BeetleFamily.fromValue(s.beetleFamily),
+                          lifeStage: BeetleLifeStage.fromValue(s.lifeStage),
                         ),
+                        title: Text(s.name?.isNotEmpty == true ? s.name! : s.species),
+                        subtitle: Text([
+                          if (s.species.isNotEmpty) s.species,
+                          if (s.sizeCm != null)
+                            '${s.sizeCm!.toStringAsFixed(1)} cm',
+                          if (s.weightGrams != null)
+                            '${s.weightGrams!.toStringAsFixed(1)} g',
+                        ].join(' · ')),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) =>
+                                SpecimenDetailScreen(specimenId: s.id),
+                          ));
+                        },
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAssignSpecimenSheet(BuildContext context, Terrarium terrarium) {
+    final db = context.read<AppDatabase>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            return FutureBuilder<List<Specimen>>(
+              future: db.getAllSpecimens(),
+              builder: (context, snapshot) {
+                final unassigned = (snapshot.data ?? const [])
+                    .where((s) => s.terrariumId == null)
+                    .toList();
+                if (unassigned.isEmpty) {
+                  return const Center(
+                      child: Text('No unassigned specimens available.'));
+                }
+                return ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Text('Assign a specimen',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    for (final s in unassigned)
+                      ListTile(
+                        leading: SpecimenAvatar(
+                          iconType: SpecimenIconType.fromValue(s.speciesIconKey),
+                          beetleFamily: BeetleFamily.fromValue(s.beetleFamily),
+                          lifeStage: BeetleLifeStage.fromValue(s.lifeStage),
+                        ),
+                        title: Text(s.name?.isNotEmpty == true ? s.name! : s.species),
+                        subtitle: Text(s.species),
+                        onTap: () async {
+                          await db.updateSpecimen(
+                              s.copyWith(terrariumId: drift.Value(terrarium.id)));
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                      ),
                   ],
                 );
               },
@@ -144,33 +245,127 @@ class ShelfDetailScreen extends StatelessWidget {
           ),
           body: StreamBuilder<List<Terrarium>>(
             stream: db.watchTerrariumsForShelf(shelfId),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
+            builder: (context, terrariumSnapshot) {
+              if (!terrariumSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              final terrariums = snapshot.data!;
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: ShelfVisualization(
-                  shelf: shelf,
-                  terrariums: terrariums,
-                  onMove: ({
-                    required moving,
-                    required targetLevel,
-                    required targetPositionInLevel,
-                    required stackOnTarget,
-                  }) =>
-                      _handleMove(
-                    context,
-                    shelf,
-                    terrariums,
-                    moving: moving,
-                    targetLevel: targetLevel,
-                    targetPositionInLevel: targetPositionInLevel,
-                    stackOnTarget: stackOnTarget,
-                  ),
-                  onTapTerrarium: (t) => _showTerrariumSheet(context, shelf, t),
-                ),
+              final terrariums = terrariumSnapshot.data!;
+              return StreamBuilder<List<Tool>>(
+                stream: db.watchToolsForShelf(shelfId),
+                builder: (context, toolSnapshot) {
+                  final tools = toolSnapshot.data ?? const <Tool>[];
+                  return StreamBuilder<List<Specimen>>(
+                    stream: db.watchSpecimensForShelf(shelfId),
+                    builder: (context, specimenSnapshot) {
+                      final specimens =
+                          specimenSnapshot.data ?? const <Specimen>[];
+                      final specimensByTerrariumId = <int, List<Specimen>>{};
+                      for (final s in specimens) {
+                        specimensByTerrariumId
+                            .putIfAbsent(s.terrariumId!, () => [])
+                            .add(s);
+                      }
+                      final allOnShelf = <ShelfItem>[
+                        ...terrariums.map(TerrariumShelfItem.new),
+                        ...tools.map(ToolShelfItem.new),
+                      ];
+                      final replenishDueCount =
+                          specimens.where(isReplenishDue).length;
+                      final usedLengthCm = terrariums.fold<double>(
+                              0.0, (sum, t) => sum + footprintWidthCm(t)) +
+                          tools.fold<double>(0.0, (sum, t) => sum + t.lengthCm);
+                      final totalLengthCm = shelf.lengthCm * shelf.levelCount;
+                      final occupiedFraction = totalLengthCm == 0
+                          ? 0.0
+                          : (usedLengthCm / totalLengthCm).clamp(0.0, 1.0);
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Space occupied',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall),
+                                        Text(
+                                            '${(occupiedFraction * 100).toStringAsFixed(0)}%'),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                          value: occupiedFraction,
+                                          minHeight: 8),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 8,
+                                      children: [
+                                        Text(
+                                            '${terrariums.length} terrarium(s) in use'),
+                                        if (replenishDueCount > 0)
+                                          Text(
+                                            '$replenishDueCount need${replenishDueCount == 1 ? 's' : ''} replenishing today',
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error,
+                                                fontWeight: FontWeight.w600),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            ShelfVisualization(
+                              shelf: shelf,
+                              terrariums: terrariums,
+                              tools: tools,
+                              specimensByTerrariumId: specimensByTerrariumId,
+                              onMove: ({
+                                required moving,
+                                required targetLevel,
+                                required targetPositionXCm,
+                                stackOnTarget,
+                              }) =>
+                                  _handleMove(
+                                context,
+                                shelf,
+                                terrariums,
+                                tools,
+                                moving: moving,
+                                targetLevel: targetLevel,
+                                targetPositionXCm: targetPositionXCm,
+                                stackOnTarget: stackOnTarget,
+                              ),
+                              onTapTerrarium: (t) => _showTerrariumSheet(
+                                  context, shelf, t, allOnShelf),
+                              onTapTool: (tool) => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          ToolFormScreen(existing: tool))),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
               );
             },
           ),

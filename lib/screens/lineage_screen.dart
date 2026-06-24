@@ -141,6 +141,8 @@ class _LineageNodeCard extends StatelessWidget {
           children: [
             SpecimenAvatar(
                 iconType: SpecimenIconType.fromValue(specimen.speciesIconKey),
+                beetleFamily: BeetleFamily.fromValue(specimen.beetleFamily),
+                lifeStage: BeetleLifeStage.fromValue(specimen.lifeStage),
                 radius: 22),
             const SizedBox(height: 6),
             Text(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/database.dart';
+import '../models/enums.dart';
 import '../models/terrarium_layout.dart';
 import '../models/terrarium_placement.dart';
 import 'terrarium_placement_picker_screen.dart';
@@ -32,6 +33,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
   final _locationController = TextEditingController();
 
   String _shape = 'rectangular';
+  TerrariumPurpose _purpose = TerrariumPurpose.general;
   _Placement _placement = _Placement.individual;
   int? _shelfId;
   bool _useAutoPlace = true;
@@ -53,6 +55,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
       _locationController.text = existing.location ?? '';
       _placement = existing.shelfId == null ? _Placement.individual : _Placement.shelf;
       _shelfId = existing.shelfId;
+      _purpose = TerrariumPurpose.fromValue(existing.purpose);
     } else if (widget.preselectedShelfId != null) {
       _placement = _Placement.shelf;
       _shelfId = widget.preselectedShelfId;
@@ -120,8 +123,9 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             volumeLitres: volume,
             shelfId: const Value(null),
             level: const Value(null),
-            positionInLevel: const Value(null),
+            positionXCm: const Value(null),
             stackOrder: const Value(null),
+            purpose: _purpose.name,
             location: Value(_locationController.text.trim().isEmpty
                 ? null
                 : _locationController.text.trim()),
@@ -137,6 +141,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             diameterCm: Value(diameter),
             heightCm: height,
             volumeLitres: volume,
+            purpose: Value(_purpose.name),
             location: Value(_locationController.text.trim().isEmpty
                 ? null
                 : _locationController.text.trim()),
@@ -151,12 +156,17 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
           return;
         }
         final shelf = await db.getShelfById(shelfId);
-        final existingOnShelf = (await db.getTerrariumsForShelf(shelfId))
+        final existingTerrariums = (await db.getTerrariumsForShelf(shelfId))
             .where((t) => t.id != widget.existing?.id)
             .toList();
+        final existingTools = await db.getToolsForShelf(shelfId);
+        final existingOnShelf = <ShelfItem>[
+          ...existingTerrariums.map(TerrariumShelfItem.new),
+          ...existingTools.map(ToolShelfItem.new),
+        ];
 
         int level;
-        int positionInLevel;
+        double positionXCm;
         int stackOrder;
         if (_useAutoPlace) {
           try {
@@ -167,7 +177,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
               existingOnShelf: existingOnShelf,
             );
             level = placement.level;
-            positionInLevel = placement.positionInLevel;
+            positionXCm = placement.positionXCm;
             stackOrder = 0;
           } on PlacementException catch (e) {
             if (mounted) {
@@ -184,15 +194,15 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             return;
           }
           level = choice.level;
-          if (choice.stackOnTarget) {
-            final slots = slotsForLevel(existingOnShelf, level);
-            final slot = choice.positionInLevel < slots.length
-                ? slots[choice.positionInLevel]
-                : const [];
-            positionInLevel = choice.positionInLevel;
-            stackOrder = slot.length;
+          positionXCm = choice.positionXCm;
+          if (choice.stackOnTarget != null) {
+            final target = choice.stackOnTarget!;
+            final stackHeight = columnsForLevel(existingOnShelf, level)
+                .firstWhere((col) =>
+                    col.any((i) => i.id == target.id && i.kind == target.kind))
+                .length;
+            stackOrder = stackHeight;
           } else {
-            positionInLevel = choice.positionInLevel;
             stackOrder = 0;
           }
         }
@@ -207,8 +217,9 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             volumeLitres: volume,
             shelfId: Value(shelfId),
             level: Value(level),
-            positionInLevel: Value(positionInLevel),
+            positionXCm: Value(positionXCm),
             stackOrder: Value(stackOrder),
+            purpose: _purpose.name,
             location: const Value(null),
           ));
           if (mounted) Navigator.of(context).pop(widget.existing!.id);
@@ -222,8 +233,9 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             volumeLitres: volume,
             shelfId: Value(shelfId),
             level: Value(level),
-            positionInLevel: Value(positionInLevel),
+            positionXCm: Value(positionXCm),
             stackOrder: Value(stackOrder),
+            purpose: Value(_purpose.name),
           ));
           if (mounted) Navigator.of(context).pop(id);
         }
@@ -320,6 +332,16 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
                   .titleMedium
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 18),
+            Text('Purpose', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            SegmentedButton<TerrariumPurpose>(
+              segments: TerrariumPurpose.values
+                  .map((p) => ButtonSegment(value: p, label: Text(p.label)))
+                  .toList(),
+              selected: {_purpose},
+              onSelectionChanged: (s) => setState(() => _purpose = s.first),
+            ),
             const Divider(height: 32),
             Text('Placement', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
@@ -384,12 +406,24 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
                               : () async {
                                   final shelf =
                                       shelves.firstWhere((s) => s.id == _shelfId);
+                                  final height = double.tryParse(
+                                          _heightController.text.trim()) ??
+                                      0;
+                                  final footprint = _shape == 'cylinder'
+                                      ? double.tryParse(
+                                              _diameterController.text.trim()) ??
+                                          0
+                                      : double.tryParse(
+                                              _lengthController.text.trim()) ??
+                                          0;
                                   final result = await Navigator.of(context)
                                       .push<PlacementChoice>(
                                     MaterialPageRoute(
                                       builder: (_) =>
                                           TerrariumPlacementPickerScreen(
                                         shelf: shelf,
+                                        newFootprintWidthCm: footprint,
+                                        newHeightCm: height,
                                         excludeTerrariumId: widget.existing?.id,
                                       ),
                                     ),
@@ -401,8 +435,8 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
                           icon: const Icon(Icons.grid_view),
                           label: Text(_manualChoice == null
                               ? 'Choose position'
-                              : 'Level ${_manualChoice!.level}, '
-                                  '${_manualChoice!.stackOnTarget ? "stacked" : "slot ${_manualChoice!.positionInLevel + 1}"}'),
+                              : 'Level ${levelDisplayLabel(_manualChoice!.level)}, '
+                                  '${_manualChoice!.stackOnTarget != null ? "stacked" : "new column at ${_manualChoice!.positionXCm.toStringAsFixed(1)}cm"}'),
                         ),
                       ],
                     ],

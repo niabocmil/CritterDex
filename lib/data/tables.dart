@@ -11,6 +11,9 @@ class Specimens extends Table {
   RealColumn get weightGrams => real().nullable()();
   RealColumn get sizeCm => real().nullable()();
   TextColumn get lifeStage => text().nullable()();
+  TextColumn get beetleFamily => text().nullable()();
+  IntColumn get replenishIntervalDays => integer().nullable()();
+  DateTimeColumn get lastReplenishedAt => dateTime().nullable()();
   TextColumn get status => text().withDefault(const Constant('alive'))();
   TextColumn get notes => text().nullable()();
   TextColumn get photoPath => text().nullable()();
@@ -73,10 +76,31 @@ class Terrariums extends Table {
   RealColumn get volumeLitres => real()();
   IntColumn get shelfId => integer().nullable().references(Shelves, #id)();
   IntColumn get level => integer().nullable()();
+  // Legacy slot index from the v2 discrete slot-grid layout. No longer
+  // written by any code path — kept declared only so the one-time v3
+  // migration backfill can read it via the typed query API. Use
+  // [positionXCm] for all placement going forward.
   IntColumn get positionInLevel => integer().nullable()();
+  RealColumn get positionXCm => real().nullable()();
   IntColumn get stackOrder => integer().nullable()();
   TextColumn get location => text().nullable()();
   IntColumn get individualSequence => integer().nullable()();
+  TextColumn get purpose => text().withDefault(const Constant('general'))();
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('Tool')
+class Tools extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  RealColumn get lengthCm => real()();
+  RealColumn get heightCm => real()();
+  IntColumn get colorArgb => integer()();
+  IntColumn get shelfId => integer().references(Shelves, #id)();
+  IntColumn get level => integer()();
+  RealColumn get positionXCm => real()();
+  IntColumn get stackOrder => integer()();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
 }

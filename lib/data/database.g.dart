@@ -574,6 +574,17 @@ class $TerrariumsTable extends Terrariums
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _positionXCmMeta = const VerificationMeta(
+    'positionXCm',
+  );
+  @override
+  late final GeneratedColumn<double> positionXCm = GeneratedColumn<double>(
+    'position_x_cm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _stackOrderMeta = const VerificationMeta(
     'stackOrder',
   );
@@ -606,6 +617,18 @@ class $TerrariumsTable extends Terrariums
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _purposeMeta = const VerificationMeta(
+    'purpose',
+  );
+  @override
+  late final GeneratedColumn<String> purpose = GeneratedColumn<String>(
+    'purpose',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('general'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -630,9 +653,11 @@ class $TerrariumsTable extends Terrariums
     shelfId,
     level,
     positionInLevel,
+    positionXCm,
     stackOrder,
     location,
     individualSequence,
+    purpose,
     createdAt,
   ];
   @override
@@ -716,6 +741,15 @@ class $TerrariumsTable extends Terrariums
         ),
       );
     }
+    if (data.containsKey('position_x_cm')) {
+      context.handle(
+        _positionXCmMeta,
+        positionXCm.isAcceptableOrUnknown(
+          data['position_x_cm']!,
+          _positionXCmMeta,
+        ),
+      );
+    }
     if (data.containsKey('stack_order')) {
       context.handle(
         _stackOrderMeta,
@@ -735,6 +769,12 @@ class $TerrariumsTable extends Terrariums
           data['individual_sequence']!,
           _individualSequenceMeta,
         ),
+      );
+    }
+    if (data.containsKey('purpose')) {
+      context.handle(
+        _purposeMeta,
+        purpose.isAcceptableOrUnknown(data['purpose']!, _purposeMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -792,6 +832,10 @@ class $TerrariumsTable extends Terrariums
         DriftSqlType.int,
         data['${effectivePrefix}position_in_level'],
       ),
+      positionXCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}position_x_cm'],
+      ),
       stackOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}stack_order'],
@@ -804,6 +848,10 @@ class $TerrariumsTable extends Terrariums
         DriftSqlType.int,
         data['${effectivePrefix}individual_sequence'],
       ),
+      purpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}purpose'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -828,9 +876,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
   final int? shelfId;
   final int? level;
   final int? positionInLevel;
+  final double? positionXCm;
   final int? stackOrder;
   final String? location;
   final int? individualSequence;
+  final String purpose;
   final DateTime createdAt;
   const Terrarium({
     required this.id,
@@ -843,9 +893,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     this.shelfId,
     this.level,
     this.positionInLevel,
+    this.positionXCm,
     this.stackOrder,
     this.location,
     this.individualSequence,
+    required this.purpose,
     required this.createdAt,
   });
   @override
@@ -873,6 +925,9 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     if (!nullToAbsent || positionInLevel != null) {
       map['position_in_level'] = Variable<int>(positionInLevel);
     }
+    if (!nullToAbsent || positionXCm != null) {
+      map['position_x_cm'] = Variable<double>(positionXCm);
+    }
     if (!nullToAbsent || stackOrder != null) {
       map['stack_order'] = Variable<int>(stackOrder);
     }
@@ -882,6 +937,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     if (!nullToAbsent || individualSequence != null) {
       map['individual_sequence'] = Variable<int>(individualSequence);
     }
+    map['purpose'] = Variable<String>(purpose);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -910,6 +966,9 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       positionInLevel: positionInLevel == null && nullToAbsent
           ? const Value.absent()
           : Value(positionInLevel),
+      positionXCm: positionXCm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(positionXCm),
       stackOrder: stackOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(stackOrder),
@@ -919,6 +978,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       individualSequence: individualSequence == null && nullToAbsent
           ? const Value.absent()
           : Value(individualSequence),
+      purpose: Value(purpose),
       createdAt: Value(createdAt),
     );
   }
@@ -939,9 +999,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       shelfId: serializer.fromJson<int?>(json['shelfId']),
       level: serializer.fromJson<int?>(json['level']),
       positionInLevel: serializer.fromJson<int?>(json['positionInLevel']),
+      positionXCm: serializer.fromJson<double?>(json['positionXCm']),
       stackOrder: serializer.fromJson<int?>(json['stackOrder']),
       location: serializer.fromJson<String?>(json['location']),
       individualSequence: serializer.fromJson<int?>(json['individualSequence']),
+      purpose: serializer.fromJson<String>(json['purpose']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -959,9 +1021,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       'shelfId': serializer.toJson<int?>(shelfId),
       'level': serializer.toJson<int?>(level),
       'positionInLevel': serializer.toJson<int?>(positionInLevel),
+      'positionXCm': serializer.toJson<double?>(positionXCm),
       'stackOrder': serializer.toJson<int?>(stackOrder),
       'location': serializer.toJson<String?>(location),
       'individualSequence': serializer.toJson<int?>(individualSequence),
+      'purpose': serializer.toJson<String>(purpose),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -977,9 +1041,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     Value<int?> shelfId = const Value.absent(),
     Value<int?> level = const Value.absent(),
     Value<int?> positionInLevel = const Value.absent(),
+    Value<double?> positionXCm = const Value.absent(),
     Value<int?> stackOrder = const Value.absent(),
     Value<String?> location = const Value.absent(),
     Value<int?> individualSequence = const Value.absent(),
+    String? purpose,
     DateTime? createdAt,
   }) => Terrarium(
     id: id ?? this.id,
@@ -994,11 +1060,13 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     positionInLevel: positionInLevel.present
         ? positionInLevel.value
         : this.positionInLevel,
+    positionXCm: positionXCm.present ? positionXCm.value : this.positionXCm,
     stackOrder: stackOrder.present ? stackOrder.value : this.stackOrder,
     location: location.present ? location.value : this.location,
     individualSequence: individualSequence.present
         ? individualSequence.value
         : this.individualSequence,
+    purpose: purpose ?? this.purpose,
     createdAt: createdAt ?? this.createdAt,
   );
   Terrarium copyWithCompanion(TerrariumsCompanion data) {
@@ -1019,6 +1087,9 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       positionInLevel: data.positionInLevel.present
           ? data.positionInLevel.value
           : this.positionInLevel,
+      positionXCm: data.positionXCm.present
+          ? data.positionXCm.value
+          : this.positionXCm,
       stackOrder: data.stackOrder.present
           ? data.stackOrder.value
           : this.stackOrder,
@@ -1026,6 +1097,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       individualSequence: data.individualSequence.present
           ? data.individualSequence.value
           : this.individualSequence,
+      purpose: data.purpose.present ? data.purpose.value : this.purpose,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1043,9 +1115,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           ..write('shelfId: $shelfId, ')
           ..write('level: $level, ')
           ..write('positionInLevel: $positionInLevel, ')
+          ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
+          ..write('purpose: $purpose, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1063,9 +1137,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     shelfId,
     level,
     positionInLevel,
+    positionXCm,
     stackOrder,
     location,
     individualSequence,
+    purpose,
     createdAt,
   );
   @override
@@ -1082,9 +1158,11 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           other.shelfId == this.shelfId &&
           other.level == this.level &&
           other.positionInLevel == this.positionInLevel &&
+          other.positionXCm == this.positionXCm &&
           other.stackOrder == this.stackOrder &&
           other.location == this.location &&
           other.individualSequence == this.individualSequence &&
+          other.purpose == this.purpose &&
           other.createdAt == this.createdAt);
 }
 
@@ -1099,9 +1177,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
   final Value<int?> shelfId;
   final Value<int?> level;
   final Value<int?> positionInLevel;
+  final Value<double?> positionXCm;
   final Value<int?> stackOrder;
   final Value<String?> location;
   final Value<int?> individualSequence;
+  final Value<String> purpose;
   final Value<DateTime> createdAt;
   const TerrariumsCompanion({
     this.id = const Value.absent(),
@@ -1114,9 +1194,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.shelfId = const Value.absent(),
     this.level = const Value.absent(),
     this.positionInLevel = const Value.absent(),
+    this.positionXCm = const Value.absent(),
     this.stackOrder = const Value.absent(),
     this.location = const Value.absent(),
     this.individualSequence = const Value.absent(),
+    this.purpose = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TerrariumsCompanion.insert({
@@ -1130,9 +1212,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.shelfId = const Value.absent(),
     this.level = const Value.absent(),
     this.positionInLevel = const Value.absent(),
+    this.positionXCm = const Value.absent(),
     this.stackOrder = const Value.absent(),
     this.location = const Value.absent(),
     this.individualSequence = const Value.absent(),
+    this.purpose = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : shape = Value(shape),
        heightCm = Value(heightCm),
@@ -1148,9 +1232,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Expression<int>? shelfId,
     Expression<int>? level,
     Expression<int>? positionInLevel,
+    Expression<double>? positionXCm,
     Expression<int>? stackOrder,
     Expression<String>? location,
     Expression<int>? individualSequence,
+    Expression<String>? purpose,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1164,9 +1250,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       if (shelfId != null) 'shelf_id': shelfId,
       if (level != null) 'level': level,
       if (positionInLevel != null) 'position_in_level': positionInLevel,
+      if (positionXCm != null) 'position_x_cm': positionXCm,
       if (stackOrder != null) 'stack_order': stackOrder,
       if (location != null) 'location': location,
       if (individualSequence != null) 'individual_sequence': individualSequence,
+      if (purpose != null) 'purpose': purpose,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1182,9 +1270,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Value<int?>? shelfId,
     Value<int?>? level,
     Value<int?>? positionInLevel,
+    Value<double?>? positionXCm,
     Value<int?>? stackOrder,
     Value<String?>? location,
     Value<int?>? individualSequence,
+    Value<String>? purpose,
     Value<DateTime>? createdAt,
   }) {
     return TerrariumsCompanion(
@@ -1198,9 +1288,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       shelfId: shelfId ?? this.shelfId,
       level: level ?? this.level,
       positionInLevel: positionInLevel ?? this.positionInLevel,
+      positionXCm: positionXCm ?? this.positionXCm,
       stackOrder: stackOrder ?? this.stackOrder,
       location: location ?? this.location,
       individualSequence: individualSequence ?? this.individualSequence,
+      purpose: purpose ?? this.purpose,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1238,6 +1330,9 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     if (positionInLevel.present) {
       map['position_in_level'] = Variable<int>(positionInLevel.value);
     }
+    if (positionXCm.present) {
+      map['position_x_cm'] = Variable<double>(positionXCm.value);
+    }
     if (stackOrder.present) {
       map['stack_order'] = Variable<int>(stackOrder.value);
     }
@@ -1246,6 +1341,9 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     }
     if (individualSequence.present) {
       map['individual_sequence'] = Variable<int>(individualSequence.value);
+    }
+    if (purpose.present) {
+      map['purpose'] = Variable<String>(purpose.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1266,9 +1364,11 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
           ..write('shelfId: $shelfId, ')
           ..write('level: $level, ')
           ..write('positionInLevel: $positionInLevel, ')
+          ..write('positionXCm: $positionXCm, ')
           ..write('stackOrder: $stackOrder, ')
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
+          ..write('purpose: $purpose, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1389,6 +1489,39 @@ class $SpecimensTable extends Specimens
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _beetleFamilyMeta = const VerificationMeta(
+    'beetleFamily',
+  );
+  @override
+  late final GeneratedColumn<String> beetleFamily = GeneratedColumn<String>(
+    'beetle_family',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _replenishIntervalDaysMeta =
+      const VerificationMeta('replenishIntervalDays');
+  @override
+  late final GeneratedColumn<int> replenishIntervalDays = GeneratedColumn<int>(
+    'replenish_interval_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastReplenishedAtMeta = const VerificationMeta(
+    'lastReplenishedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReplenishedAt =
+      GeneratedColumn<DateTime>(
+        'last_replenished_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1495,6 +1628,9 @@ class $SpecimensTable extends Specimens
     weightGrams,
     sizeCm,
     lifeStage,
+    beetleFamily,
+    replenishIntervalDays,
+    lastReplenishedAt,
     status,
     notes,
     photoPath,
@@ -1585,6 +1721,33 @@ class $SpecimensTable extends Specimens
       context.handle(
         _lifeStageMeta,
         lifeStage.isAcceptableOrUnknown(data['life_stage']!, _lifeStageMeta),
+      );
+    }
+    if (data.containsKey('beetle_family')) {
+      context.handle(
+        _beetleFamilyMeta,
+        beetleFamily.isAcceptableOrUnknown(
+          data['beetle_family']!,
+          _beetleFamilyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('replenish_interval_days')) {
+      context.handle(
+        _replenishIntervalDaysMeta,
+        replenishIntervalDays.isAcceptableOrUnknown(
+          data['replenish_interval_days']!,
+          _replenishIntervalDaysMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_replenished_at')) {
+      context.handle(
+        _lastReplenishedAtMeta,
+        lastReplenishedAt.isAcceptableOrUnknown(
+          data['last_replenished_at']!,
+          _lastReplenishedAtMeta,
+        ),
       );
     }
     if (data.containsKey('status')) {
@@ -1690,6 +1853,18 @@ class $SpecimensTable extends Specimens
         DriftSqlType.string,
         data['${effectivePrefix}life_stage'],
       ),
+      beetleFamily: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}beetle_family'],
+      ),
+      replenishIntervalDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}replenish_interval_days'],
+      ),
+      lastReplenishedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_replenished_at'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -1742,6 +1917,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   final double? weightGrams;
   final double? sizeCm;
   final String? lifeStage;
+  final String? beetleFamily;
+  final int? replenishIntervalDays;
+  final DateTime? lastReplenishedAt;
   final String status;
   final String? notes;
   final String? photoPath;
@@ -1761,6 +1939,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     this.weightGrams,
     this.sizeCm,
     this.lifeStage,
+    this.beetleFamily,
+    this.replenishIntervalDays,
+    this.lastReplenishedAt,
     required this.status,
     this.notes,
     this.photoPath,
@@ -1794,6 +1975,15 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     }
     if (!nullToAbsent || lifeStage != null) {
       map['life_stage'] = Variable<String>(lifeStage);
+    }
+    if (!nullToAbsent || beetleFamily != null) {
+      map['beetle_family'] = Variable<String>(beetleFamily);
+    }
+    if (!nullToAbsent || replenishIntervalDays != null) {
+      map['replenish_interval_days'] = Variable<int>(replenishIntervalDays);
+    }
+    if (!nullToAbsent || lastReplenishedAt != null) {
+      map['last_replenished_at'] = Variable<DateTime>(lastReplenishedAt);
     }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || notes != null) {
@@ -1840,6 +2030,15 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       lifeStage: lifeStage == null && nullToAbsent
           ? const Value.absent()
           : Value(lifeStage),
+      beetleFamily: beetleFamily == null && nullToAbsent
+          ? const Value.absent()
+          : Value(beetleFamily),
+      replenishIntervalDays: replenishIntervalDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(replenishIntervalDays),
+      lastReplenishedAt: lastReplenishedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReplenishedAt),
       status: Value(status),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
@@ -1879,6 +2078,13 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       weightGrams: serializer.fromJson<double?>(json['weightGrams']),
       sizeCm: serializer.fromJson<double?>(json['sizeCm']),
       lifeStage: serializer.fromJson<String?>(json['lifeStage']),
+      beetleFamily: serializer.fromJson<String?>(json['beetleFamily']),
+      replenishIntervalDays: serializer.fromJson<int?>(
+        json['replenishIntervalDays'],
+      ),
+      lastReplenishedAt: serializer.fromJson<DateTime?>(
+        json['lastReplenishedAt'],
+      ),
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       photoPath: serializer.fromJson<String?>(json['photoPath']),
@@ -1905,6 +2111,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       'weightGrams': serializer.toJson<double?>(weightGrams),
       'sizeCm': serializer.toJson<double?>(sizeCm),
       'lifeStage': serializer.toJson<String?>(lifeStage),
+      'beetleFamily': serializer.toJson<String?>(beetleFamily),
+      'replenishIntervalDays': serializer.toJson<int?>(replenishIntervalDays),
+      'lastReplenishedAt': serializer.toJson<DateTime?>(lastReplenishedAt),
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'photoPath': serializer.toJson<String?>(photoPath),
@@ -1927,6 +2136,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     Value<double?> weightGrams = const Value.absent(),
     Value<double?> sizeCm = const Value.absent(),
     Value<String?> lifeStage = const Value.absent(),
+    Value<String?> beetleFamily = const Value.absent(),
+    Value<int?> replenishIntervalDays = const Value.absent(),
+    Value<DateTime?> lastReplenishedAt = const Value.absent(),
     String? status,
     Value<String?> notes = const Value.absent(),
     Value<String?> photoPath = const Value.absent(),
@@ -1946,6 +2158,13 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     weightGrams: weightGrams.present ? weightGrams.value : this.weightGrams,
     sizeCm: sizeCm.present ? sizeCm.value : this.sizeCm,
     lifeStage: lifeStage.present ? lifeStage.value : this.lifeStage,
+    beetleFamily: beetleFamily.present ? beetleFamily.value : this.beetleFamily,
+    replenishIntervalDays: replenishIntervalDays.present
+        ? replenishIntervalDays.value
+        : this.replenishIntervalDays,
+    lastReplenishedAt: lastReplenishedAt.present
+        ? lastReplenishedAt.value
+        : this.lastReplenishedAt,
     status: status ?? this.status,
     notes: notes.present ? notes.value : this.notes,
     photoPath: photoPath.present ? photoPath.value : this.photoPath,
@@ -1977,6 +2196,15 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           : this.weightGrams,
       sizeCm: data.sizeCm.present ? data.sizeCm.value : this.sizeCm,
       lifeStage: data.lifeStage.present ? data.lifeStage.value : this.lifeStage,
+      beetleFamily: data.beetleFamily.present
+          ? data.beetleFamily.value
+          : this.beetleFamily,
+      replenishIntervalDays: data.replenishIntervalDays.present
+          ? data.replenishIntervalDays.value
+          : this.replenishIntervalDays,
+      lastReplenishedAt: data.lastReplenishedAt.present
+          ? data.lastReplenishedAt.value
+          : this.lastReplenishedAt,
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
       photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
@@ -2005,6 +2233,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ..write('weightGrams: $weightGrams, ')
           ..write('sizeCm: $sizeCm, ')
           ..write('lifeStage: $lifeStage, ')
+          ..write('beetleFamily: $beetleFamily, ')
+          ..write('replenishIntervalDays: $replenishIntervalDays, ')
+          ..write('lastReplenishedAt: $lastReplenishedAt, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
@@ -2018,7 +2249,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     species,
@@ -2029,6 +2260,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     weightGrams,
     sizeCm,
     lifeStage,
+    beetleFamily,
+    replenishIntervalDays,
+    lastReplenishedAt,
     status,
     notes,
     photoPath,
@@ -2037,7 +2271,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     terrariumId,
     sourceBreedingEventId,
     createdAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2052,6 +2286,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           other.weightGrams == this.weightGrams &&
           other.sizeCm == this.sizeCm &&
           other.lifeStage == this.lifeStage &&
+          other.beetleFamily == this.beetleFamily &&
+          other.replenishIntervalDays == this.replenishIntervalDays &&
+          other.lastReplenishedAt == this.lastReplenishedAt &&
           other.status == this.status &&
           other.notes == this.notes &&
           other.photoPath == this.photoPath &&
@@ -2073,6 +2310,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
   final Value<double?> weightGrams;
   final Value<double?> sizeCm;
   final Value<String?> lifeStage;
+  final Value<String?> beetleFamily;
+  final Value<int?> replenishIntervalDays;
+  final Value<DateTime?> lastReplenishedAt;
   final Value<String> status;
   final Value<String?> notes;
   final Value<String?> photoPath;
@@ -2092,6 +2332,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.weightGrams = const Value.absent(),
     this.sizeCm = const Value.absent(),
     this.lifeStage = const Value.absent(),
+    this.beetleFamily = const Value.absent(),
+    this.replenishIntervalDays = const Value.absent(),
+    this.lastReplenishedAt = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
@@ -2112,6 +2355,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.weightGrams = const Value.absent(),
     this.sizeCm = const Value.absent(),
     this.lifeStage = const Value.absent(),
+    this.beetleFamily = const Value.absent(),
+    this.replenishIntervalDays = const Value.absent(),
+    this.lastReplenishedAt = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
@@ -2132,6 +2378,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Expression<double>? weightGrams,
     Expression<double>? sizeCm,
     Expression<String>? lifeStage,
+    Expression<String>? beetleFamily,
+    Expression<int>? replenishIntervalDays,
+    Expression<DateTime>? lastReplenishedAt,
     Expression<String>? status,
     Expression<String>? notes,
     Expression<String>? photoPath,
@@ -2152,6 +2401,10 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       if (weightGrams != null) 'weight_grams': weightGrams,
       if (sizeCm != null) 'size_cm': sizeCm,
       if (lifeStage != null) 'life_stage': lifeStage,
+      if (beetleFamily != null) 'beetle_family': beetleFamily,
+      if (replenishIntervalDays != null)
+        'replenish_interval_days': replenishIntervalDays,
+      if (lastReplenishedAt != null) 'last_replenished_at': lastReplenishedAt,
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (photoPath != null) 'photo_path': photoPath,
@@ -2175,6 +2428,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Value<double?>? weightGrams,
     Value<double?>? sizeCm,
     Value<String?>? lifeStage,
+    Value<String?>? beetleFamily,
+    Value<int?>? replenishIntervalDays,
+    Value<DateTime?>? lastReplenishedAt,
     Value<String>? status,
     Value<String?>? notes,
     Value<String?>? photoPath,
@@ -2195,6 +2451,10 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       weightGrams: weightGrams ?? this.weightGrams,
       sizeCm: sizeCm ?? this.sizeCm,
       lifeStage: lifeStage ?? this.lifeStage,
+      beetleFamily: beetleFamily ?? this.beetleFamily,
+      replenishIntervalDays:
+          replenishIntervalDays ?? this.replenishIntervalDays,
+      lastReplenishedAt: lastReplenishedAt ?? this.lastReplenishedAt,
       status: status ?? this.status,
       notes: notes ?? this.notes,
       photoPath: photoPath ?? this.photoPath,
@@ -2240,6 +2500,17 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     if (lifeStage.present) {
       map['life_stage'] = Variable<String>(lifeStage.value);
     }
+    if (beetleFamily.present) {
+      map['beetle_family'] = Variable<String>(beetleFamily.value);
+    }
+    if (replenishIntervalDays.present) {
+      map['replenish_interval_days'] = Variable<int>(
+        replenishIntervalDays.value,
+      );
+    }
+    if (lastReplenishedAt.present) {
+      map['last_replenished_at'] = Variable<DateTime>(lastReplenishedAt.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -2282,6 +2553,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           ..write('weightGrams: $weightGrams, ')
           ..write('sizeCm: $sizeCm, ')
           ..write('lifeStage: $lifeStage, ')
+          ..write('beetleFamily: $beetleFamily, ')
+          ..write('replenishIntervalDays: $replenishIntervalDays, ')
+          ..write('lastReplenishedAt: $lastReplenishedAt, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
@@ -3160,6 +3434,607 @@ class BreedingLogEntriesCompanion extends UpdateCompanion<BreedingLogEntry> {
   }
 }
 
+class $ToolsTable extends Tools with TableInfo<$ToolsTable, Tool> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ToolsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lengthCmMeta = const VerificationMeta(
+    'lengthCm',
+  );
+  @override
+  late final GeneratedColumn<double> lengthCm = GeneratedColumn<double>(
+    'length_cm',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _heightCmMeta = const VerificationMeta(
+    'heightCm',
+  );
+  @override
+  late final GeneratedColumn<double> heightCm = GeneratedColumn<double>(
+    'height_cm',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorArgbMeta = const VerificationMeta(
+    'colorArgb',
+  );
+  @override
+  late final GeneratedColumn<int> colorArgb = GeneratedColumn<int>(
+    'color_argb',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _shelfIdMeta = const VerificationMeta(
+    'shelfId',
+  );
+  @override
+  late final GeneratedColumn<int> shelfId = GeneratedColumn<int>(
+    'shelf_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shelves (id)',
+    ),
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<int> level = GeneratedColumn<int>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionXCmMeta = const VerificationMeta(
+    'positionXCm',
+  );
+  @override
+  late final GeneratedColumn<double> positionXCm = GeneratedColumn<double>(
+    'position_x_cm',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stackOrderMeta = const VerificationMeta(
+    'stackOrder',
+  );
+  @override
+  late final GeneratedColumn<int> stackOrder = GeneratedColumn<int>(
+    'stack_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    lengthCm,
+    heightCm,
+    colorArgb,
+    shelfId,
+    level,
+    positionXCm,
+    stackOrder,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tools';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Tool> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('length_cm')) {
+      context.handle(
+        _lengthCmMeta,
+        lengthCm.isAcceptableOrUnknown(data['length_cm']!, _lengthCmMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lengthCmMeta);
+    }
+    if (data.containsKey('height_cm')) {
+      context.handle(
+        _heightCmMeta,
+        heightCm.isAcceptableOrUnknown(data['height_cm']!, _heightCmMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_heightCmMeta);
+    }
+    if (data.containsKey('color_argb')) {
+      context.handle(
+        _colorArgbMeta,
+        colorArgb.isAcceptableOrUnknown(data['color_argb']!, _colorArgbMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_colorArgbMeta);
+    }
+    if (data.containsKey('shelf_id')) {
+      context.handle(
+        _shelfIdMeta,
+        shelfId.isAcceptableOrUnknown(data['shelf_id']!, _shelfIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shelfIdMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelMeta);
+    }
+    if (data.containsKey('position_x_cm')) {
+      context.handle(
+        _positionXCmMeta,
+        positionXCm.isAcceptableOrUnknown(
+          data['position_x_cm']!,
+          _positionXCmMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_positionXCmMeta);
+    }
+    if (data.containsKey('stack_order')) {
+      context.handle(
+        _stackOrderMeta,
+        stackOrder.isAcceptableOrUnknown(data['stack_order']!, _stackOrderMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stackOrderMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Tool map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Tool(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      lengthCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}length_cm'],
+      )!,
+      heightCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}height_cm'],
+      )!,
+      colorArgb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_argb'],
+      )!,
+      shelfId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shelf_id'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}level'],
+      )!,
+      positionXCm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}position_x_cm'],
+      )!,
+      stackOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}stack_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ToolsTable createAlias(String alias) {
+    return $ToolsTable(attachedDatabase, alias);
+  }
+}
+
+class Tool extends DataClass implements Insertable<Tool> {
+  final int id;
+  final String name;
+  final double lengthCm;
+  final double heightCm;
+  final int colorArgb;
+  final int shelfId;
+  final int level;
+  final double positionXCm;
+  final int stackOrder;
+  final DateTime createdAt;
+  const Tool({
+    required this.id,
+    required this.name,
+    required this.lengthCm,
+    required this.heightCm,
+    required this.colorArgb,
+    required this.shelfId,
+    required this.level,
+    required this.positionXCm,
+    required this.stackOrder,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['length_cm'] = Variable<double>(lengthCm);
+    map['height_cm'] = Variable<double>(heightCm);
+    map['color_argb'] = Variable<int>(colorArgb);
+    map['shelf_id'] = Variable<int>(shelfId);
+    map['level'] = Variable<int>(level);
+    map['position_x_cm'] = Variable<double>(positionXCm);
+    map['stack_order'] = Variable<int>(stackOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ToolsCompanion toCompanion(bool nullToAbsent) {
+    return ToolsCompanion(
+      id: Value(id),
+      name: Value(name),
+      lengthCm: Value(lengthCm),
+      heightCm: Value(heightCm),
+      colorArgb: Value(colorArgb),
+      shelfId: Value(shelfId),
+      level: Value(level),
+      positionXCm: Value(positionXCm),
+      stackOrder: Value(stackOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Tool.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Tool(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      lengthCm: serializer.fromJson<double>(json['lengthCm']),
+      heightCm: serializer.fromJson<double>(json['heightCm']),
+      colorArgb: serializer.fromJson<int>(json['colorArgb']),
+      shelfId: serializer.fromJson<int>(json['shelfId']),
+      level: serializer.fromJson<int>(json['level']),
+      positionXCm: serializer.fromJson<double>(json['positionXCm']),
+      stackOrder: serializer.fromJson<int>(json['stackOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'lengthCm': serializer.toJson<double>(lengthCm),
+      'heightCm': serializer.toJson<double>(heightCm),
+      'colorArgb': serializer.toJson<int>(colorArgb),
+      'shelfId': serializer.toJson<int>(shelfId),
+      'level': serializer.toJson<int>(level),
+      'positionXCm': serializer.toJson<double>(positionXCm),
+      'stackOrder': serializer.toJson<int>(stackOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Tool copyWith({
+    int? id,
+    String? name,
+    double? lengthCm,
+    double? heightCm,
+    int? colorArgb,
+    int? shelfId,
+    int? level,
+    double? positionXCm,
+    int? stackOrder,
+    DateTime? createdAt,
+  }) => Tool(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    lengthCm: lengthCm ?? this.lengthCm,
+    heightCm: heightCm ?? this.heightCm,
+    colorArgb: colorArgb ?? this.colorArgb,
+    shelfId: shelfId ?? this.shelfId,
+    level: level ?? this.level,
+    positionXCm: positionXCm ?? this.positionXCm,
+    stackOrder: stackOrder ?? this.stackOrder,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Tool copyWithCompanion(ToolsCompanion data) {
+    return Tool(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      lengthCm: data.lengthCm.present ? data.lengthCm.value : this.lengthCm,
+      heightCm: data.heightCm.present ? data.heightCm.value : this.heightCm,
+      colorArgb: data.colorArgb.present ? data.colorArgb.value : this.colorArgb,
+      shelfId: data.shelfId.present ? data.shelfId.value : this.shelfId,
+      level: data.level.present ? data.level.value : this.level,
+      positionXCm: data.positionXCm.present
+          ? data.positionXCm.value
+          : this.positionXCm,
+      stackOrder: data.stackOrder.present
+          ? data.stackOrder.value
+          : this.stackOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Tool(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('lengthCm: $lengthCm, ')
+          ..write('heightCm: $heightCm, ')
+          ..write('colorArgb: $colorArgb, ')
+          ..write('shelfId: $shelfId, ')
+          ..write('level: $level, ')
+          ..write('positionXCm: $positionXCm, ')
+          ..write('stackOrder: $stackOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    lengthCm,
+    heightCm,
+    colorArgb,
+    shelfId,
+    level,
+    positionXCm,
+    stackOrder,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Tool &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.lengthCm == this.lengthCm &&
+          other.heightCm == this.heightCm &&
+          other.colorArgb == this.colorArgb &&
+          other.shelfId == this.shelfId &&
+          other.level == this.level &&
+          other.positionXCm == this.positionXCm &&
+          other.stackOrder == this.stackOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class ToolsCompanion extends UpdateCompanion<Tool> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<double> lengthCm;
+  final Value<double> heightCm;
+  final Value<int> colorArgb;
+  final Value<int> shelfId;
+  final Value<int> level;
+  final Value<double> positionXCm;
+  final Value<int> stackOrder;
+  final Value<DateTime> createdAt;
+  const ToolsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.lengthCm = const Value.absent(),
+    this.heightCm = const Value.absent(),
+    this.colorArgb = const Value.absent(),
+    this.shelfId = const Value.absent(),
+    this.level = const Value.absent(),
+    this.positionXCm = const Value.absent(),
+    this.stackOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ToolsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required double lengthCm,
+    required double heightCm,
+    required int colorArgb,
+    required int shelfId,
+    required int level,
+    required double positionXCm,
+    required int stackOrder,
+    this.createdAt = const Value.absent(),
+  }) : name = Value(name),
+       lengthCm = Value(lengthCm),
+       heightCm = Value(heightCm),
+       colorArgb = Value(colorArgb),
+       shelfId = Value(shelfId),
+       level = Value(level),
+       positionXCm = Value(positionXCm),
+       stackOrder = Value(stackOrder);
+  static Insertable<Tool> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<double>? lengthCm,
+    Expression<double>? heightCm,
+    Expression<int>? colorArgb,
+    Expression<int>? shelfId,
+    Expression<int>? level,
+    Expression<double>? positionXCm,
+    Expression<int>? stackOrder,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (lengthCm != null) 'length_cm': lengthCm,
+      if (heightCm != null) 'height_cm': heightCm,
+      if (colorArgb != null) 'color_argb': colorArgb,
+      if (shelfId != null) 'shelf_id': shelfId,
+      if (level != null) 'level': level,
+      if (positionXCm != null) 'position_x_cm': positionXCm,
+      if (stackOrder != null) 'stack_order': stackOrder,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ToolsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<double>? lengthCm,
+    Value<double>? heightCm,
+    Value<int>? colorArgb,
+    Value<int>? shelfId,
+    Value<int>? level,
+    Value<double>? positionXCm,
+    Value<int>? stackOrder,
+    Value<DateTime>? createdAt,
+  }) {
+    return ToolsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      lengthCm: lengthCm ?? this.lengthCm,
+      heightCm: heightCm ?? this.heightCm,
+      colorArgb: colorArgb ?? this.colorArgb,
+      shelfId: shelfId ?? this.shelfId,
+      level: level ?? this.level,
+      positionXCm: positionXCm ?? this.positionXCm,
+      stackOrder: stackOrder ?? this.stackOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (lengthCm.present) {
+      map['length_cm'] = Variable<double>(lengthCm.value);
+    }
+    if (heightCm.present) {
+      map['height_cm'] = Variable<double>(heightCm.value);
+    }
+    if (colorArgb.present) {
+      map['color_argb'] = Variable<int>(colorArgb.value);
+    }
+    if (shelfId.present) {
+      map['shelf_id'] = Variable<int>(shelfId.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<int>(level.value);
+    }
+    if (positionXCm.present) {
+      map['position_x_cm'] = Variable<double>(positionXCm.value);
+    }
+    if (stackOrder.present) {
+      map['stack_order'] = Variable<int>(stackOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ToolsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('lengthCm: $lengthCm, ')
+          ..write('heightCm: $heightCm, ')
+          ..write('colorArgb: $colorArgb, ')
+          ..write('shelfId: $shelfId, ')
+          ..write('level: $level, ')
+          ..write('positionXCm: $positionXCm, ')
+          ..write('stackOrder: $stackOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3169,6 +4044,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BreedingEventsTable breedingEvents = $BreedingEventsTable(this);
   late final $BreedingLogEntriesTable breedingLogEntries =
       $BreedingLogEntriesTable(this);
+  late final $ToolsTable tools = $ToolsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3179,6 +4055,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     specimens,
     breedingEvents,
     breedingLogEntries,
+    tools,
   ];
 }
 
@@ -3220,6 +4097,25 @@ final class $$ShelvesTableReferences
     ).filter((f) => f.shelfId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_terrariumsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ToolsTable, List<Tool>> _toolsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.tools,
+    aliasName: 'shelves__id__tools__shelf_id',
+  );
+
+  $$ToolsTableProcessedTableManager get toolsRefs {
+    final manager = $$ToolsTableTableManager(
+      $_db,
+      $_db.tools,
+    ).filter((f) => f.shelfId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_toolsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -3286,6 +4182,31 @@ class $$ShelvesTableFilterComposer
           }) => $$TerrariumsTableFilterComposer(
             $db: $db,
             $table: $db.terrariums,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> toolsRefs(
+    Expression<bool> Function($$ToolsTableFilterComposer f) f,
+  ) {
+    final $$ToolsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tools,
+      getReferencedColumn: (t) => t.shelfId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ToolsTableFilterComposer(
+            $db: $db,
+            $table: $db.tools,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3399,6 +4320,31 @@ class $$ShelvesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> toolsRefs<T extends Object>(
+    Expression<T> Function($$ToolsTableAnnotationComposer a) f,
+  ) {
+    final $$ToolsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tools,
+      getReferencedColumn: (t) => t.shelfId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ToolsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tools,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShelvesTableTableManager
@@ -3414,7 +4360,7 @@ class $$ShelvesTableTableManager
           $$ShelvesTableUpdateCompanionBuilder,
           (Shelf, $$ShelvesTableReferences),
           Shelf,
-          PrefetchHooks Function({bool terrariumsRefs})
+          PrefetchHooks Function({bool terrariumsRefs, bool toolsRefs})
         > {
   $$ShelvesTableTableManager(_$AppDatabase db, $ShelvesTable table)
     : super(
@@ -3471,10 +4417,13 @@ class $$ShelvesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({terrariumsRefs = false}) {
+          prefetchHooksCallback: ({terrariumsRefs = false, toolsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (terrariumsRefs) db.terrariums],
+              explicitlyWatchedTables: [
+                if (terrariumsRefs) db.terrariums,
+                if (toolsRefs) db.tools,
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -3488,6 +4437,18 @@ class $$ShelvesTableTableManager
                         table,
                         p0,
                       ).terrariumsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.shelfId == item.id),
+                      typedResults: items,
+                    ),
+                  if (toolsRefs)
+                    await $_getPrefetchedData<Shelf, $ShelvesTable, Tool>(
+                      currentTable: table,
+                      referencedTable: $$ShelvesTableReferences._toolsRefsTable(
+                        db,
+                      ),
+                      managerFromTypedResult: (p0) =>
+                          $$ShelvesTableReferences(db, table, p0).toolsRefs,
                       referencedItemsForCurrentItem: (item, referencedItems) =>
                           referencedItems.where((e) => e.shelfId == item.id),
                       typedResults: items,
@@ -3512,7 +4473,7 @@ typedef $$ShelvesTableProcessedTableManager =
       $$ShelvesTableUpdateCompanionBuilder,
       (Shelf, $$ShelvesTableReferences),
       Shelf,
-      PrefetchHooks Function({bool terrariumsRefs})
+      PrefetchHooks Function({bool terrariumsRefs, bool toolsRefs})
     >;
 typedef $$TerrariumsTableCreateCompanionBuilder =
     TerrariumsCompanion Function({
@@ -3526,9 +4487,11 @@ typedef $$TerrariumsTableCreateCompanionBuilder =
       Value<int?> shelfId,
       Value<int?> level,
       Value<int?> positionInLevel,
+      Value<double?> positionXCm,
       Value<int?> stackOrder,
       Value<String?> location,
       Value<int?> individualSequence,
+      Value<String> purpose,
       Value<DateTime> createdAt,
     });
 typedef $$TerrariumsTableUpdateCompanionBuilder =
@@ -3543,9 +4506,11 @@ typedef $$TerrariumsTableUpdateCompanionBuilder =
       Value<int?> shelfId,
       Value<int?> level,
       Value<int?> positionInLevel,
+      Value<double?> positionXCm,
       Value<int?> stackOrder,
       Value<String?> location,
       Value<int?> individualSequence,
+      Value<String> purpose,
       Value<DateTime> createdAt,
     });
 
@@ -3643,6 +4608,11 @@ class $$TerrariumsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
     builder: (column) => ColumnFilters(column),
@@ -3655,6 +4625,11 @@ class $$TerrariumsTableFilterComposer
 
   ColumnFilters<int> get individualSequence => $composableBuilder(
     column: $table.individualSequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get purpose => $composableBuilder(
+    column: $table.purpose,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3766,6 +4741,11 @@ class $$TerrariumsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
     builder: (column) => ColumnOrderings(column),
@@ -3778,6 +4758,11 @@ class $$TerrariumsTableOrderingComposer
 
   ColumnOrderings<int> get individualSequence => $composableBuilder(
     column: $table.individualSequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get purpose => $composableBuilder(
+    column: $table.purpose,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3852,6 +4837,11 @@ class $$TerrariumsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get stackOrder => $composableBuilder(
     column: $table.stackOrder,
     builder: (column) => column,
@@ -3864,6 +4854,9 @@ class $$TerrariumsTableAnnotationComposer
     column: $table.individualSequence,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get purpose =>
+      $composableBuilder(column: $table.purpose, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3955,9 +4948,11 @@ class $$TerrariumsTableTableManager
                 Value<int?> shelfId = const Value.absent(),
                 Value<int?> level = const Value.absent(),
                 Value<int?> positionInLevel = const Value.absent(),
+                Value<double?> positionXCm = const Value.absent(),
                 Value<int?> stackOrder = const Value.absent(),
                 Value<String?> location = const Value.absent(),
                 Value<int?> individualSequence = const Value.absent(),
+                Value<String> purpose = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => TerrariumsCompanion(
                 id: id,
@@ -3970,9 +4965,11 @@ class $$TerrariumsTableTableManager
                 shelfId: shelfId,
                 level: level,
                 positionInLevel: positionInLevel,
+                positionXCm: positionXCm,
                 stackOrder: stackOrder,
                 location: location,
                 individualSequence: individualSequence,
+                purpose: purpose,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -3987,9 +4984,11 @@ class $$TerrariumsTableTableManager
                 Value<int?> shelfId = const Value.absent(),
                 Value<int?> level = const Value.absent(),
                 Value<int?> positionInLevel = const Value.absent(),
+                Value<double?> positionXCm = const Value.absent(),
                 Value<int?> stackOrder = const Value.absent(),
                 Value<String?> location = const Value.absent(),
                 Value<int?> individualSequence = const Value.absent(),
+                Value<String> purpose = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => TerrariumsCompanion.insert(
                 id: id,
@@ -4002,9 +5001,11 @@ class $$TerrariumsTableTableManager
                 shelfId: shelfId,
                 level: level,
                 positionInLevel: positionInLevel,
+                positionXCm: positionXCm,
                 stackOrder: stackOrder,
                 location: location,
                 individualSequence: individualSequence,
+                purpose: purpose,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -4108,6 +5109,9 @@ typedef $$SpecimensTableCreateCompanionBuilder =
       Value<double?> weightGrams,
       Value<double?> sizeCm,
       Value<String?> lifeStage,
+      Value<String?> beetleFamily,
+      Value<int?> replenishIntervalDays,
+      Value<DateTime?> lastReplenishedAt,
       Value<String> status,
       Value<String?> notes,
       Value<String?> photoPath,
@@ -4129,6 +5133,9 @@ typedef $$SpecimensTableUpdateCompanionBuilder =
       Value<double?> weightGrams,
       Value<double?> sizeCm,
       Value<String?> lifeStage,
+      Value<String?> beetleFamily,
+      Value<int?> replenishIntervalDays,
+      Value<DateTime?> lastReplenishedAt,
       Value<String> status,
       Value<String?> notes,
       Value<String?> photoPath,
@@ -4251,6 +5258,21 @@ class $$SpecimensTableFilterComposer
 
   ColumnFilters<String> get lifeStage => $composableBuilder(
     column: $table.lifeStage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get beetleFamily => $composableBuilder(
+    column: $table.beetleFamily,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get replenishIntervalDays => $composableBuilder(
+    column: $table.replenishIntervalDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastReplenishedAt => $composableBuilder(
+    column: $table.lastReplenishedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4408,6 +5430,21 @@ class $$SpecimensTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get beetleFamily => $composableBuilder(
+    column: $table.beetleFamily,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get replenishIntervalDays => $composableBuilder(
+    column: $table.replenishIntervalDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastReplenishedAt => $composableBuilder(
+    column: $table.lastReplenishedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -4550,6 +5587,21 @@ class $$SpecimensTableAnnotationComposer
   GeneratedColumn<String> get lifeStage =>
       $composableBuilder(column: $table.lifeStage, builder: (column) => column);
 
+  GeneratedColumn<String> get beetleFamily => $composableBuilder(
+    column: $table.beetleFamily,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get replenishIntervalDays => $composableBuilder(
+    column: $table.replenishIntervalDays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastReplenishedAt => $composableBuilder(
+    column: $table.lastReplenishedAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
@@ -4679,6 +5731,9 @@ class $$SpecimensTableTableManager
                 Value<double?> weightGrams = const Value.absent(),
                 Value<double?> sizeCm = const Value.absent(),
                 Value<String?> lifeStage = const Value.absent(),
+                Value<String?> beetleFamily = const Value.absent(),
+                Value<int?> replenishIntervalDays = const Value.absent(),
+                Value<DateTime?> lastReplenishedAt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
@@ -4698,6 +5753,9 @@ class $$SpecimensTableTableManager
                 weightGrams: weightGrams,
                 sizeCm: sizeCm,
                 lifeStage: lifeStage,
+                beetleFamily: beetleFamily,
+                replenishIntervalDays: replenishIntervalDays,
+                lastReplenishedAt: lastReplenishedAt,
                 status: status,
                 notes: notes,
                 photoPath: photoPath,
@@ -4719,6 +5777,9 @@ class $$SpecimensTableTableManager
                 Value<double?> weightGrams = const Value.absent(),
                 Value<double?> sizeCm = const Value.absent(),
                 Value<String?> lifeStage = const Value.absent(),
+                Value<String?> beetleFamily = const Value.absent(),
+                Value<int?> replenishIntervalDays = const Value.absent(),
+                Value<DateTime?> lastReplenishedAt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
@@ -4738,6 +5799,9 @@ class $$SpecimensTableTableManager
                 weightGrams: weightGrams,
                 sizeCm: sizeCm,
                 lifeStage: lifeStage,
+                beetleFamily: beetleFamily,
+                replenishIntervalDays: replenishIntervalDays,
+                lastReplenishedAt: lastReplenishedAt,
                 status: status,
                 notes: notes,
                 photoPath: photoPath,
@@ -5748,6 +6812,413 @@ typedef $$BreedingLogEntriesTableProcessedTableManager =
       BreedingLogEntry,
       PrefetchHooks Function({bool breedingEventId})
     >;
+typedef $$ToolsTableCreateCompanionBuilder =
+    ToolsCompanion Function({
+      Value<int> id,
+      required String name,
+      required double lengthCm,
+      required double heightCm,
+      required int colorArgb,
+      required int shelfId,
+      required int level,
+      required double positionXCm,
+      required int stackOrder,
+      Value<DateTime> createdAt,
+    });
+typedef $$ToolsTableUpdateCompanionBuilder =
+    ToolsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<double> lengthCm,
+      Value<double> heightCm,
+      Value<int> colorArgb,
+      Value<int> shelfId,
+      Value<int> level,
+      Value<double> positionXCm,
+      Value<int> stackOrder,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ToolsTableReferences
+    extends BaseReferences<_$AppDatabase, $ToolsTable, Tool> {
+  $$ToolsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShelvesTable _shelfIdTable(_$AppDatabase db) =>
+      db.shelves.createAlias('tools__shelf_id__shelves__id');
+
+  $$ShelvesTableProcessedTableManager get shelfId {
+    final $_column = $_itemColumn<int>('shelf_id')!;
+
+    final manager = $$ShelvesTableTableManager(
+      $_db,
+      $_db.shelves,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shelfIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ToolsTableFilterComposer extends Composer<_$AppDatabase, $ToolsTable> {
+  $$ToolsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lengthCm => $composableBuilder(
+    column: $table.lengthCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get heightCm => $composableBuilder(
+    column: $table.heightCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorArgb => $composableBuilder(
+    column: $table.colorArgb,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get stackOrder => $composableBuilder(
+    column: $table.stackOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShelvesTableFilterComposer get shelfId {
+    final $$ShelvesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shelfId,
+      referencedTable: $db.shelves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShelvesTableFilterComposer(
+            $db: $db,
+            $table: $db.shelves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ToolsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ToolsTable> {
+  $$ToolsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lengthCm => $composableBuilder(
+    column: $table.lengthCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get heightCm => $composableBuilder(
+    column: $table.heightCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colorArgb => $composableBuilder(
+    column: $table.colorArgb,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get stackOrder => $composableBuilder(
+    column: $table.stackOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShelvesTableOrderingComposer get shelfId {
+    final $$ShelvesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shelfId,
+      referencedTable: $db.shelves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShelvesTableOrderingComposer(
+            $db: $db,
+            $table: $db.shelves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ToolsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ToolsTable> {
+  $$ToolsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get lengthCm =>
+      $composableBuilder(column: $table.lengthCm, builder: (column) => column);
+
+  GeneratedColumn<double> get heightCm =>
+      $composableBuilder(column: $table.heightCm, builder: (column) => column);
+
+  GeneratedColumn<int> get colorArgb =>
+      $composableBuilder(column: $table.colorArgb, builder: (column) => column);
+
+  GeneratedColumn<int> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+
+  GeneratedColumn<double> get positionXCm => $composableBuilder(
+    column: $table.positionXCm,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get stackOrder => $composableBuilder(
+    column: $table.stackOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ShelvesTableAnnotationComposer get shelfId {
+    final $$ShelvesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shelfId,
+      referencedTable: $db.shelves,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShelvesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shelves,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ToolsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ToolsTable,
+          Tool,
+          $$ToolsTableFilterComposer,
+          $$ToolsTableOrderingComposer,
+          $$ToolsTableAnnotationComposer,
+          $$ToolsTableCreateCompanionBuilder,
+          $$ToolsTableUpdateCompanionBuilder,
+          (Tool, $$ToolsTableReferences),
+          Tool,
+          PrefetchHooks Function({bool shelfId})
+        > {
+  $$ToolsTableTableManager(_$AppDatabase db, $ToolsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ToolsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ToolsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ToolsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> lengthCm = const Value.absent(),
+                Value<double> heightCm = const Value.absent(),
+                Value<int> colorArgb = const Value.absent(),
+                Value<int> shelfId = const Value.absent(),
+                Value<int> level = const Value.absent(),
+                Value<double> positionXCm = const Value.absent(),
+                Value<int> stackOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ToolsCompanion(
+                id: id,
+                name: name,
+                lengthCm: lengthCm,
+                heightCm: heightCm,
+                colorArgb: colorArgb,
+                shelfId: shelfId,
+                level: level,
+                positionXCm: positionXCm,
+                stackOrder: stackOrder,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required double lengthCm,
+                required double heightCm,
+                required int colorArgb,
+                required int shelfId,
+                required int level,
+                required double positionXCm,
+                required int stackOrder,
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ToolsCompanion.insert(
+                id: id,
+                name: name,
+                lengthCm: lengthCm,
+                heightCm: heightCm,
+                colorArgb: colorArgb,
+                shelfId: shelfId,
+                level: level,
+                positionXCm: positionXCm,
+                stackOrder: stackOrder,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$ToolsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shelfId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shelfId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shelfId,
+                                referencedTable: $$ToolsTableReferences
+                                    ._shelfIdTable(db),
+                                referencedColumn: $$ToolsTableReferences
+                                    ._shelfIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ToolsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ToolsTable,
+      Tool,
+      $$ToolsTableFilterComposer,
+      $$ToolsTableOrderingComposer,
+      $$ToolsTableAnnotationComposer,
+      $$ToolsTableCreateCompanionBuilder,
+      $$ToolsTableUpdateCompanionBuilder,
+      (Tool, $$ToolsTableReferences),
+      Tool,
+      PrefetchHooks Function({bool shelfId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5762,4 +7233,6 @@ class $AppDatabaseManager {
       $$BreedingEventsTableTableManager(_db, _db.breedingEvents);
   $$BreedingLogEntriesTableTableManager get breedingLogEntries =>
       $$BreedingLogEntriesTableTableManager(_db, _db.breedingLogEntries);
+  $$ToolsTableTableManager get tools =>
+      $$ToolsTableTableManager(_db, _db.tools);
 }

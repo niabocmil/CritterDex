@@ -6,18 +6,15 @@ import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../services/backup_service.dart';
-import '../services/excel_export_service.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_controller.dart';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+class BackupSettingsScreen extends StatefulWidget {
+  const BackupSettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<BackupSettingsScreen> createState() => _BackupSettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
   bool _busy = false;
 
   Future<void> _runBusy(Future<void> Function() action) async {
@@ -75,19 +72,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _exportExcel(AppDatabase db) async {
-    final service = ExcelExportService(db);
-    final file = await service.exportToExcel();
-    await service.shareExcel(file);
-  }
-
   @override
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
-    final themeController = context.watch<ThemeController>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('More')),
+      appBar: AppBar(title: const Text('Backup & Restore')),
       body: AbsorbPointer(
         absorbing: _busy,
         child: Opacity(
@@ -95,28 +85,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text('Theme', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: [
-                    for (final choice in AppThemeChoice.values)
-                      RadioListTile<AppThemeChoice>(
-                        title: Text(choice.label),
-                        value: choice,
-                        // ignore: deprecated_member_use
-                        groupValue: themeController.choice,
-                        // ignore: deprecated_member_use
-                        onChanged: (v) {
-                          if (v != null) themeController.setChoice(v);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text('Backup', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
               Card(
                 child: Column(
                   children: [
@@ -143,18 +111,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(
                   "Android's automatic backup to your Google account stays on regardless — this is an additional, manual option.",
                   style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text('Export', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.table_chart_outlined),
-                  title: const Text('Export to Excel'),
-                  subtitle:
-                      const Text('Specimens and breeding events as a spreadsheet'),
-                  onTap: () => _runBusy(() => _exportExcel(db)),
                 ),
               ),
             ],

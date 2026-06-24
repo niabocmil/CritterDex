@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'breeding_list_screen.dart';
 import 'dashboard_screen.dart';
-import 'settings_screen.dart';
+import 'more_menu_screen.dart';
 import 'shelf_list_screen.dart';
 import 'specimen_list_screen.dart';
 
@@ -21,7 +21,7 @@ class _HomeShellState extends State<HomeShell> {
     SpecimenListScreen(),
     BreedingListScreen(),
     ShelfListScreen(),
-    SettingsScreen(),
+    MoreMenuScreen(),
   ];
 
   @override

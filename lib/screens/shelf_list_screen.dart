@@ -5,6 +5,7 @@ import '../data/database.dart';
 import 'shelf_detail_screen.dart';
 import 'shelf_form_screen.dart';
 import 'terrarium_form_screen.dart';
+import 'tool_form_screen.dart';
 
 class ShelfListScreen extends StatelessWidget {
   const ShelfListScreen({super.key});
@@ -32,6 +33,16 @@ class ShelfListScreen extends StatelessWidget {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => const TerrariumFormScreen(),
+                ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.build_outlined),
+              title: const Text('New tool'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const ToolFormScreen(),
                 ));
               },
             ),

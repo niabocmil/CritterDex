@@ -3,27 +3,43 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../models/terrarium_layout.dart';
 import 'terrarium_slot.dart';
+import 'tool_slot.dart';
 
-typedef TerrariumMoveCallback = Future<void> Function({
-  required Terrarium moving,
+typedef ShelfMoveCallback = Future<void> Function({
+  required ShelfItem moving,
   required int targetLevel,
-  required int targetPositionInLevel,
-  required bool stackOnTarget,
+  required double targetPositionXCm,
+  ShelfItem? stackOnTarget,
 });
+
+/// Fixed cm:px ratio (rather than scaling to fit the viewport) so a 100cm
+/// shelf renders at a readable 800px — comfortably requiring horizontal
+/// scroll past ~45cm of shelf on a typical phone width.
+const double cmToPx = 8.0;
+const _levelGapPx = 14.0;
+const _levelLabelWidthPx = 20.0;
+
+String _itemKey(ShelfItem item) => '${item.kind.name}_${item.id}';
 
 class ShelfVisualization extends StatefulWidget {
   const ShelfVisualization({
     super.key,
     required this.shelf,
     required this.terrariums,
+    required this.tools,
     required this.onMove,
     required this.onTapTerrarium,
+    required this.onTapTool,
+    this.specimensByTerrariumId = const {},
   });
 
   final Shelf shelf;
   final List<Terrarium> terrariums;
-  final TerrariumMoveCallback onMove;
+  final List<Tool> tools;
+  final Map<int, List<Specimen>> specimensByTerrariumId;
+  final ShelfMoveCallback onMove;
   final ValueChanged<Terrarium> onTapTerrarium;
+  final ValueChanged<Tool> onTapTool;
 
   @override
   State<ShelfVisualization> createState() => _ShelfVisualizationState();
@@ -31,7 +47,7 @@ class ShelfVisualization extends StatefulWidget {
 
 class _ShelfVisualizationState extends State<ShelfVisualization> {
   final GlobalKey _canvasKey = GlobalKey();
-  int? _draggingId;
+  String? _draggingKey;
   Offset? _dragLocalPosition;
 
   Offset? _globalToLocal(Offset global) {
@@ -43,73 +59,125 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return LayoutBuilder(builder: (context, constraints) {
-      final scale = constraints.maxWidth / widget.shelf.lengthCm;
-      final layout = buildShelfLayout(widget.shelf, widget.terrariums);
-      final geo = _computeGeometry(widget.shelf, layout, scale);
-      final byId = {for (final t in widget.terrariums) t.id: t};
-      final draggingTerrarium =
-          _draggingId != null ? byId[_draggingId] : null;
-      final draggingRect =
-          _draggingId != null ? geo.rects[_draggingId] : null;
+    final items = <ShelfItem>[
+      ...widget.terrariums.map(TerrariumShelfItem.new),
+      ...widget.tools.map(ToolShelfItem.new),
+    ];
+    final geo = _computeGeometry(widget.shelf, items);
+    final byKey = {for (final i in items) _itemKey(i): i};
+    final draggingItem = _draggingKey != null ? byKey[_draggingKey] : null;
+    final draggingRect = _draggingKey != null ? geo.rects[_draggingKey] : null;
 
-      return SizedBox(
-        width: geo.totalWidthPx,
-        height: geo.totalHeightPx,
-        child: Stack(
-          key: _canvasKey,
-          clipBehavior: Clip.none,
-          children: [
-            for (final entry in geo.levelRowRects.entries)
+    final canvas = SizedBox(
+      width: geo.totalWidthPx,
+      height: geo.totalHeightPx,
+      child: Stack(
+        key: _canvasKey,
+        clipBehavior: Clip.none,
+        children: [
+          for (final entry in geo.levelRowRects.entries)
+            Positioned.fromRect(
+              rect: entry.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+              ),
+            ),
+          for (final entry in geo.rects.entries)
+            if (entry.key != _draggingKey)
               Positioned.fromRect(
                 rect: entry.value,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
+                child: _buildItemGesture(byKey[entry.key]!, geo, items),
+              ),
+          if (draggingItem != null &&
+              _dragLocalPosition != null &&
+              draggingRect != null)
+            Positioned(
+              left: _dragLocalPosition!.dx - draggingRect.width / 2,
+              top: _dragLocalPosition!.dy - draggingRect.height / 2,
+              width: draggingRect.width,
+              height: draggingRect.height,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: 0.85,
+                  child: _buildItemVisual(draggingItem, items, isGhost: true),
                 ),
               ),
-            for (final entry in geo.rects.entries)
-              if (entry.key != _draggingId)
-                Positioned.fromRect(
-                  rect: entry.value,
-                  child:
-                      _buildSlotGesture(byId[entry.key]!, geo, widget.shelf),
-                ),
-            if (draggingTerrarium != null &&
-                _dragLocalPosition != null &&
-                draggingRect != null)
-              Positioned(
-                left: _dragLocalPosition!.dx - draggingRect.width / 2,
-                top: _dragLocalPosition!.dy - draggingRect.height / 2,
-                width: draggingRect.width,
-                height: draggingRect.height,
-                child: IgnorePointer(
-                  child: Opacity(
-                    opacity: 0.85,
-                    child: TerrariumSlot(
-                      terrarium: draggingTerrarium,
-                      label: labelFor(draggingTerrarium, widget.shelf),
-                      isGhost: true,
+            ),
+        ],
+      ),
+    );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: _levelLabelWidthPx,
+            height: geo.totalHeightPx,
+            child: Stack(
+              children: [
+                for (final entry in geo.levelRowRects.entries)
+                  Positioned(
+                    left: 0,
+                    top: entry.value.top + entry.value.height / 2 - 8,
+                    child: Text(
+                      levelDisplayLabel(entry.key),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
-      );
-    });
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: canvas,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildSlotGesture(
-      Terrarium terrarium, _TerrariumGeometry geo, Shelf shelf) {
+  Widget _buildItemVisual(ShelfItem item, List<ShelfItem> allItems,
+      {bool isGhost = false}) {
+    if (item is TerrariumShelfItem) {
+      final t = item.terrarium;
+      return TerrariumSlot(
+        terrarium: t,
+        label: labelFor(t, widget.shelf, allItems),
+        assignedSpecimens: widget.specimensByTerrariumId[t.id] ?? const [],
+        isGhost: isGhost,
+      );
+    }
+    final tool = (item as ToolShelfItem).tool;
+    return ToolSlot(tool: tool, isGhost: isGhost);
+  }
+
+  Widget _buildItemGesture(
+      ShelfItem item, _ShelfGeometry geo, List<ShelfItem> allItems) {
     return GestureDetector(
-      onTap: () => widget.onTapTerrarium(terrarium),
+      onTap: () {
+        if (item is TerrariumShelfItem) {
+          widget.onTapTerrarium(item.terrarium);
+        } else {
+          widget.onTapTool((item as ToolShelfItem).tool);
+        }
+      },
       onLongPressStart: (details) {
         setState(() {
-          _draggingId = terrarium.id;
+          _draggingKey = _itemKey(item);
           _dragLocalPosition = _globalToLocal(details.globalPosition);
         });
       },
@@ -120,94 +188,97 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
       onLongPressEnd: (details) {
         final local = _dragLocalPosition;
         setState(() {
-          _draggingId = null;
+          _draggingKey = null;
           _dragLocalPosition = null;
         });
         if (local == null) return;
         final target = _hitTest(geo, local);
         if (target == null) return; // dropped outside any level: cancel
         widget.onMove(
-          moving: terrarium,
+          moving: item,
           targetLevel: target.level,
-          targetPositionInLevel: target.positionInLevel,
-          stackOnTarget: target.stack,
+          targetPositionXCm: target.positionXCm,
+          stackOnTarget: target.stackOnTarget,
         );
       },
-      child: TerrariumSlot(terrarium: terrarium, label: labelFor(terrarium, shelf)),
+      child: _buildItemVisual(item, allItems),
     );
   }
 }
 
-class _TerrariumGeometry {
-  _TerrariumGeometry({
+class _ShelfGeometry {
+  _ShelfGeometry({
     required this.rects,
     required this.levelRowRects,
-    required this.levelSlotColumnRects,
+    required this.levelColumnRects,
+    required this.levelColumns,
     required this.totalWidthPx,
     required this.totalHeightPx,
   });
 
-  final Map<int, Rect> rects;
+  final Map<String, Rect> rects;
   final Map<int, Rect> levelRowRects;
-  final Map<int, List<Rect>> levelSlotColumnRects;
+  final Map<int, List<Rect>> levelColumnRects;
+  final Map<int, List<List<ShelfItem>>> levelColumns;
   final double totalWidthPx;
   final double totalHeightPx;
 }
 
-const _levelGapPx = 14.0;
-
-_TerrariumGeometry _computeGeometry(
-    Shelf shelf, ShelfLayout layout, double scale) {
-  final rects = <int, Rect>{};
+_ShelfGeometry _computeGeometry(Shelf shelf, List<ShelfItem> items) {
+  final rects = <String, Rect>{};
   final levelRowRects = <int, Rect>{};
-  final levelSlotColumnRects = <int, List<Rect>>{};
-  final rowWidthPx = shelf.lengthCm * scale;
-  final rowHeightPx = shelf.levelHeightCm * scale;
+  final levelColumnRects = <int, List<Rect>>{};
+  final levelColumns = <int, List<List<ShelfItem>>>{};
+  final rowWidthPx = shelf.lengthCm * cmToPx;
+  final rowHeightPx = shelf.levelHeightCm * cmToPx;
 
   var cursorY = 0.0;
   for (var level = 1; level <= shelf.levelCount; level++) {
     final rowTop = cursorY;
     levelRowRects[level] = Rect.fromLTWH(0, rowTop, rowWidthPx, rowHeightPx);
 
-    final slots = layout.levels[level] ?? const [];
-    var cursorX = 0.0;
-    final slotColumns = <Rect>[];
-    for (final slot in slots) {
-      final widthPx = footprintWidthCm(slot[0]) * scale;
-      slotColumns.add(Rect.fromLTWH(cursorX, rowTop, widthPx, rowHeightPx));
+    final columns = columnsForLevel(items, level);
+    levelColumns[level] = columns;
+    final columnRects = <Rect>[];
+    for (final column in columns) {
+      final x = column.first.positionXCm!;
+      final footprint =
+          column.map((i) => i.footprintCm).reduce((a, b) => a > b ? a : b);
+      final widthPx = footprint * cmToPx;
+      final leftPx = x * cmToPx;
+      columnRects.add(Rect.fromLTWH(leftPx, rowTop, widthPx, rowHeightPx));
 
       var heightFromBottom = 0.0;
-      for (final terrarium in slot) {
-        final hPx = terrarium.heightCm * scale;
+      for (final item in column) {
+        final hPx = item.itemHeightCm * cmToPx;
         final bottom = rowTop + rowHeightPx - heightFromBottom;
-        rects[terrarium.id] = Rect.fromLTWH(cursorX, bottom - hPx, widthPx, hPx);
+        rects[_itemKey(item)] =
+            Rect.fromLTWH(leftPx, bottom - hPx, widthPx, hPx);
         heightFromBottom += hPx;
       }
-
-      cursorX += widthPx;
     }
-    levelSlotColumnRects[level] = slotColumns;
+    levelColumnRects[level] = columnRects;
     cursorY += rowHeightPx + _levelGapPx;
   }
 
-  return _TerrariumGeometry(
+  return _ShelfGeometry(
     rects: rects,
     levelRowRects: levelRowRects,
-    levelSlotColumnRects: levelSlotColumnRects,
+    levelColumnRects: levelColumnRects,
+    levelColumns: levelColumns,
     totalWidthPx: rowWidthPx,
     totalHeightPx: (cursorY - _levelGapPx).clamp(0, double.infinity),
   );
 }
 
 class _DropTarget {
-  _DropTarget(
-      {required this.level, required this.positionInLevel, required this.stack});
+  _DropTarget({required this.level, required this.positionXCm, this.stackOnTarget});
   final int level;
-  final int positionInLevel;
-  final bool stack;
+  final double positionXCm;
+  final ShelfItem? stackOnTarget;
 }
 
-_DropTarget? _hitTest(_TerrariumGeometry geo, Offset point) {
+_DropTarget? _hitTest(_ShelfGeometry geo, Offset point) {
   int? bestLevel;
   var bestDist = double.infinity;
   for (final entry in geo.levelRowRects.entries) {
@@ -224,20 +295,17 @@ _DropTarget? _hitTest(_TerrariumGeometry geo, Offset point) {
   }
   if (bestLevel == null) return null;
 
-  final columns = geo.levelSlotColumnRects[bestLevel] ?? const [];
-  for (var i = 0; i < columns.length; i++) {
-    if (point.dx >= columns[i].left && point.dx < columns[i].right) {
-      return _DropTarget(level: bestLevel, positionInLevel: i, stack: true);
+  final columnRects = geo.levelColumnRects[bestLevel] ?? const [];
+  final columns = geo.levelColumns[bestLevel] ?? const [];
+  for (var i = 0; i < columnRects.length; i++) {
+    if (point.dx >= columnRects[i].left && point.dx < columnRects[i].right) {
+      return _DropTarget(
+        level: bestLevel,
+        positionXCm: columns[i].first.positionXCm!,
+        stackOnTarget: columns[i].first,
+      );
     }
   }
 
-  var insertIndex = columns.length;
-  for (var i = 0; i < columns.length; i++) {
-    if (point.dx < columns[i].left) {
-      insertIndex = i;
-      break;
-    }
-  }
-  return _DropTarget(
-      level: bestLevel, positionInLevel: insertIndex, stack: false);
+  return _DropTarget(level: bestLevel, positionXCm: point.dx / cmToPx);
 }
