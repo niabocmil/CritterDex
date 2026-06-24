@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../models/terrarium_layout.dart';
 import '../widgets/specimen_avatar.dart';
 import '../widgets/specimen_icon_picker_dialog.dart';
 import 'terrarium_form_screen.dart';
@@ -634,23 +635,23 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 14),
-        FutureBuilder<List<Terrarium>>(
-          future: db.getAllTerrariums(),
+        FutureBuilder<(List<Terrarium>, Map<int, String>)>(
+          future: _loadTerrariumsAndLabels(db),
           builder: (context, snapshot) {
-            final terrariums = snapshot.data ?? const <Terrarium>[];
-            return DropdownButtonFormField<int?>(
-              initialValue: _terrariumId,
-              decoration: const InputDecoration(labelText: 'Terrarium'),
-              items: [
-                const DropdownMenuItem<int?>(value: null, child: Text('None')),
-                ...terrariums.map((t) => DropdownMenuItem<int?>(
-                      value: t.id,
-                      child: Text(t.shelfId == null
-                          ? 'T${t.individualSequence}'
-                          : 'Terrarium #${t.id}'),
-                    )),
-              ],
-              onChanged: (v) => setState(() => _terrariumId = v),
+            final terrariums = snapshot.data?.$1 ?? const <Terrarium>[];
+            final labels = snapshot.data?.$2 ?? const <int, String>{};
+            final selected =
+                terrariums.where((t) => t.id == _terrariumId).firstOrNull;
+            return InkWell(
+              onTap: () => _pickTerrarium(terrariums, labels),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Terrarium',
+                  suffixIcon: Icon(Icons.search),
+                ),
+                child: Text(
+                    selected == null ? 'None' : (labels[selected.id] ?? '—')),
+              ),
             );
           },
         ),
@@ -668,6 +669,84 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
         ),
       ],
     );
+  }
+
+  Future<(List<Terrarium>, Map<int, String>)> _loadTerrariumsAndLabels(
+      AppDatabase db) async {
+    final terrariums = await db.getAllTerrariums();
+    final shelves = await db.getAllShelves();
+    final tools = await db.getAllTools();
+    return (terrariums, computeAllTerrariumLabels(shelves, terrariums, tools));
+  }
+
+  Future<void> _pickTerrarium(
+      List<Terrarium> terrariums, Map<int, String> labels) async {
+    final selectedId = await showModalBottomSheet<int?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        var query = '';
+        return StatefulBuilder(builder: (context, setSheetState) {
+          final filtered = terrariums.where((t) {
+            if (query.isEmpty) return true;
+            final label = labels[t.id] ?? '';
+            return label.toLowerCase().contains(query.toLowerCase()) ||
+                t.shape.toLowerCase().contains(query.toLowerCase());
+          }).toList();
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.4,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) {
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Select a terrarium',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    TextField(
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Search terrarium label',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (v) => setSheetState(() => query = v),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.block),
+                            title: const Text('None'),
+                            onTap: () => Navigator.of(context).pop(null),
+                          ),
+                          for (final t in filtered)
+                            ListTile(
+                              leading: const Icon(Icons.crop_square_outlined),
+                              title: Text(labels[t.id] ?? '—'),
+                              subtitle: Text(
+                                  '${t.volumeLitres.toStringAsFixed(1)} L · ${t.shape}'),
+                              onTap: () => Navigator.of(context).pop(t.id),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        });
+      },
+    );
+    if (selectedId != _terrariumId) {
+      setState(() => _terrariumId = selectedId);
+    }
   }
 
   String _formatDate(DateTime d) =>

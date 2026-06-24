@@ -24,6 +24,7 @@ LazyDatabase _openConnection() {
   Shelves,
   Terrariums,
   Tools,
+  SpecimenLogEntries,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -31,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -60,6 +61,11 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(terrariums, terrariums.positionXCm);
             await m.createTable(tools);
             await _backfillPositionXCm();
+          }
+          if (from < 4) {
+            await m.addColumn(specimens, specimens.deletedAt);
+            await m.addColumn(terrariums, terrariums.deletedAt);
+            await m.createTable(specimenLogEntries);
           }
         },
       );
@@ -108,9 +114,11 @@ class AppDatabase extends _$AppDatabase {
 
   // ---------- Specimens ----------
 
-  Stream<List<Specimen>> watchAllSpecimens() => select(specimens).watch();
+  Stream<List<Specimen>> watchAllSpecimens() =>
+      (select(specimens)..where((s) => s.deletedAt.isNull())).watch();
 
-  Future<List<Specimen>> getAllSpecimens() => select(specimens).get();
+  Future<List<Specimen>> getAllSpecimens() =>
+      (select(specimens)..where((s) => s.deletedAt.isNull())).get();
 
   Future<Specimen> getSpecimenById(int id) =>
       (select(specimens)..where((s) => s.id.equals(id))).getSingle();
@@ -121,12 +129,15 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Specimen>> getChildrenOf(int specimenId) {
     return (select(specimens)
           ..where((s) =>
-              s.motherId.equals(specimenId) | s.fatherId.equals(specimenId)))
+              s.deletedAt.isNull() &
+              (s.motherId.equals(specimenId) | s.fatherId.equals(specimenId))))
         .get();
   }
 
   Stream<List<Specimen>> watchSpecimensForTerrarium(int terrariumId) =>
-      (select(specimens)..where((s) => s.terrariumId.equals(terrariumId)))
+      (select(specimens)
+            ..where((s) =>
+                s.terrariumId.equals(terrariumId) & s.deletedAt.isNull()))
           .watch();
 
   Future<int> insertSpecimen(SpecimensCompanion entry) =>
@@ -135,8 +146,35 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateSpecimen(Specimen entry) =>
       update(specimens).replace(entry);
 
+  Future<void> softDeleteSpecimen(int id) async {
+    await (update(specimens)..where((s) => s.id.equals(id)))
+        .write(SpecimensCompanion(deletedAt: Value(DateTime.now())));
+  }
+
+  Future<void> restoreSpecimen(int id) async {
+    await (update(specimens)..where((s) => s.id.equals(id)))
+        .write(const SpecimensCompanion(deletedAt: Value(null)));
+  }
+
   Future<int> deleteSpecimen(int id) =>
       (delete(specimens)..where((s) => s.id.equals(id))).go();
+
+  Stream<List<Specimen>> watchDeletedSpecimens() => (select(specimens)
+        ..where((s) => s.deletedAt.isNotNull())
+        ..orderBy([(s) => OrderingTerm.desc(s.deletedAt)]))
+      .watch();
+
+  // ---------- Specimen log entries ----------
+
+  Stream<List<SpecimenLogEntry>> watchLogEntriesForSpecimen(int specimenId) {
+    return (select(specimenLogEntries)
+          ..where((e) => e.specimenId.equals(specimenId))
+          ..orderBy([(e) => OrderingTerm.asc(e.timestamp)]))
+        .watch();
+  }
+
+  Future<int> insertSpecimenLogEntry(SpecimenLogEntriesCompanion entry) =>
+      into(specimenLogEntries).insert(entry);
 
   // ---------- Breeding events ----------
 
@@ -202,9 +240,11 @@ class AppDatabase extends _$AppDatabase {
 
   // ---------- Terrariums ----------
 
-  Stream<List<Terrarium>> watchAllTerrariums() => select(terrariums).watch();
+  Stream<List<Terrarium>> watchAllTerrariums() =>
+      (select(terrariums)..where((t) => t.deletedAt.isNull())).watch();
 
-  Future<List<Terrarium>> getAllTerrariums() => select(terrariums).get();
+  Future<List<Terrarium>> getAllTerrariums() =>
+      (select(terrariums)..where((t) => t.deletedAt.isNull())).get();
 
   Future<Terrarium> getTerrariumById(int id) =>
       (select(terrariums)..where((t) => t.id.equals(id))).getSingle();
@@ -213,10 +253,14 @@ class AppDatabase extends _$AppDatabase {
       (select(terrariums)..where((t) => t.id.equals(id))).watchSingle();
 
   Future<List<Terrarium>> getTerrariumsForShelf(int shelfId) =>
-      (select(terrariums)..where((t) => t.shelfId.equals(shelfId))).get();
+      (select(terrariums)
+            ..where((t) => t.shelfId.equals(shelfId) & t.deletedAt.isNull()))
+          .get();
 
   Stream<List<Terrarium>> watchTerrariumsForShelf(int shelfId) =>
-      (select(terrariums)..where((t) => t.shelfId.equals(shelfId))).watch();
+      (select(terrariums)
+            ..where((t) => t.shelfId.equals(shelfId) & t.deletedAt.isNull()))
+          .watch();
 
   Future<int> insertTerrarium(TerrariumsCompanion entry) =>
       into(terrariums).insert(entry);
@@ -224,8 +268,23 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateTerrarium(Terrarium entry) =>
       update(terrariums).replace(entry);
 
+  Future<void> softDeleteTerrarium(int id) async {
+    await (update(terrariums)..where((t) => t.id.equals(id)))
+        .write(TerrariumsCompanion(deletedAt: Value(DateTime.now())));
+  }
+
+  Future<void> restoreTerrarium(int id) async {
+    await (update(terrariums)..where((t) => t.id.equals(id)))
+        .write(const TerrariumsCompanion(deletedAt: Value(null)));
+  }
+
   Future<int> deleteTerrarium(int id) =>
       (delete(terrariums)..where((t) => t.id.equals(id))).go();
+
+  Stream<List<Terrarium>> watchDeletedTerrariums() => (select(terrariums)
+        ..where((t) => t.deletedAt.isNotNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.deletedAt)]))
+      .watch();
 
   Future<int> nextIndividualSequence() async {
     final query = selectOnly(terrariums)
@@ -242,7 +301,9 @@ class AppDatabase extends _$AppDatabase {
     final query = select(specimens).join([
       innerJoin(terrariums, terrariums.id.equalsExp(specimens.terrariumId)),
     ])
-      ..where(terrariums.shelfId.equals(shelfId));
+      ..where(terrariums.shelfId.equals(shelfId) &
+          specimens.deletedAt.isNull() &
+          terrariums.deletedAt.isNull());
     return query
         .watch()
         .map((rows) => rows.map((row) => row.readTable(specimens)).toList());
@@ -272,4 +333,18 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteTool(int id) =>
       (delete(tools)..where((t) => t.id.equals(id))).go();
+
+  // ---------- Bin ----------
+
+  /// Hard-deletes anything that's been sitting in the bin for 30+ days.
+  /// Run once on app startup — this app has no background scheduler, so
+  /// "auto delete after 30 days" means "purged the next time the app opens
+  /// after the 30 days have elapsed", not a real-time background job.
+  Future<void> purgeExpiredBinItems() async {
+    final cutoff = DateTime.now().subtract(const Duration(days: 30));
+    await (delete(specimens)..where((s) => s.deletedAt.isSmallerThanValue(cutoff)))
+        .go();
+    await (delete(terrariums)..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+        .go();
+  }
 }

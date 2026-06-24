@@ -96,8 +96,20 @@ class ShelfDetailScreen extends StatelessWidget {
                     controller: scrollController,
                     padding: const EdgeInsets.all(20),
                     children: [
-                      Text('Empty terrarium',
-                          style: Theme.of(context).textTheme.titleLarge),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text('Empty terrarium',
+                                style: Theme.of(context).textTheme.titleLarge),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Move to bin',
+                            onPressed: () => _confirmDeleteTerrarium(
+                                context, db, terrarium, 0),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       ListTile(
                         leading: const Icon(Icons.link),
@@ -125,9 +137,21 @@ class ShelfDetailScreen extends StatelessWidget {
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   children: [
-                    Text(
-                      labelFor(terrarium, shelf, allOnShelf),
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            labelFor(terrarium, shelf, allOnShelf),
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Move to bin',
+                          onPressed: () => _confirmDeleteTerrarium(
+                              context, db, terrarium, specimens.length),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -163,6 +187,37 @@ class ShelfDetailScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  void _confirmDeleteTerrarium(BuildContext context, AppDatabase db,
+      Terrarium terrarium, int specimenCount) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Move to bin?'),
+        content: Text(specimenCount > 0
+            ? 'This terrarium will be moved to the bin. Its $specimenCount assigned '
+                'specimen${specimenCount == 1 ? '' : 's'} will stay assigned to it. '
+                'You can restore it from More > Bin within 30 days, after which it is '
+                'permanently deleted.'
+            : 'This terrarium will be moved to the bin. You can restore it from '
+                'More > Bin within 30 days, after which it is permanently deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await db.softDeleteTerrarium(terrarium.id);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('Move to bin'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -271,65 +326,28 @@ class ShelfDetailScreen extends StatelessWidget {
                       ];
                       final replenishDueCount =
                           specimens.where(isReplenishDue).length;
-                      final usedLengthCm = terrariums.fold<double>(
-                              0.0, (sum, t) => sum + footprintWidthCm(t)) +
-                          tools.fold<double>(0.0, (sum, t) => sum + t.lengthCm);
-                      final totalLengthCm = shelf.lengthCm * shelf.levelCount;
-                      final occupiedFraction = totalLengthCm == 0
-                          ? 0.0
-                          : (usedLengthCm / totalLengthCm).clamp(0.0, 1.0);
 
                       return SingleChildScrollView(
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text('Space occupied',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall),
-                                        Text(
-                                            '${(occupiedFraction * 100).toStringAsFixed(0)}%'),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: LinearProgressIndicator(
-                                          value: occupiedFraction,
-                                          minHeight: 8),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 16,
-                                      runSpacing: 8,
-                                      children: [
-                                        Text(
-                                            '${terrariums.length} terrarium(s) in use'),
-                                        if (replenishDueCount > 0)
-                                          Text(
-                                            '$replenishDueCount need${replenishDueCount == 1 ? 's' : ''} replenishing today',
-                                            style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error,
-                                                fontWeight: FontWeight.w600),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 8,
+                              children: [
+                                Text(
+                                    '${terrariums.length} terrarium(s) in use'),
+                                if (replenishDueCount > 0)
+                                  Text(
+                                    '$replenishDueCount need${replenishDueCount == 1 ? 's' : ''} replenishing today',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 20),
                             ShelfVisualization(

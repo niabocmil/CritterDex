@@ -24,10 +24,34 @@ String? _formatAge(DateTime? dob) {
   return '$years year${years == 1 ? '' : 's'}';
 }
 
-class SpecimenDetailScreen extends StatelessWidget {
+class SpecimenDetailScreen extends StatefulWidget {
   const SpecimenDetailScreen({super.key, required this.specimenId});
 
   final int specimenId;
+
+  @override
+  State<SpecimenDetailScreen> createState() => _SpecimenDetailScreenState();
+}
+
+class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
+  final _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addNote(AppDatabase db) async {
+    final note = _noteController.text.trim();
+    if (note.isEmpty) return;
+    await db.insertSpecimenLogEntry(SpecimenLogEntriesCompanion.insert(
+      specimenId: widget.specimenId,
+      note: note,
+    ));
+    _noteController.clear();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +59,7 @@ class SpecimenDetailScreen extends StatelessWidget {
 
     return Scaffold(
       body: StreamBuilder<Specimen>(
-        stream: db.watchSpecimenById(specimenId),
+        stream: db.watchSpecimenById(widget.specimenId),
         builder: (context, snapshot) {
           final specimen = snapshot.data;
           if (specimen == null) {
@@ -262,6 +286,57 @@ class SpecimenDetailScreen extends StatelessWidget {
                             const SizedBox(height: 8),
                             ..._relativeList(context, children),
                           ],
+                          const Divider(height: 32),
+                          Text('Add a note',
+                              style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _noteController,
+                                  decoration:
+                                      const InputDecoration(hintText: 'Note'),
+                                  minLines: 1,
+                                  maxLines: 3,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.send),
+                                onPressed: () => _addNote(db),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 32),
+                          Text('Timeline',
+                              style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 8),
+                          StreamBuilder<List<SpecimenLogEntry>>(
+                            stream:
+                                db.watchLogEntriesForSpecimen(specimen.id),
+                            builder: (context, logSnapshot) {
+                              final entries =
+                                  logSnapshot.data ?? const <SpecimenLogEntry>[];
+                              if (entries.isEmpty) {
+                                return const Text('No timeline entries yet.');
+                              }
+                              return Column(
+                                children: [
+                                  for (final entry in entries.reversed)
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: const Icon(Icons.notes),
+                                      title: Text(entry.note),
+                                      subtitle: Text(DateFormat.yMMMd()
+                                          .add_jm()
+                                          .format(entry.timestamp)),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -302,9 +377,10 @@ class SpecimenDetailScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete specimen?'),
+        title: const Text('Move to bin?'),
         content: Text(
-            'This will permanently remove ${specimen.name?.isNotEmpty == true ? specimen.name! : specimen.species}. Records of this specimen as a parent will keep the link but it will no longer resolve.'),
+            '${specimen.name?.isNotEmpty == true ? specimen.name! : specimen.species} will be moved to the bin. '
+            'You can restore it from More > Bin within 30 days, after which it is permanently deleted.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -312,11 +388,11 @@ class SpecimenDetailScreen extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () async {
-              await db.deleteSpecimen(specimen.id);
+              await db.softDeleteSpecimen(specimen.id);
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) Navigator.of(context).pop();
             },
-            child: const Text('Delete'),
+            child: const Text('Move to bin'),
           ),
         ],
       ),

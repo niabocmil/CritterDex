@@ -113,3 +113,29 @@ String labelFor(Terrarium t, Shelf? shelf, List<ShelfItem> allOnShelf) =>
     t.shelfId == null
         ? individualLabelFor(t)
         : shelfLabelFor(t, shelf!, allOnShelf);
+
+/// Computes every terrarium's display label (e.g. "A1-2a" or "T3") in one
+/// pass, for pickers that need to show real labels for a whole list of
+/// terrariums at once rather than one at a time.
+Map<int, String> computeAllTerrariumLabels(
+  List<Shelf> shelves,
+  List<Terrarium> terrariums,
+  List<Tool> tools,
+) {
+  final shelfById = {for (final s in shelves) s.id: s};
+  final itemsByShelfId = <int?, List<ShelfItem>>{};
+  for (final t in terrariums) {
+    itemsByShelfId.putIfAbsent(t.shelfId, () => []).add(TerrariumShelfItem(t));
+  }
+  for (final tool in tools) {
+    itemsByShelfId.putIfAbsent(tool.shelfId, () => []).add(ToolShelfItem(tool));
+  }
+  return {
+    for (final t in terrariums)
+      t.id: labelFor(
+        t,
+        t.shelfId == null ? null : shelfById[t.shelfId],
+        itemsByShelfId[t.shelfId] ?? const [],
+      ),
+  };
+}

@@ -18,14 +18,27 @@ class ThemeController extends ChangeNotifier {
 
   ThemeData get themeData {
     if (_choice == AppThemeChoice.custom) {
-      final scheme = ColorScheme.fromSeed(
+      final base = ColorScheme.fromSeed(
         seedColor: _customSeedColor,
         brightness: _customBrightness,
+      );
+      // ColorScheme.fromSeed() remaps the seed into a tonal palette, which
+      // visibly darkens (or otherwise shifts) whatever color the user
+      // actually picked. Overriding primary/onPrimary with the literal
+      // chosen color keeps every primary-colored accent (FAB, buttons,
+      // focused inputs, etc.) matching the exact color, while the rest of
+      // the scheme still derives its harmonious surfaces from the seed.
+      final scheme = base.copyWith(
+        primary: _customSeedColor,
+        onPrimary: _contrastingOnColor(_customSeedColor),
       );
       return AppTheme.themeForScheme(scheme);
     }
     return AppTheme.themeFor(_choice);
   }
+
+  static Color _contrastingOnColor(Color color) =>
+      color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();

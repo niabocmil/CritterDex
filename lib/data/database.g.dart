@@ -641,6 +641,17 @@ class $TerrariumsTable extends Terrariums
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -659,6 +670,7 @@ class $TerrariumsTable extends Terrariums
     individualSequence,
     purpose,
     createdAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -783,6 +795,12 @@ class $TerrariumsTable extends Terrariums
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -856,6 +874,10 @@ class $TerrariumsTable extends Terrariums
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -882,6 +904,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
   final int? individualSequence;
   final String purpose;
   final DateTime createdAt;
+  final DateTime? deletedAt;
   const Terrarium({
     required this.id,
     required this.shape,
@@ -899,6 +922,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     this.individualSequence,
     required this.purpose,
     required this.createdAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -939,6 +963,9 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     }
     map['purpose'] = Variable<String>(purpose);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -980,6 +1007,9 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           : Value(individualSequence),
       purpose: Value(purpose),
       createdAt: Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -1005,6 +1035,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       individualSequence: serializer.fromJson<int?>(json['individualSequence']),
       purpose: serializer.fromJson<String>(json['purpose']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -1027,6 +1058,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
       'individualSequence': serializer.toJson<int?>(individualSequence),
       'purpose': serializer.toJson<String>(purpose),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -1047,6 +1079,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     Value<int?> individualSequence = const Value.absent(),
     String? purpose,
     DateTime? createdAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Terrarium(
     id: id ?? this.id,
     shape: shape ?? this.shape,
@@ -1068,6 +1101,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
         : this.individualSequence,
     purpose: purpose ?? this.purpose,
     createdAt: createdAt ?? this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Terrarium copyWithCompanion(TerrariumsCompanion data) {
     return Terrarium(
@@ -1099,6 +1133,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           : this.individualSequence,
       purpose: data.purpose.present ? data.purpose.value : this.purpose,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -1120,7 +1155,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
           ..write('purpose: $purpose, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1143,6 +1179,7 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
     individualSequence,
     purpose,
     createdAt,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1163,7 +1200,8 @@ class Terrarium extends DataClass implements Insertable<Terrarium> {
           other.location == this.location &&
           other.individualSequence == this.individualSequence &&
           other.purpose == this.purpose &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
@@ -1183,6 +1221,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
   final Value<int?> individualSequence;
   final Value<String> purpose;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> deletedAt;
   const TerrariumsCompanion({
     this.id = const Value.absent(),
     this.shape = const Value.absent(),
@@ -1200,6 +1239,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.individualSequence = const Value.absent(),
     this.purpose = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   });
   TerrariumsCompanion.insert({
     this.id = const Value.absent(),
@@ -1218,6 +1258,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     this.individualSequence = const Value.absent(),
     this.purpose = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   }) : shape = Value(shape),
        heightCm = Value(heightCm),
        volumeLitres = Value(volumeLitres);
@@ -1238,6 +1279,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Expression<int>? individualSequence,
     Expression<String>? purpose,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1256,6 +1298,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       if (individualSequence != null) 'individual_sequence': individualSequence,
       if (purpose != null) 'purpose': purpose,
       if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -1276,6 +1319,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     Value<int?>? individualSequence,
     Value<String>? purpose,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? deletedAt,
   }) {
     return TerrariumsCompanion(
       id: id ?? this.id,
@@ -1294,6 +1338,7 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
       individualSequence: individualSequence ?? this.individualSequence,
       purpose: purpose ?? this.purpose,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -1348,6 +1393,9 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     return map;
   }
 
@@ -1369,7 +1417,8 @@ class TerrariumsCompanion extends UpdateCompanion<Terrarium> {
           ..write('location: $location, ')
           ..write('individualSequence: $individualSequence, ')
           ..write('purpose: $purpose, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -1616,6 +1665,17 @@ class $SpecimensTable extends Specimens
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1639,6 +1699,7 @@ class $SpecimensTable extends Specimens
     terrariumId,
     sourceBreedingEventId,
     createdAt,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1804,6 +1865,12 @@ class $SpecimensTable extends Specimens
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -1897,6 +1964,10 @@ class $SpecimensTable extends Specimens
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -1928,6 +1999,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   final int? terrariumId;
   final int? sourceBreedingEventId;
   final DateTime createdAt;
+  final DateTime? deletedAt;
   const Specimen({
     required this.id,
     this.name,
@@ -1950,6 +2022,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     this.terrariumId,
     this.sourceBreedingEventId,
     required this.createdAt,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2005,6 +2078,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       map['source_breeding_event_id'] = Variable<int>(sourceBreedingEventId);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -2059,6 +2135,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ? const Value.absent()
           : Value(sourceBreedingEventId),
       createdAt: Value(createdAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
     );
   }
 
@@ -2095,6 +2174,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
         json['sourceBreedingEventId'],
       ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -2122,6 +2202,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       'terrariumId': serializer.toJson<int?>(terrariumId),
       'sourceBreedingEventId': serializer.toJson<int?>(sourceBreedingEventId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -2147,6 +2228,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     Value<int?> terrariumId = const Value.absent(),
     Value<int?> sourceBreedingEventId = const Value.absent(),
     DateTime? createdAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => Specimen(
     id: id ?? this.id,
     name: name.present ? name.value : this.name,
@@ -2175,6 +2257,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
         ? sourceBreedingEventId.value
         : this.sourceBreedingEventId,
     createdAt: createdAt ?? this.createdAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   Specimen copyWithCompanion(SpecimensCompanion data) {
     return Specimen(
@@ -2217,6 +2300,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ? data.sourceBreedingEventId.value
           : this.sourceBreedingEventId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -2243,7 +2327,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ..write('fatherId: $fatherId, ')
           ..write('terrariumId: $terrariumId, ')
           ..write('sourceBreedingEventId: $sourceBreedingEventId, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -2271,6 +2356,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     terrariumId,
     sourceBreedingEventId,
     createdAt,
+    deletedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -2296,7 +2382,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           other.fatherId == this.fatherId &&
           other.terrariumId == this.terrariumId &&
           other.sourceBreedingEventId == this.sourceBreedingEventId &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.deletedAt == this.deletedAt);
 }
 
 class SpecimensCompanion extends UpdateCompanion<Specimen> {
@@ -2321,6 +2408,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
   final Value<int?> terrariumId;
   final Value<int?> sourceBreedingEventId;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> deletedAt;
   const SpecimensCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -2343,6 +2431,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.terrariumId = const Value.absent(),
     this.sourceBreedingEventId = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   });
   SpecimensCompanion.insert({
     this.id = const Value.absent(),
@@ -2366,6 +2455,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.terrariumId = const Value.absent(),
     this.sourceBreedingEventId = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   }) : species = Value(species);
   static Insertable<Specimen> custom({
     Expression<int>? id,
@@ -2389,6 +2479,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Expression<int>? terrariumId,
     Expression<int>? sourceBreedingEventId,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2414,6 +2505,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       if (sourceBreedingEventId != null)
         'source_breeding_event_id': sourceBreedingEventId,
       if (createdAt != null) 'created_at': createdAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -2439,6 +2531,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Value<int?>? terrariumId,
     Value<int?>? sourceBreedingEventId,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? deletedAt,
   }) {
     return SpecimensCompanion(
       id: id ?? this.id,
@@ -2464,6 +2557,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       sourceBreedingEventId:
           sourceBreedingEventId ?? this.sourceBreedingEventId,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -2537,6 +2631,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     return map;
   }
 
@@ -2563,7 +2660,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           ..write('fatherId: $fatherId, ')
           ..write('terrariumId: $terrariumId, ')
           ..write('sourceBreedingEventId: $sourceBreedingEventId, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -4035,6 +4133,308 @@ class ToolsCompanion extends UpdateCompanion<Tool> {
   }
 }
 
+class $SpecimenLogEntriesTable extends SpecimenLogEntries
+    with TableInfo<$SpecimenLogEntriesTable, SpecimenLogEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SpecimenLogEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _specimenIdMeta = const VerificationMeta(
+    'specimenId',
+  );
+  @override
+  late final GeneratedColumn<int> specimenId = GeneratedColumn<int>(
+    'specimen_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES specimens (id)',
+    ),
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, specimenId, timestamp, note];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'specimen_log_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SpecimenLogEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('specimen_id')) {
+      context.handle(
+        _specimenIdMeta,
+        specimenId.isAcceptableOrUnknown(data['specimen_id']!, _specimenIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_specimenIdMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SpecimenLogEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SpecimenLogEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      specimenId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}specimen_id'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+    );
+  }
+
+  @override
+  $SpecimenLogEntriesTable createAlias(String alias) {
+    return $SpecimenLogEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class SpecimenLogEntry extends DataClass
+    implements Insertable<SpecimenLogEntry> {
+  final int id;
+  final int specimenId;
+  final DateTime timestamp;
+  final String note;
+  const SpecimenLogEntry({
+    required this.id,
+    required this.specimenId,
+    required this.timestamp,
+    required this.note,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['specimen_id'] = Variable<int>(specimenId);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    map['note'] = Variable<String>(note);
+    return map;
+  }
+
+  SpecimenLogEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SpecimenLogEntriesCompanion(
+      id: Value(id),
+      specimenId: Value(specimenId),
+      timestamp: Value(timestamp),
+      note: Value(note),
+    );
+  }
+
+  factory SpecimenLogEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SpecimenLogEntry(
+      id: serializer.fromJson<int>(json['id']),
+      specimenId: serializer.fromJson<int>(json['specimenId']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      note: serializer.fromJson<String>(json['note']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'specimenId': serializer.toJson<int>(specimenId),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'note': serializer.toJson<String>(note),
+    };
+  }
+
+  SpecimenLogEntry copyWith({
+    int? id,
+    int? specimenId,
+    DateTime? timestamp,
+    String? note,
+  }) => SpecimenLogEntry(
+    id: id ?? this.id,
+    specimenId: specimenId ?? this.specimenId,
+    timestamp: timestamp ?? this.timestamp,
+    note: note ?? this.note,
+  );
+  SpecimenLogEntry copyWithCompanion(SpecimenLogEntriesCompanion data) {
+    return SpecimenLogEntry(
+      id: data.id.present ? data.id.value : this.id,
+      specimenId: data.specimenId.present
+          ? data.specimenId.value
+          : this.specimenId,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      note: data.note.present ? data.note.value : this.note,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpecimenLogEntry(')
+          ..write('id: $id, ')
+          ..write('specimenId: $specimenId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, specimenId, timestamp, note);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpecimenLogEntry &&
+          other.id == this.id &&
+          other.specimenId == this.specimenId &&
+          other.timestamp == this.timestamp &&
+          other.note == this.note);
+}
+
+class SpecimenLogEntriesCompanion extends UpdateCompanion<SpecimenLogEntry> {
+  final Value<int> id;
+  final Value<int> specimenId;
+  final Value<DateTime> timestamp;
+  final Value<String> note;
+  const SpecimenLogEntriesCompanion({
+    this.id = const Value.absent(),
+    this.specimenId = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.note = const Value.absent(),
+  });
+  SpecimenLogEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int specimenId,
+    this.timestamp = const Value.absent(),
+    required String note,
+  }) : specimenId = Value(specimenId),
+       note = Value(note);
+  static Insertable<SpecimenLogEntry> custom({
+    Expression<int>? id,
+    Expression<int>? specimenId,
+    Expression<DateTime>? timestamp,
+    Expression<String>? note,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (specimenId != null) 'specimen_id': specimenId,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (note != null) 'note': note,
+    });
+  }
+
+  SpecimenLogEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? specimenId,
+    Value<DateTime>? timestamp,
+    Value<String>? note,
+  }) {
+    return SpecimenLogEntriesCompanion(
+      id: id ?? this.id,
+      specimenId: specimenId ?? this.specimenId,
+      timestamp: timestamp ?? this.timestamp,
+      note: note ?? this.note,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (specimenId.present) {
+      map['specimen_id'] = Variable<int>(specimenId.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpecimenLogEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('specimenId: $specimenId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('note: $note')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4045,6 +4445,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BreedingLogEntriesTable breedingLogEntries =
       $BreedingLogEntriesTable(this);
   late final $ToolsTable tools = $ToolsTable(this);
+  late final $SpecimenLogEntriesTable specimenLogEntries =
+      $SpecimenLogEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4056,6 +4458,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     breedingEvents,
     breedingLogEntries,
     tools,
+    specimenLogEntries,
   ];
 }
 
@@ -4493,6 +4896,7 @@ typedef $$TerrariumsTableCreateCompanionBuilder =
       Value<int?> individualSequence,
       Value<String> purpose,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 typedef $$TerrariumsTableUpdateCompanionBuilder =
     TerrariumsCompanion Function({
@@ -4512,6 +4916,7 @@ typedef $$TerrariumsTableUpdateCompanionBuilder =
       Value<int?> individualSequence,
       Value<String> purpose,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 
 final class $$TerrariumsTableReferences
@@ -4635,6 +5040,11 @@ class $$TerrariumsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4771,6 +5181,11 @@ class $$TerrariumsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ShelvesTableOrderingComposer get shelfId {
     final $$ShelvesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4860,6 +5275,9 @@ class $$TerrariumsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 
   $$ShelvesTableAnnotationComposer get shelfId {
     final $$ShelvesTableAnnotationComposer composer = $composerBuilder(
@@ -4954,6 +5372,7 @@ class $$TerrariumsTableTableManager
                 Value<int?> individualSequence = const Value.absent(),
                 Value<String> purpose = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => TerrariumsCompanion(
                 id: id,
                 shape: shape,
@@ -4971,6 +5390,7 @@ class $$TerrariumsTableTableManager
                 individualSequence: individualSequence,
                 purpose: purpose,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           createCompanionCallback:
               ({
@@ -4990,6 +5410,7 @@ class $$TerrariumsTableTableManager
                 Value<int?> individualSequence = const Value.absent(),
                 Value<String> purpose = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => TerrariumsCompanion.insert(
                 id: id,
                 shape: shape,
@@ -5007,6 +5428,7 @@ class $$TerrariumsTableTableManager
                 individualSequence: individualSequence,
                 purpose: purpose,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -5120,6 +5542,7 @@ typedef $$SpecimensTableCreateCompanionBuilder =
       Value<int?> terrariumId,
       Value<int?> sourceBreedingEventId,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 typedef $$SpecimensTableUpdateCompanionBuilder =
     SpecimensCompanion Function({
@@ -5144,6 +5567,7 @@ typedef $$SpecimensTableUpdateCompanionBuilder =
       Value<int?> terrariumId,
       Value<int?> sourceBreedingEventId,
       Value<DateTime> createdAt,
+      Value<DateTime?> deletedAt,
     });
 
 final class $$SpecimensTableReferences
@@ -5198,6 +5622,27 @@ final class $$SpecimensTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$SpecimenLogEntriesTable, List<SpecimenLogEntry>>
+  _specimenLogEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.specimenLogEntries,
+        aliasName: 'specimens__id__specimen_log_entries__specimen_id',
+      );
+
+  $$SpecimenLogEntriesTableProcessedTableManager get specimenLogEntriesRefs {
+    final manager = $$SpecimenLogEntriesTableTableManager(
+      $_db,
+      $_db.specimenLogEntries,
+    ).filter((f) => f.specimenId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _specimenLogEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -5301,6 +5746,11 @@ class $$SpecimensTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$SpecimensTableFilterComposer get motherId {
     final $$SpecimensTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -5368,6 +5818,31 @@ class $$SpecimensTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> specimenLogEntriesRefs(
+    Expression<bool> Function($$SpecimenLogEntriesTableFilterComposer f) f,
+  ) {
+    final $$SpecimenLogEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.specimenLogEntries,
+      getReferencedColumn: (t) => t.specimenId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimenLogEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.specimenLogEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -5467,6 +5942,11 @@ class $$SpecimensTableOrderingComposer
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5619,6 +6099,9 @@ class $$SpecimensTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
   $$SpecimensTableAnnotationComposer get motherId {
     final $$SpecimensTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -5687,6 +6170,32 @@ class $$SpecimensTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> specimenLogEntriesRefs<T extends Object>(
+    Expression<T> Function($$SpecimenLogEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$SpecimenLogEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.specimenLogEntries,
+          getReferencedColumn: (t) => t.specimenId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SpecimenLogEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.specimenLogEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$SpecimensTableTableManager
@@ -5706,6 +6215,7 @@ class $$SpecimensTableTableManager
             bool motherId,
             bool fatherId,
             bool terrariumId,
+            bool specimenLogEntriesRefs,
           })
         > {
   $$SpecimensTableTableManager(_$AppDatabase db, $SpecimensTable table)
@@ -5742,6 +6252,7 @@ class $$SpecimensTableTableManager
                 Value<int?> terrariumId = const Value.absent(),
                 Value<int?> sourceBreedingEventId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => SpecimensCompanion(
                 id: id,
                 name: name,
@@ -5764,6 +6275,7 @@ class $$SpecimensTableTableManager
                 terrariumId: terrariumId,
                 sourceBreedingEventId: sourceBreedingEventId,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           createCompanionCallback:
               ({
@@ -5788,6 +6300,7 @@ class $$SpecimensTableTableManager
                 Value<int?> terrariumId = const Value.absent(),
                 Value<int?> sourceBreedingEventId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
               }) => SpecimensCompanion.insert(
                 id: id,
                 name: name,
@@ -5810,6 +6323,7 @@ class $$SpecimensTableTableManager
                 terrariumId: terrariumId,
                 sourceBreedingEventId: sourceBreedingEventId,
                 createdAt: createdAt,
+                deletedAt: deletedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -5820,10 +6334,17 @@ class $$SpecimensTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({motherId = false, fatherId = false, terrariumId = false}) {
+              ({
+                motherId = false,
+                fatherId = false,
+                terrariumId = false,
+                specimenLogEntriesRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [],
+                  explicitlyWatchedTables: [
+                    if (specimenLogEntriesRefs) db.specimenLogEntries,
+                  ],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -5883,7 +6404,29 @@ class $$SpecimensTableTableManager
                         return state;
                       },
                   getPrefetchedDataCallback: (items) async {
-                    return [];
+                    return [
+                      if (specimenLogEntriesRefs)
+                        await $_getPrefetchedData<
+                          Specimen,
+                          $SpecimensTable,
+                          SpecimenLogEntry
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SpecimensTableReferences
+                              ._specimenLogEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SpecimensTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).specimenLogEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.specimenId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
                 );
               },
@@ -5903,7 +6446,12 @@ typedef $$SpecimensTableProcessedTableManager =
       $$SpecimensTableUpdateCompanionBuilder,
       (Specimen, $$SpecimensTableReferences),
       Specimen,
-      PrefetchHooks Function({bool motherId, bool fatherId, bool terrariumId})
+      PrefetchHooks Function({
+        bool motherId,
+        bool fatherId,
+        bool terrariumId,
+        bool specimenLogEntriesRefs,
+      })
     >;
 typedef $$BreedingEventsTableCreateCompanionBuilder =
     BreedingEventsCompanion Function({
@@ -7219,6 +7767,314 @@ typedef $$ToolsTableProcessedTableManager =
       Tool,
       PrefetchHooks Function({bool shelfId})
     >;
+typedef $$SpecimenLogEntriesTableCreateCompanionBuilder =
+    SpecimenLogEntriesCompanion Function({
+      Value<int> id,
+      required int specimenId,
+      Value<DateTime> timestamp,
+      required String note,
+    });
+typedef $$SpecimenLogEntriesTableUpdateCompanionBuilder =
+    SpecimenLogEntriesCompanion Function({
+      Value<int> id,
+      Value<int> specimenId,
+      Value<DateTime> timestamp,
+      Value<String> note,
+    });
+
+final class $$SpecimenLogEntriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $SpecimenLogEntriesTable,
+          SpecimenLogEntry
+        > {
+  $$SpecimenLogEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SpecimensTable _specimenIdTable(_$AppDatabase db) => db.specimens
+      .createAlias('specimen_log_entries__specimen_id__specimens__id');
+
+  $$SpecimensTableProcessedTableManager get specimenId {
+    final $_column = $_itemColumn<int>('specimen_id')!;
+
+    final manager = $$SpecimensTableTableManager(
+      $_db,
+      $_db.specimens,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_specimenIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SpecimenLogEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SpecimenLogEntriesTable> {
+  $$SpecimenLogEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SpecimensTableFilterComposer get specimenId {
+    final $$SpecimensTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableFilterComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenLogEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SpecimenLogEntriesTable> {
+  $$SpecimenLogEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SpecimensTableOrderingComposer get specimenId {
+    final $$SpecimensTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableOrderingComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenLogEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SpecimenLogEntriesTable> {
+  $$SpecimenLogEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  $$SpecimensTableAnnotationComposer get specimenId {
+    final $$SpecimensTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableAnnotationComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenLogEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SpecimenLogEntriesTable,
+          SpecimenLogEntry,
+          $$SpecimenLogEntriesTableFilterComposer,
+          $$SpecimenLogEntriesTableOrderingComposer,
+          $$SpecimenLogEntriesTableAnnotationComposer,
+          $$SpecimenLogEntriesTableCreateCompanionBuilder,
+          $$SpecimenLogEntriesTableUpdateCompanionBuilder,
+          (SpecimenLogEntry, $$SpecimenLogEntriesTableReferences),
+          SpecimenLogEntry,
+          PrefetchHooks Function({bool specimenId})
+        > {
+  $$SpecimenLogEntriesTableTableManager(
+    _$AppDatabase db,
+    $SpecimenLogEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SpecimenLogEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SpecimenLogEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SpecimenLogEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> specimenId = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<String> note = const Value.absent(),
+              }) => SpecimenLogEntriesCompanion(
+                id: id,
+                specimenId: specimenId,
+                timestamp: timestamp,
+                note: note,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int specimenId,
+                Value<DateTime> timestamp = const Value.absent(),
+                required String note,
+              }) => SpecimenLogEntriesCompanion.insert(
+                id: id,
+                specimenId: specimenId,
+                timestamp: timestamp,
+                note: note,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SpecimenLogEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({specimenId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (specimenId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.specimenId,
+                                referencedTable:
+                                    $$SpecimenLogEntriesTableReferences
+                                        ._specimenIdTable(db),
+                                referencedColumn:
+                                    $$SpecimenLogEntriesTableReferences
+                                        ._specimenIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SpecimenLogEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SpecimenLogEntriesTable,
+      SpecimenLogEntry,
+      $$SpecimenLogEntriesTableFilterComposer,
+      $$SpecimenLogEntriesTableOrderingComposer,
+      $$SpecimenLogEntriesTableAnnotationComposer,
+      $$SpecimenLogEntriesTableCreateCompanionBuilder,
+      $$SpecimenLogEntriesTableUpdateCompanionBuilder,
+      (SpecimenLogEntry, $$SpecimenLogEntriesTableReferences),
+      SpecimenLogEntry,
+      PrefetchHooks Function({bool specimenId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7235,4 +8091,6 @@ class $AppDatabaseManager {
       $$BreedingLogEntriesTableTableManager(_db, _db.breedingLogEntries);
   $$ToolsTableTableManager get tools =>
       $$ToolsTableTableManager(_db, _db.tools);
+  $$SpecimenLogEntriesTableTableManager get specimenLogEntries =>
+      $$SpecimenLogEntriesTableTableManager(_db, _db.specimenLogEntries);
 }

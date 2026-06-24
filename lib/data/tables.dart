@@ -29,6 +29,18 @@ class Specimens extends Table {
   IntColumn get sourceBreedingEventId => integer().nullable()();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
+  // Soft-delete: non-null means "in the bin". Hidden from all normal
+  // queries; purged for good 30 days after this is set.
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+}
+
+@DataClassName('SpecimenLogEntry')
+class SpecimenLogEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get specimenId => integer().references(Specimens, #id)();
+  DateTimeColumn get timestamp =>
+      dateTime().withDefault(currentDateAndTime)();
+  TextColumn get note => text()();
 }
 
 class BreedingEvents extends Table {
@@ -88,6 +100,7 @@ class Terrariums extends Table {
   TextColumn get purpose => text().withDefault(const Constant('general'))();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 }
 
 @DataClassName('Tool')

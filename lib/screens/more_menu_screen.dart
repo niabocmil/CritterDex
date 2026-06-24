@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'backup_settings_screen.dart';
+import 'bin_screen.dart';
 import 'excel_export_screen.dart';
 import 'theme_settings_screen.dart';
 
@@ -43,6 +44,17 @@ class MoreMenuScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => const ExcelExportScreen(),
+              )),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Bin'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const BinScreen(),
               )),
             ),
           ),

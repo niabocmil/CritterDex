@@ -174,68 +174,89 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Specimens'),
-        actions: [
-          PopupMenuButton<_SortOption>(
-            icon: const Icon(Icons.sort),
-            tooltip: 'Sort',
-            initialValue: _sort,
-            onSelected: (option) => setState(() => _sort = option),
-            itemBuilder: (context) => [
-              for (final option in _SortOption.values)
-                PopupMenuItem(
-                  value: option,
-                  child: Row(
-                    children: [
-                      if (_sort == option) ...[
-                        const Icon(Icons.check, size: 18),
-                        const SizedBox(width: 8),
-                      ] else
-                        const SizedBox(width: 26),
-                      Text(option.label),
-                    ],
-                  ),
-                ),
+    return StreamBuilder<List<Specimen>>(
+      stream: db.watchAllSpecimens(),
+      builder: (context, snapshot) {
+        final all = snapshot.data ?? const [];
+        final allSpecies = all.map((s) => s.species).toSet().toList()..sort();
+        final filtersActive =
+            _speciesFilter.isNotEmpty || _sexFilter.isNotEmpty;
+        final filtered = all.where((s) {
+          final matchesQuery = _query.isEmpty ||
+              s.species.toLowerCase().contains(_query) ||
+              (s.name?.toLowerCase().contains(_query) ?? false);
+          final matchesStatus = _statusFilter == null ||
+              SpecimenStatus.fromValue(s.status) == _statusFilter;
+          final matchesSpecies =
+              _speciesFilter.isEmpty || _speciesFilter.contains(s.species);
+          final matchesSex = _sexFilter.isEmpty ||
+              _sexFilter.contains(SpecimenSex.fromValue(s.sex));
+          return matchesQuery && matchesStatus && matchesSpecies && matchesSex;
+        }).toList();
+        final sorted = _sortSpecimens(filtered);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Specimens'),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.filter_list,
+                    color: filtersActive
+                        ? Theme.of(context).colorScheme.primary
+                        : null),
+                tooltip: 'Categories',
+                onPressed: () => _showFilterSheet(context, allSpecies),
+              ),
+              PopupMenuButton<_SortOption>(
+                icon: const Icon(Icons.sort),
+                tooltip: 'Sort',
+                initialValue: _sort,
+                onSelected: (option) => setState(() => _sort = option),
+                itemBuilder: (context) => [
+                  for (final option in _SortOption.values)
+                    PopupMenuItem(
+                      value: option,
+                      child: Row(
+                        children: [
+                          if (_sort == option) ...[
+                            const Icon(Icons.check, size: 18),
+                            const SizedBox(width: 8),
+                          ] else
+                            const SizedBox(width: 26),
+                          Text(option.label),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddMenu(context),
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search by name or species',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                    onChanged: (v) =>
-                        setState(() => _query = v.trim().toLowerCase()),
-                  ),
-                ),
-              ],
-            ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _showAddMenu(context),
+            child: const Icon(Icons.add),
           ),
-          SizedBox(
-            height: 40,
-            child: StreamBuilder<List<Specimen>>(
-              stream: db.watchAllSpecimens(),
-              builder: (context, snapshot) {
-                final all = snapshot.data ?? const [];
-                final allSpecies = all.map((s) => s.species).toSet().toList()
-                  ..sort();
-                final filtersActive =
-                    _speciesFilter.isNotEmpty || _sexFilter.isNotEmpty;
-                return ListView(
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search by name or species',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _query = v.trim().toLowerCase()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 40,
+                child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
@@ -245,82 +266,49 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
                       _filterChip(status, status.label),
                       const SizedBox(width: 8),
                     ],
-                    const SizedBox(width: 4),
-                    ActionChip(
-                      avatar: Icon(Icons.filter_list,
-                          size: 16,
-                          color: filtersActive
-                              ? Theme.of(context).colorScheme.primary
-                              : null),
-                      label: const Text('Categories'),
-                      onPressed: () => _showFilterSheet(context, allSpecies),
-                    ),
                   ],
-                );
-              },
-            ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: !snapshot.hasData
+                    ? const Center(child: CircularProgressIndicator())
+                    : sorted.isEmpty
+                        ? Center(
+                            child: Text(
+                              all.isEmpty
+                                  ? 'No specimens yet.\nTap + to add your first one.'
+                                  : 'No matches.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                            itemCount: sorted.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final specimen = sorted[index];
+                              return SpecimenCard(
+                                specimen: specimen,
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => SpecimenDetailScreen(
+                                        specimenId: specimen.id),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: StreamBuilder<List<Specimen>>(
-              stream: db.watchAllSpecimens(),
-              builder: (context, snapshot) {
-                final all = snapshot.data ?? const [];
-                final filtered = all.where((s) {
-                  final matchesQuery = _query.isEmpty ||
-                      s.species.toLowerCase().contains(_query) ||
-                      (s.name?.toLowerCase().contains(_query) ?? false);
-                  final matchesStatus = _statusFilter == null ||
-                      SpecimenStatus.fromValue(s.status) == _statusFilter;
-                  final matchesSpecies = _speciesFilter.isEmpty ||
-                      _speciesFilter.contains(s.species);
-                  final matchesSex = _sexFilter.isEmpty ||
-                      _sexFilter.contains(SpecimenSex.fromValue(s.sex));
-                  return matchesQuery &&
-                      matchesStatus &&
-                      matchesSpecies &&
-                      matchesSex;
-                }).toList();
-                final sorted = _sortSpecimens(filtered);
-
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (sorted.isEmpty) {
-                  return Center(
-                    child: Text(
-                      all.isEmpty
-                          ? 'No specimens yet.\nTap + to add your first one.'
-                          : 'No matches.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                  itemCount: sorted.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final specimen = sorted[index];
-                    return SpecimenCard(
-                      specimen: specimen,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              SpecimenDetailScreen(specimenId: specimen.id),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

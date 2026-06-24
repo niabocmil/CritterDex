@@ -17,7 +17,7 @@ class CritterDexApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<AppDatabase>(
-          create: (_) => AppDatabase(),
+          create: (_) => AppDatabase()..purgeExpiredBinItems(),
           dispose: (_, db) => db.close(),
         ),
         ChangeNotifierProvider<ThemeController>(

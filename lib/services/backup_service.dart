@@ -19,12 +19,16 @@ class BackupService {
   final AppDatabase db;
 
   Future<File> exportBackup() async {
+    // Raw (unfiltered) selects here, not the deletedAt-filtered
+    // getAllSpecimens()/getAllTerrariums() — a backup is meant to capture
+    // everything, including anything currently sitting in the bin.
     final shelves = await db.getAllShelves();
-    final terrariums = await db.getAllTerrariums();
+    final terrariums = await db.select(db.terrariums).get();
     final tools = await db.getAllTools();
-    final specimens = await db.getAllSpecimens();
+    final specimens = await db.select(db.specimens).get();
     final breedingEvents = await db.select(db.breedingEvents).get();
     final logEntries = await db.select(db.breedingLogEntries).get();
+    final specimenLogEntries = await db.select(db.specimenLogEntries).get();
 
     final data = {
       'version': 1,
@@ -34,6 +38,7 @@ class BackupService {
       'specimens': specimens.map((s) => s.toJson()).toList(),
       'breedingEvents': breedingEvents.map((b) => b.toJson()).toList(),
       'breedingLogEntries': logEntries.map((e) => e.toJson()).toList(),
+      'specimenLogEntries': specimenLogEntries.map((e) => e.toJson()).toList(),
     };
 
     final archive = Archive();
@@ -87,8 +92,13 @@ class BackupService {
         (data['breedingEvents'] as List).cast<Map<String, dynamic>>();
     final logEntries =
         (data['breedingLogEntries'] as List).cast<Map<String, dynamic>>();
+    // Older (pre-v4) backups won't have a 'specimenLogEntries' key.
+    final specimenLogEntries =
+        (data['specimenLogEntries'] as List?)?.cast<Map<String, dynamic>>() ??
+            [];
 
     await db.transaction(() async {
+      await db.delete(db.specimenLogEntries).go();
       await db.delete(db.breedingLogEntries).go();
       await db.delete(db.breedingEvents).go();
       await db.delete(db.specimens).go();
@@ -113,6 +123,9 @@ class BackupService {
       }
       for (final row in logEntries) {
         await db.into(db.breedingLogEntries).insert(BreedingLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
+      for (final row in specimenLogEntries) {
+        await db.into(db.specimenLogEntries).insert(SpecimenLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
       }
     });
 
