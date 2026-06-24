@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Controls what gets included in Android 12+ cloud backup (Google account)
+  and device-to-device transfer. CritterDex's database and specimen photos
+  live under the app's internal "files" directory, so we explicitly include
+  that and exclude caches.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="." />
+        <exclude domain="file" path="cache" />
+        <exclude domain="file" path="code_cache" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="." />
+        <exclude domain="file" path="cache" />
+        <exclude domain="file" path="code_cache" />
+    </device-transfer>
+</data-extraction-rules>
