@@ -3,13 +3,22 @@ import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
-import '../models/replenish.dart';
-import '../widgets/specimen_card.dart';
+import '../models/reminders.dart';
+import '../widgets/activity_tile.dart';
+import 'all_activities_screen.dart';
+import 'breeding_log_screen.dart';
+import 'reminder_calendar_screen.dart';
 import 'replenish_due_screen.dart';
-import 'specimen_detail_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _recentExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -26,107 +35,277 @@ class DashboardScreen extends StatelessWidget {
               .where((s) => SpecimenStatus.fromValue(s.status) == SpecimenStatus.alive)
               .length;
           final speciesCount = specimens.map((s) => s.species.toLowerCase()).toSet().length;
-          final recent = [...specimens]
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-          return StreamBuilder<List<BreedingEvent>>(
-            stream: db.watchAllBreedingEvents(),
-            builder: (context, eventSnapshot) {
-              final events = eventSnapshot.data ?? const <BreedingEvent>[];
-              final replenishDueCount =
-                  terrariumIdsNeedingReplenish(specimens).length;
+          return StreamBuilder<List<Terrarium>>(
+            stream: db.watchAllTerrariums(),
+            builder: (context, terrariumSnapshot) {
+              final terrariums = terrariumSnapshot.data ?? const <Terrarium>[];
+              return StreamBuilder<List<Shelf>>(
+                stream: db.watchAllShelves(),
+                builder: (context, shelfSnapshot) {
+                  final shelves = shelfSnapshot.data ?? const <Shelf>[];
+                  return StreamBuilder<List<Tool>>(
+                    stream: db.watchAllTools(),
+                    builder: (context, toolSnapshot) {
+                      final tools = toolSnapshot.data ?? const <Tool>[];
+                      return StreamBuilder<List<BreedingEvent>>(
+                        stream: db.watchAllBreedingEvents(),
+                        builder: (context, eventSnapshot) {
+                          final events =
+                              eventSnapshot.data ?? const <BreedingEvent>[];
+                          return StreamBuilder<List<BreedingReminder>>(
+                            stream: db.watchActiveBreedingReminders(),
+                            builder: (context, breedingReminderSnapshot) {
+                              final breedingReminders =
+                                  breedingReminderSnapshot.data ??
+                                      const <BreedingReminder>[];
+                              return StreamBuilder<List<ActivityLogEntry>>(
+                                stream: db.watchRecentActivity(limit: 20),
+                                builder: (context, activitySnapshot) {
+                                  final recentActivity = activitySnapshot.data ??
+                                      const <ActivityLogEntry>[];
+                                  final visibleCount =
+                                      _recentExpanded ? recentActivity.length : 4;
+                                  final visible =
+                                      recentActivity.take(visibleCount).toList();
 
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.pets,
-                          label: 'Specimens',
-                          value: '${specimens.length}',
-                          color: scheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.favorite,
-                          label: 'Alive',
-                          value: '$alive',
-                          color: scheme.tertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.category_outlined,
-                          label: 'Species',
-                          value: '$speciesCount',
-                          color: scheme.secondary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.account_tree_outlined,
-                          label: 'Breeding events',
-                          value: '${events.length}',
-                          color: scheme.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (replenishDueCount > 0) ...[
-                    const SizedBox(height: 28),
-                    Text('Notifications',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    Card(
-                      child: ListTile(
-                        leading: Icon(Icons.water_drop_outlined,
-                            color: scheme.error),
-                        title: Text(
-                            '$replenishDueCount terrarium${replenishDueCount == 1 ? '' : 's'} need${replenishDueCount == 1 ? 's' : ''} replenishing today'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const ReplenishDueScreen())),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 28),
-                  Text('Recently added', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  if (recent.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'Nothing here yet — head to the Specimens tab to add one.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: scheme.onSurfaceVariant),
-                        ),
-                      ),
-                    )
-                  else
-                    ...recent.take(5).map((s) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: SpecimenCard(
-                            specimen: s,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => SpecimenDetailScreen(specimenId: s.id),
-                              ),
-                            ),
-                          ),
-                        )),
-                ],
+                                  final reminders = computeReminders(
+                                    specimens: specimens,
+                                    terrariums: terrariums,
+                                    shelves: shelves,
+                                    tools: tools,
+                                    breedingEvents: events,
+                                    breedingReminders: breedingReminders,
+                                  );
+                                  final missedReplenishCount = reminders
+                                      .where((r) =>
+                                          r.source == ReminderSource.replenish &&
+                                          r.isMissed)
+                                      .length;
+                                  final dueTodayReplenishCount = reminders
+                                      .where((r) =>
+                                          r.source == ReminderSource.replenish &&
+                                          !r.isMissed)
+                                      .length;
+                                  final missedBreeding = reminders
+                                      .where((r) =>
+                                          r.source == ReminderSource.breeding &&
+                                          r.isMissed)
+                                      .toList();
+                                  final upcomingCount =
+                                      reminders.where((r) => !r.isMissed).length;
+
+                                  return ListView(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _StatCard(
+                                              icon: Icons.pets,
+                                              label: 'Specimens',
+                                              value: '${specimens.length}',
+                                              color: scheme.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _StatCard(
+                                              icon: Icons.favorite,
+                                              label: 'Alive',
+                                              value: '$alive',
+                                              color: scheme.tertiary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _StatCard(
+                                              icon: Icons.category_outlined,
+                                              label: 'Species',
+                                              value: '$speciesCount',
+                                              color: scheme.secondary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _StatCard(
+                                              icon: Icons.account_tree_outlined,
+                                              label: 'Breeding events',
+                                              value: '${events.length}',
+                                              color: scheme.error,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 28),
+                                      Text('Notifications',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const SizedBox(height: 12),
+                                      if (missedReplenishCount > 0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 10),
+                                          child: Card(
+                                            color: scheme.errorContainer,
+                                            child: ListTile(
+                                              leading: Icon(Icons.error_outline,
+                                                  color: scheme.error),
+                                              title: Text(
+                                                '$missedReplenishCount terrarium${missedReplenishCount == 1 ? '' : 's'} overdue for replenishing',
+                                                style:
+                                                    TextStyle(color: scheme.error),
+                                              ),
+                                              trailing: Icon(Icons.chevron_right,
+                                                  color: scheme.error),
+                                              onTap: () =>
+                                                  Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const ReplenishDueScreen()),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      for (final r in missedBreeding)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 10),
+                                          child: Card(
+                                            color: scheme.errorContainer,
+                                            child: ListTile(
+                                              leading: Icon(Icons.error_outline,
+                                                  color: scheme.error),
+                                              title: Text(r.title,
+                                                  style: TextStyle(
+                                                      color: scheme.error)),
+                                              subtitle: r.subtitle == null
+                                                  ? null
+                                                  : Text(r.subtitle!,
+                                                      style: TextStyle(
+                                                          color: scheme.error)),
+                                              trailing: Icon(Icons.chevron_right,
+                                                  color: scheme.error),
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) => BreedingLogScreen(
+                                                    breedingEventId:
+                                                        r.breedingEventId!),
+                                              )),
+                                            ),
+                                          ),
+                                        ),
+                                      if (dueTodayReplenishCount > 0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 10),
+                                          child: Card(
+                                            child: ListTile(
+                                              leading: Icon(
+                                                  Icons.water_drop_outlined,
+                                                  color: scheme.error),
+                                              title: Text(
+                                                  '$dueTodayReplenishCount terrarium${dueTodayReplenishCount == 1 ? '' : 's'} need${dueTodayReplenishCount == 1 ? 's' : ''} replenishing today'),
+                                              trailing:
+                                                  const Icon(Icons.chevron_right),
+                                              onTap: () =>
+                                                  Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const ReplenishDueScreen()),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      Card(
+                                        child: ListTile(
+                                          leading: const Icon(Icons.event_outlined),
+                                          title: const Text('Upcoming reminders'),
+                                          subtitle: Text(upcomingCount == 0
+                                              ? 'Nothing due soon'
+                                              : '$upcomingCount upcoming'),
+                                          trailing: const Icon(Icons.chevron_right),
+                                          onTap: () => Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const ReminderCalendarScreen())),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 28),
+                                      Text('Recently added',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const SizedBox(height: 12),
+                                      if (recentActivity.isEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 24),
+                                          child: Center(
+                                            child: Text(
+                                              'Nothing here yet — head to the Specimens tab to add one.',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                  color: scheme.onSurfaceVariant),
+                                            ),
+                                          ),
+                                        )
+                                      else ...[
+                                        Card(
+                                          child: Column(
+                                            children: [
+                                              for (final entry in visible)
+                                                ActivityTile(entry: entry),
+                                              if (!_recentExpanded &&
+                                                  recentActivity.length > 4)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                          vertical: 4),
+                                                  child: TextButton(
+                                                    onPressed: () => setState(
+                                                        () => _recentExpanded =
+                                                            true),
+                                                    child: Text(
+                                                        'Show ${(recentActivity.length - 4).clamp(0, 16)} more'),
+                                                  ),
+                                                ),
+                                              if (_recentExpanded)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                          vertical: 4),
+                                                  child: TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(context).push(
+                                                            MaterialPageRoute(
+                                                                builder: (_) =>
+                                                                    const AllActivitiesScreen())),
+                                                    child: const Text(
+                                                        'View all activities'),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
               );
             },
           );

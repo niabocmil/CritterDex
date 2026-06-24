@@ -105,6 +105,17 @@ class ShelfDetailScreen extends StatelessWidget {
                                 style: Theme.of(context).textTheme.titleLarge),
                           ),
                           IconButton(
+                            icon: const Icon(Icons.copy_outlined),
+                            tooltip: 'Duplicate',
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => TerrariumFormScreen(
+                                    duplicateFrom: terrarium),
+                              ));
+                            },
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.delete_outline),
                             tooltip: 'Move to bin',
                             onPressed: () => _confirmDeleteTerrarium(
@@ -146,6 +157,17 @@ class ShelfDetailScreen extends StatelessWidget {
                             labelFor(terrarium, shelf, allOnShelf),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy_outlined),
+                          tooltip: 'Duplicate',
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) =>
+                                  TerrariumFormScreen(duplicateFrom: terrarium),
+                            ));
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline),

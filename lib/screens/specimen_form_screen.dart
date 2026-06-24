@@ -13,6 +13,7 @@ import '../models/enums.dart';
 import '../models/terrarium_layout.dart';
 import '../widgets/specimen_avatar.dart';
 import '../widgets/specimen_icon_picker_dialog.dart';
+import '../widgets/terrarium_picker_sheet.dart';
 import 'terrarium_form_screen.dart';
 
 /// Single-flow 4-step specimen creation/editing, also reused for batch
@@ -70,6 +71,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   int? _fatherId;
   int? _terrariumId;
   final _replenishIntervalController = TextEditingController();
+  final _replenishNoteController = TextEditingController();
   DateTime? _lastReplenishedAt;
   bool _saving = false;
 
@@ -100,6 +102,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _terrariumId = existing.terrariumId;
       _replenishIntervalController.text =
           existing.replenishIntervalDays?.toString() ?? '';
+      _replenishNoteController.text = existing.replenishNote ?? '';
       _lastReplenishedAt = existing.lastReplenishedAt;
     } else {
       _speciesController.text = widget.prefillSpecies ?? '';
@@ -120,6 +123,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     _sizeController.dispose();
     _notesController.dispose();
     _replenishIntervalController.dispose();
+    _replenishNoteController.dispose();
     super.dispose();
   }
 
@@ -192,9 +196,11 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
         _iconType == SpecimenIconType.beetle ? _lifeStage?.name : null;
     final beetleFamily =
         _iconType == SpecimenIconType.beetle ? _beetleFamily?.name : null;
-    final replenishIntervalDays = _iconType == SpecimenIconType.beetle
-        ? int.tryParse(_replenishIntervalController.text.trim())
-        : null;
+    final replenishIntervalDays =
+        int.tryParse(_replenishIntervalController.text.trim());
+    final replenishNote = _replenishNoteController.text.trim().isEmpty
+        ? null
+        : _replenishNoteController.text.trim();
     var lastReplenishedAt = _lastReplenishedAt;
     if (!_isEditing && replenishIntervalDays != null && lastReplenishedAt == null) {
       // Seed the countdown anchor immediately so it's meaningful right away.
@@ -219,6 +225,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           lifeStage: Value(lifeStage),
           beetleFamily: Value(beetleFamily),
           replenishIntervalDays: Value(replenishIntervalDays),
+          replenishNote: Value(replenishNote),
           lastReplenishedAt: Value(lastReplenishedAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
@@ -229,29 +236,33 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       } else if (_isBatch) {
         final count = int.parse(_countController.text.trim());
         final pattern = _namePatternController.text.trim();
-        for (var i = 1; i <= count; i++) {
-          final name = pattern.isEmpty ? null : pattern.replaceAll('%n', '$i');
-          await db.insertSpecimen(SpecimensCompanion.insert(
-            name: Value(name),
-            species: species,
-            speciesIconKey: Value(_iconType.name),
-            sex: Value(_sex.name),
-            status: Value(_status.name),
-            dateAcquired: Value(_dateAcquired),
-            dateOfBirth: Value(dob),
-            weightGrams: Value(weight),
-            sizeCm: Value(size),
-            lifeStage: Value(lifeStage),
-            beetleFamily: Value(beetleFamily),
-            replenishIntervalDays: Value(replenishIntervalDays),
-            lastReplenishedAt: Value(lastReplenishedAt),
-            notes: Value(notes),
-            motherId: Value(_motherId),
-            fatherId: Value(_fatherId),
-            terrariumId: Value(_terrariumId),
-            sourceBreedingEventId: Value(widget.sourceBreedingEventId),
-          ));
-        }
+        final entries = [
+          for (var i = 1; i <= count; i++)
+            SpecimensCompanion.insert(
+              name: Value(
+                  pattern.isEmpty ? null : pattern.replaceAll('%n', '$i')),
+              species: species,
+              speciesIconKey: Value(_iconType.name),
+              sex: Value(_sex.name),
+              status: Value(_status.name),
+              dateAcquired: Value(_dateAcquired),
+              dateOfBirth: Value(dob),
+              weightGrams: Value(weight),
+              sizeCm: Value(size),
+              lifeStage: Value(lifeStage),
+              beetleFamily: Value(beetleFamily),
+              replenishIntervalDays: Value(replenishIntervalDays),
+              replenishNote: Value(replenishNote),
+              lastReplenishedAt: Value(lastReplenishedAt),
+              notes: Value(notes),
+              motherId: Value(_motherId),
+              fatherId: Value(_fatherId),
+              terrariumId: Value(_terrariumId),
+              sourceBreedingEventId: Value(widget.sourceBreedingEventId),
+            ),
+        ];
+        await db.insertSpecimensBatch(entries,
+            title: 'Batch-created $count specimens ($species)');
       } else {
         await db.insertSpecimen(SpecimensCompanion.insert(
           name: Value(_nameController.text.trim().isEmpty
@@ -268,6 +279,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           lifeStage: Value(lifeStage),
           beetleFamily: Value(beetleFamily),
           replenishIntervalDays: Value(replenishIntervalDays),
+          replenishNote: Value(replenishNote),
           lastReplenishedAt: Value(lastReplenishedAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
@@ -586,33 +598,42 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text('Replenish (substrate/food)',
-              style: Theme.of(context).textTheme.labelLarge),
+        ],
+        const SizedBox(height: 14),
+        Text('Replenish (substrate/food)',
+            style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _replenishIntervalController,
+          decoration: const InputDecoration(
+              labelText: 'Replenish every (days)',
+              hintText: 'Leave blank to not track'),
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_replenishIntervalController.text.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Last replenished'),
+            subtitle: Text(_lastReplenishedAt == null
+                ? 'Not started'
+                : _formatDate(_lastReplenishedAt!)),
+            trailing: TextButton(
+              onPressed: () =>
+                  setState(() => _lastReplenishedAt = DateTime.now()),
+              child: const Text('Mark today'),
+            ),
+          ),
           const SizedBox(height: 8),
           TextFormField(
-            controller: _replenishIntervalController,
+            controller: _replenishNoteController,
             decoration: const InputDecoration(
-                labelText: 'Replenish every (days)',
-                hintText: 'Leave blank to not track'),
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
+                labelText: 'Replenish note',
+                hintText: 'e.g. "change substrate, mist daily"'),
+            minLines: 1,
+            maxLines: 3,
           ),
-          if (_replenishIntervalController.text.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Last replenished'),
-              subtitle: Text(_lastReplenishedAt == null
-                  ? 'Not started'
-                  : _formatDate(_lastReplenishedAt!)),
-              trailing: TextButton(
-                onPressed: () =>
-                    setState(() => _lastReplenishedAt = DateTime.now()),
-                child: const Text('Mark today'),
-              ),
-            ),
-          ],
         ],
         const SizedBox(height: 14),
         TextFormField(
@@ -635,22 +656,22 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 14),
-        FutureBuilder<(List<Terrarium>, Map<int, String>)>(
-          future: _loadTerrariumsAndLabels(db),
+        FutureBuilder<Map<int, String>>(
+          future: _loadTerrariumLabels(db),
           builder: (context, snapshot) {
-            final terrariums = snapshot.data?.$1 ?? const <Terrarium>[];
-            final labels = snapshot.data?.$2 ?? const <int, String>{};
-            final selected =
-                terrariums.where((t) => t.id == _terrariumId).firstOrNull;
+            final labels = snapshot.data ?? const <int, String>{};
             return InkWell(
-              onTap: () => _pickTerrarium(terrariums, labels),
+              onTap: () async {
+                final id = await showTerrariumPickerSheet(context, db);
+                if (id != _terrariumId) setState(() => _terrariumId = id);
+              },
               child: InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Terrarium',
                   suffixIcon: Icon(Icons.search),
                 ),
                 child: Text(
-                    selected == null ? 'None' : (labels[selected.id] ?? '—')),
+                    _terrariumId == null ? 'None' : (labels[_terrariumId] ?? '—')),
               ),
             );
           },
@@ -671,82 +692,11 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     );
   }
 
-  Future<(List<Terrarium>, Map<int, String>)> _loadTerrariumsAndLabels(
-      AppDatabase db) async {
+  Future<Map<int, String>> _loadTerrariumLabels(AppDatabase db) async {
     final terrariums = await db.getAllTerrariums();
     final shelves = await db.getAllShelves();
     final tools = await db.getAllTools();
-    return (terrariums, computeAllTerrariumLabels(shelves, terrariums, tools));
-  }
-
-  Future<void> _pickTerrarium(
-      List<Terrarium> terrariums, Map<int, String> labels) async {
-    final selectedId = await showModalBottomSheet<int?>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        var query = '';
-        return StatefulBuilder(builder: (context, setSheetState) {
-          final filtered = terrariums.where((t) {
-            if (query.isEmpty) return true;
-            final label = labels[t.id] ?? '';
-            return label.toLowerCase().contains(query.toLowerCase()) ||
-                t.shape.toLowerCase().contains(query.toLowerCase());
-          }).toList();
-          return DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.4,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (context, scrollController) {
-              return Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Select a terrarium',
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 12),
-                    TextField(
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Search terrarium label',
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: (v) => setSheetState(() => query = v),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: ListView(
-                        controller: scrollController,
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.block),
-                            title: const Text('None'),
-                            onTap: () => Navigator.of(context).pop(null),
-                          ),
-                          for (final t in filtered)
-                            ListTile(
-                              leading: const Icon(Icons.crop_square_outlined),
-                              title: Text(labels[t.id] ?? '—'),
-                              subtitle: Text(
-                                  '${t.volumeLitres.toStringAsFixed(1)} L · ${t.shape}'),
-                              onTap: () => Navigator.of(context).pop(t.id),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        });
-      },
-    );
-    if (selectedId != _terrariumId) {
-      setState(() => _terrariumId = selectedId);
-    }
+    return computeAllTerrariumLabels(shelves, terrariums, tools);
   }
 
   String _formatDate(DateTime d) =>

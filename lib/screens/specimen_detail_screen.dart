@@ -9,9 +9,23 @@ import '../data/database.dart';
 import '../models/enums.dart';
 import '../models/lineage_utils.dart';
 import '../models/replenish.dart';
+import '../models/terrarium_layout.dart';
 import '../widgets/specimen_avatar.dart';
+import '../widgets/terrarium_picker_sheet.dart';
 import 'lineage_screen.dart';
 import 'specimen_form_screen.dart';
+import 'terrarium_form_screen.dart';
+
+Future<(Terrarium, String)?> _loadAssignedTerrarium(
+    AppDatabase db, int terrariumId) async {
+  final terrarium = await db.getTerrariumById(terrariumId);
+  final shelves = await db.getAllShelves();
+  final terrariums = await db.getAllTerrariums();
+  final tools = await db.getAllTools();
+  final label =
+      computeAllTerrariumLabels(shelves, terrariums, tools)[terrarium.id] ?? '?';
+  return (terrarium, label);
+}
 
 String? _formatAge(DateTime? dob) {
   if (dob == null) return null;
@@ -222,6 +236,42 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                             icon: const Icon(Icons.account_tree_outlined),
                             label: const Text('View family tree'),
                           ),
+                          const SizedBox(height: 12),
+                          if (specimen.terrariumId != null)
+                            FutureBuilder<(Terrarium, String)?>(
+                              future: _loadAssignedTerrarium(
+                                  db, specimen.terrariumId!),
+                              builder: (context, snapshot) {
+                                final data = snapshot.data;
+                                if (data == null) return const SizedBox.shrink();
+                                final (terrarium, label) = data;
+                                return ActionChip(
+                                  avatar: const Icon(
+                                      Icons.crop_square_outlined,
+                                      size: 16),
+                                  label: Text('Terrarium: $label'),
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => TerrariumFormScreen(
+                                          existing: terrarium),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final id =
+                                    await showTerrariumPickerSheet(context, db);
+                                if (id != null) {
+                                  await db.updateSpecimen(specimen.copyWith(
+                                      terrariumId: Value(id)));
+                                }
+                              },
+                              icon: const Icon(Icons.crop_square_outlined),
+                              label: const Text('Assign to terrarium'),
+                            ),
                           if (specimen.replenishIntervalDays != null) ...[
                             const SizedBox(height: 24),
                             Text('Replenish',
@@ -262,16 +312,36 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                                           : '$daysLeft day${daysLeft == 1 ? '' : 's'} left'),
                                     ),
                                     TextButton(
-                                      onPressed: () => db.updateSpecimen(
-                                          specimen.copyWith(
-                                              lastReplenishedAt:
-                                                  Value(DateTime.now()))),
+                                      onPressed: () async {
+                                        await db.updateSpecimen(
+                                            specimen.copyWith(
+                                                lastReplenishedAt: Value(
+                                                    DateTime.now())));
+                                        await db.logActivity(
+                                          type: ActivityType.replenished,
+                                          title:
+                                              'Replenished ${specimen.name?.isNotEmpty == true ? specimen.name! : specimen.species}',
+                                          entityId: specimen.id,
+                                        );
+                                      },
                                       child:
                                           const Text('Mark replenished today'),
                                     ),
                                   ],
                                 );
                               }),
+                            if (specimen.replenishNote?.isNotEmpty ??
+                                false) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                specimen.replenishNote!,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                              ),
+                            ],
                           ],
                           if (specimen.notes?.isNotEmpty ?? false) ...[
                             const SizedBox(height: 24),
@@ -399,6 +469,12 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                   if (status == current) return;
                   await db.updateSpecimen(
                       specimen.copyWith(status: status.name));
+                  await db.logActivity(
+                    type: ActivityType.statusChanged,
+                    title:
+                        '${specimen.name?.isNotEmpty == true ? specimen.name! : specimen.species} marked ${status.label.toLowerCase()}',
+                    entityId: specimen.id,
+                  );
                 },
               ),
           ],

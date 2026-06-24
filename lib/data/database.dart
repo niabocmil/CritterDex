@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -5,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/enums.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -25,6 +27,8 @@ LazyDatabase _openConnection() {
   Terrariums,
   Tools,
   SpecimenLogEntries,
+  ActivityLogEntries,
+  BreedingReminders,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -32,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,6 +77,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(tools, tools.supportId);
             await m.addColumn(tools, tools.supportKind);
             await _backfillSupportTree();
+          }
+          if (from < 6) {
+            await m.addColumn(specimens, specimens.replenishNote);
+            await m.createTable(activityLogEntries);
+            await m.createTable(breedingReminders);
+            await _backfillActivityLog();
           }
         },
       );
@@ -210,6 +220,100 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// One-time v5 -> v6 migration helper: seeds the new Activity Log with one
+  /// entry per pre-existing specimen/terrarium/breeding event (using each
+  /// row's own createdAt) so "Recently added"/"All Activities" isn't empty
+  /// right after upgrading. Pre-v6 terrariums can never be distinguished as
+  /// duplicates after the fact, so they all backfill as plain terrariumAdded.
+  Future<void> _backfillActivityLog() async {
+    final allSpecimens = await (select(specimens)
+          ..where((s) => s.deletedAt.isNull()))
+        .get();
+    for (final s in allSpecimens) {
+      await into(activityLogEntries).insert(ActivityLogEntriesCompanion.insert(
+        type: ActivityType.specimenAdded.name,
+        timestamp: Value(s.createdAt),
+        title: 'Added ${s.name?.isNotEmpty == true ? s.name! : s.species}',
+        entityId: Value(s.id),
+      ));
+    }
+    final allTerrariums = await (select(terrariums)
+          ..where((t) => t.deletedAt.isNull()))
+        .get();
+    for (final t in allTerrariums) {
+      await into(activityLogEntries).insert(ActivityLogEntriesCompanion.insert(
+        type: ActivityType.terrariumAdded.name,
+        timestamp: Value(t.createdAt),
+        title: 'Added a terrarium',
+        entityId: Value(t.id),
+      ));
+    }
+    final allEvents = await select(breedingEvents).get();
+    for (final e in allEvents) {
+      await into(activityLogEntries).insert(ActivityLogEntriesCompanion.insert(
+        type: ActivityType.breedingEventAdded.name,
+        timestamp: Value(e.createdAt),
+        title: 'Started a breeding log',
+        entityId: Value(e.id),
+      ));
+    }
+  }
+
+  // ---------- Activity log ----------
+
+  Future<void> logActivity({
+    required ActivityType type,
+    required String title,
+    int? entityId,
+    List<int>? relatedIds,
+  }) async {
+    await into(activityLogEntries).insert(ActivityLogEntriesCompanion.insert(
+      type: type.name,
+      title: title,
+      entityId: Value(entityId),
+      relatedIds: Value(relatedIds == null ? null : jsonEncode(relatedIds)),
+    ));
+  }
+
+  Stream<List<ActivityLogEntry>> watchRecentActivity({int limit = 20}) =>
+      (select(activityLogEntries)
+            ..orderBy([(e) => OrderingTerm.desc(e.timestamp)])
+            ..limit(limit))
+          .watch();
+
+  Stream<List<ActivityLogEntry>> watchAllActivity({bool latestFirst = true}) =>
+      (select(activityLogEntries)
+            ..orderBy([
+              (e) => latestFirst
+                  ? OrderingTerm.desc(e.timestamp)
+                  : OrderingTerm.asc(e.timestamp)
+            ]))
+          .watch();
+
+  // ---------- Breeding reminders ----------
+
+  Future<int> insertBreedingReminder(BreedingRemindersCompanion entry) =>
+      into(breedingReminders).insert(entry);
+
+  Future<void> markBreedingReminderDone(int id) async {
+    await (update(breedingReminders)..where((r) => r.id.equals(id)))
+        .write(BreedingRemindersCompanion(completedAt: Value(DateTime.now())));
+  }
+
+  Future<int> deleteBreedingReminder(int id) =>
+      (delete(breedingReminders)..where((r) => r.id.equals(id))).go();
+
+  Stream<List<BreedingReminder>> watchActiveBreedingReminders() =>
+      (select(breedingReminders)..where((r) => r.completedAt.isNull())).watch();
+
+  Stream<List<BreedingReminder>> watchActiveRemindersForEvent(
+          int breedingEventId) =>
+      (select(breedingReminders)
+            ..where((r) =>
+                r.breedingEventId.equals(breedingEventId) &
+                r.completedAt.isNull()))
+          .watch();
+
   // ---------- Specimens ----------
 
   Stream<List<Specimen>> watchAllSpecimens() =>
@@ -238,8 +342,40 @@ class AppDatabase extends _$AppDatabase {
                 s.terrariumId.equals(terrariumId) & s.deletedAt.isNull()))
           .watch();
 
-  Future<int> insertSpecimen(SpecimensCompanion entry) =>
-      into(specimens).insert(entry);
+  Future<int> insertSpecimen(SpecimensCompanion entry) {
+    return transaction(() async {
+      final id = await into(specimens).insert(entry);
+      final name = entry.name.present ? entry.name.value : null;
+      await logActivity(
+        type: ActivityType.specimenAdded,
+        title:
+            'Added ${name?.isNotEmpty == true ? name! : entry.species.value}',
+        entityId: id,
+      );
+      return id;
+    });
+  }
+
+  /// One transaction, N inserts, one `specimensBatchAdded` log entry with
+  /// every created id in `relatedIds` — used by batch-create flows instead
+  /// of looping [insertSpecimen] (which would log one entry per specimen).
+  Future<List<int>> insertSpecimensBatch(
+    List<SpecimensCompanion> entries, {
+    required String title,
+  }) {
+    return transaction(() async {
+      final ids = <int>[];
+      for (final entry in entries) {
+        ids.add(await into(specimens).insert(entry));
+      }
+      await logActivity(
+        type: ActivityType.specimensBatchAdded,
+        title: title,
+        relatedIds: ids,
+      );
+      return ids;
+    });
+  }
 
   Future<bool> updateSpecimen(Specimen entry) =>
       update(specimens).replace(entry);
@@ -294,8 +430,17 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  Future<int> insertBreedingEvent(BreedingEventsCompanion entry) =>
-      into(breedingEvents).insert(entry);
+  Future<int> insertBreedingEvent(BreedingEventsCompanion entry) {
+    return transaction(() async {
+      final id = await into(breedingEvents).insert(entry);
+      await logActivity(
+        type: ActivityType.breedingEventAdded,
+        title: 'Started a breeding log',
+        entityId: id,
+      );
+      return id;
+    });
+  }
 
   Future<bool> updateBreedingEvent(BreedingEvent entry) =>
       update(breedingEvents).replace(entry);
@@ -360,8 +505,43 @@ class AppDatabase extends _$AppDatabase {
             ..where((t) => t.shelfId.equals(shelfId) & t.deletedAt.isNull()))
           .watch();
 
-  Future<int> insertTerrarium(TerrariumsCompanion entry) =>
-      into(terrariums).insert(entry);
+  Future<int> insertTerrarium(
+    TerrariumsCompanion entry, {
+    ActivityType activityTypeOverride = ActivityType.terrariumAdded,
+  }) {
+    return transaction(() async {
+      final id = await into(terrariums).insert(entry);
+      await logActivity(
+        type: activityTypeOverride,
+        title: activityTypeOverride == ActivityType.terrariumDuplicated
+            ? 'Duplicated a terrarium'
+            : 'Added a terrarium',
+        entityId: id,
+      );
+      return id;
+    });
+  }
+
+  /// One transaction, N inserts, one `terrariumsBatchAdded` log entry with
+  /// every created id in `relatedIds` — used by batch-create instead of
+  /// looping [insertTerrarium].
+  Future<List<int>> insertTerrariumsBatch(
+    List<TerrariumsCompanion> entries, {
+    required String title,
+  }) {
+    return transaction(() async {
+      final ids = <int>[];
+      for (final entry in entries) {
+        ids.add(await into(terrariums).insert(entry));
+      }
+      await logActivity(
+        type: ActivityType.terrariumsBatchAdded,
+        title: title,
+        relatedIds: ids,
+      );
+      return ids;
+    });
+  }
 
   Future<bool> updateTerrarium(Terrarium entry) =>
       update(terrariums).replace(entry);

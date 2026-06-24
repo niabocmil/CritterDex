@@ -7,6 +7,7 @@ import '../models/enums.dart';
 import '../models/replenish.dart';
 import '../models/terrarium_layout.dart';
 import '../widgets/specimen_avatar.dart';
+import 'specimen_detail_screen.dart';
 
 /// Lists every terrarium with at least one specimen due for replenishing
 /// today. Tapping a terrarium opens a sheet listing just its due specimens,
@@ -30,6 +31,29 @@ class ReplenishDueScreen extends StatelessWidget {
               builder: (context, setSheetState) {
                 final remaining =
                     dueSpecimens.where((s) => !s.lastReplenishedAt.isToday).toList();
+
+                Future<void> markAllReplenished() async {
+                  final ids = <int>[];
+                  await db.transaction(() async {
+                    for (final s in remaining) {
+                      await db.updateSpecimen(s.copyWith(
+                        lastReplenishedAt: Value(DateTime.now()),
+                      ));
+                      ids.add(s.id);
+                    }
+                  });
+                  if (ids.isNotEmpty) {
+                    await db.logActivity(
+                      type: ActivityType.replenished,
+                      title: ids.length == 1
+                          ? 'Replenished $label'
+                          : 'Replenished ${ids.length} specimens in $label',
+                      relatedIds: ids,
+                    );
+                  }
+                  setSheetState(() {});
+                }
+
                 return ListView(
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
@@ -43,7 +67,13 @@ class ReplenishDueScreen extends StatelessWidget {
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Text('All caught up for this terrarium.'),
                       )
-                    else
+                    else ...[
+                      FilledButton.icon(
+                        onPressed: markAllReplenished,
+                        icon: const Icon(Icons.water_drop_outlined),
+                        label: const Text('Replenished'),
+                      ),
+                      const SizedBox(height: 8),
                       for (final s in remaining)
                         ListTile(
                           leading: SpecimenAvatar(
@@ -53,16 +83,16 @@ class ReplenishDueScreen extends StatelessWidget {
                           ),
                           title: Text(s.name?.isNotEmpty == true ? s.name! : s.species),
                           subtitle: Text(s.species),
-                          trailing: FilledButton.tonal(
-                            onPressed: () async {
-                              await db.updateSpecimen(s.copyWith(
-                                lastReplenishedAt: Value(DateTime.now()),
-                              ));
-                              setSheetState(() {});
-                            },
-                            child: const Text('Replenished'),
-                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) =>
+                                  SpecimenDetailScreen(specimenId: s.id),
+                            ));
+                          },
                         ),
+                    ],
                   ],
                 );
               },

@@ -14,6 +14,7 @@ class Specimens extends Table {
   TextColumn get beetleFamily => text().nullable()();
   IntColumn get replenishIntervalDays => integer().nullable()();
   DateTimeColumn get lastReplenishedAt => dateTime().nullable()();
+  TextColumn get replenishNote => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('alive'))();
   TextColumn get notes => text().nullable()();
   TextColumn get photoPath => text().nullable()();
@@ -139,4 +140,35 @@ class Tools extends Table {
   TextColumn get supportKind => text().nullable()();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('ActivityLogEntry')
+class ActivityLogEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get type => text()(); // matches ActivityType.name
+  DateTimeColumn get timestamp =>
+      dateTime().withDefault(currentDateAndTime)();
+  TextColumn get title => text()();
+  IntColumn get entityId => integer().nullable()();
+  // JSON-encoded list of ids for a batch entry (e.g. every specimen id
+  // created in one batch-create). Null for non-batch entries. Kept as a TEXT
+  // blob rather than a child table since it's only ever read back as a whole
+  // list for the batch-detail screen -- no per-id querying is needed.
+  TextColumn get relatedIds => text().nullable()();
+}
+
+@DataClassName('BreedingReminder')
+class BreedingReminders extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get breedingEventId =>
+      integer().references(BreedingEvents, #id)();
+  DateTimeColumn get dueDate => dateTime()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+  // Null = still active. Set when the user dismisses it via "Mark done" --
+  // the breeding-reminder equivalent of replenish's lastReplenishedAt
+  // update; without this, an overdue one-off reminder could never leave the
+  // high-contrast "missed" state once it passed its due date.
+  DateTimeColumn get completedAt => dateTime().nullable()();
 }

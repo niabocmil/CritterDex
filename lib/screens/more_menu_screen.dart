@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'all_activities_screen.dart';
 import 'backup_settings_screen.dart';
 import 'bin_screen.dart';
 import 'excel_export_screen.dart';
@@ -44,6 +45,17 @@ class MoreMenuScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => const ExcelExportScreen(),
+              )),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('All activities'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AllActivitiesScreen(),
               )),
             ),
           ),

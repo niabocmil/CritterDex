@@ -153,3 +153,42 @@ enum SpecimenStatus {
   static SpecimenStatus fromValue(String value) => SpecimenStatus.values
       .firstWhere((e) => e.name == value, orElse: () => SpecimenStatus.alive);
 }
+
+enum ActivityType {
+  specimenAdded,
+  specimensBatchAdded,
+  terrariumAdded,
+  terrariumDuplicated,
+  terrariumsBatchAdded,
+  statusChanged,
+  replenished,
+  breedingEventAdded,
+  breedingReminderSet;
+
+  String get label => switch (this) {
+        ActivityType.specimenAdded => 'Specimen added',
+        ActivityType.specimensBatchAdded => 'Batch of specimens added',
+        ActivityType.terrariumAdded => 'Terrarium added',
+        ActivityType.terrariumDuplicated => 'Terrarium duplicated',
+        ActivityType.terrariumsBatchAdded => 'Batch of terrariums added',
+        ActivityType.statusChanged => 'Status changed',
+        ActivityType.replenished => 'Replenished',
+        ActivityType.breedingEventAdded => 'Breeding log started',
+        ActivityType.breedingReminderSet => 'Reminder set',
+      };
+
+  IconData get icon => switch (this) {
+        ActivityType.specimenAdded => Icons.pets,
+        ActivityType.specimensBatchAdded => Icons.layers_outlined,
+        ActivityType.terrariumAdded => Icons.crop_square_outlined,
+        ActivityType.terrariumDuplicated => Icons.copy_outlined,
+        ActivityType.terrariumsBatchAdded => Icons.view_comfy_outlined,
+        ActivityType.statusChanged => Icons.swap_horiz,
+        ActivityType.replenished => Icons.water_drop_outlined,
+        ActivityType.breedingEventAdded => Icons.favorite_outline,
+        ActivityType.breedingReminderSet => Icons.notifications_outlined,
+      };
+
+  static ActivityType fromValue(String value) => ActivityType.values
+      .firstWhere((e) => e.name == value, orElse: () => ActivityType.specimenAdded);
+}

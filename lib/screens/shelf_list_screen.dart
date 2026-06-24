@@ -50,6 +50,16 @@ class _ShelfListScreenState extends State<ShelfListScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.view_comfy_outlined),
+              title: const Text('Batch create terrariums'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const TerrariumFormScreen(isBatch: true),
+                ));
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.build_outlined),
               title: const Text('New tool'),
               onTap: () {
@@ -70,28 +80,71 @@ class _ShelfListScreenState extends State<ShelfListScreen> {
     final db = context.read<AppDatabase>();
     return Scaffold(
       appBar: AppBar(title: const Text('Shelf')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SegmentedButton<_ShelfTabView>(
-              segments: const [
-                ButtonSegment(
-                    value: _ShelfTabView.shelves, label: Text('Shelves')),
-                ButtonSegment(
-                    value: _ShelfTabView.terrariums,
-                    label: Text('Terrariums')),
-              ],
-              selected: {_view},
-              onSelectionChanged: (s) => setState(() => _view = s.first),
-            ),
-          ),
-          Expanded(
-            child: _view == _ShelfTabView.shelves
-                ? _ShelvesView(db: db)
-                : _TerrariumsView(db: db),
-          ),
-        ],
+      body: StreamBuilder<List<Shelf>>(
+        stream: db.watchAllShelves(),
+        builder: (context, shelfSnapshot) {
+          final shelves = shelfSnapshot.data ?? const <Shelf>[];
+          return StreamBuilder<List<Terrarium>>(
+            stream: db.watchAllTerrariums(),
+            builder: (context, terrariumSnapshot) {
+              final terrariums = terrariumSnapshot.data ?? const <Terrarium>[];
+              return StreamBuilder<List<Tool>>(
+                stream: db.watchAllTools(),
+                builder: (context, toolSnapshot) {
+                  final tools = toolSnapshot.data ?? const <Tool>[];
+                  return StreamBuilder<List<Specimen>>(
+                    stream: db.watchAllSpecimens(),
+                    builder: (context, specimenSnapshot) {
+                      final specimens =
+                          specimenSnapshot.data ?? const <Specimen>[];
+                      final replenishDueCount =
+                          terrariumIdsNeedingReplenish(specimens).length;
+
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                            child: _OccupancyCard(
+                              shelves: shelves,
+                              terrariums: terrariums,
+                              tools: tools,
+                              replenishDueCount: replenishDueCount,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                            child: SegmentedButton<_ShelfTabView>(
+                              segments: const [
+                                ButtonSegment(
+                                    value: _ShelfTabView.shelves,
+                                    label: Text('Shelves')),
+                                ButtonSegment(
+                                    value: _ShelfTabView.terrariums,
+                                    label: Text('Terrariums')),
+                              ],
+                              selected: {_view},
+                              onSelectionChanged: (s) =>
+                                  setState(() => _view = s.first),
+                            ),
+                          ),
+                          Expanded(
+                            child: _view == _ShelfTabView.shelves
+                                ? _ShelvesView(shelves: shelves, terrariums: terrariums, tools: tools)
+                                : _TerrariumsView(
+                                    terrariums: terrariums,
+                                    shelves: shelves,
+                                    tools: tools,
+                                  ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddMenu(context),
@@ -101,172 +154,158 @@ class _ShelfListScreenState extends State<ShelfListScreen> {
   }
 }
 
-class _ShelvesView extends StatelessWidget {
-  const _ShelvesView({required this.db});
+/// Occupancy summary — rendered once, above the Shelves/Terrariums toggle,
+/// so switching that toggle never changes these numbers.
+class _OccupancyCard extends StatelessWidget {
+  const _OccupancyCard({
+    required this.shelves,
+    required this.terrariums,
+    required this.tools,
+    required this.replenishDueCount,
+  });
 
-  final AppDatabase db;
+  final List<Shelf> shelves;
+  final List<Terrarium> terrariums;
+  final List<Tool> tools;
+  final int replenishDueCount;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Shelf>>(
-      stream: db.watchAllShelves(),
-      builder: (context, shelfSnapshot) {
-        if (!shelfSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final shelves = shelfSnapshot.data!;
-        return StreamBuilder<List<Terrarium>>(
-          stream: db.watchAllTerrariums(),
-          builder: (context, terrariumSnapshot) {
-            final allTerrariums = terrariumSnapshot.data ?? const <Terrarium>[];
-            return StreamBuilder<List<Tool>>(
-              stream: db.watchAllTools(),
-              builder: (context, toolSnapshot) {
-                final allTools = toolSnapshot.data ?? const <Tool>[];
-                return StreamBuilder<List<Specimen>>(
-                  stream: db.watchAllSpecimens(),
-                  builder: (context, specimenSnapshot) {
-                    final allSpecimens =
-                        specimenSnapshot.data ?? const <Specimen>[];
+    double totalUsedCm = 0;
+    double totalCapacityCm = 0;
+    for (final shelf in shelves) {
+      final shelfTerrariums =
+          terrariums.where((t) => t.shelfId == shelf.id).toList();
+      final shelfTools = tools.where((t) => t.shelfId == shelf.id).toList();
+      final fraction = occupancyFractionFor(shelf, shelfTerrariums, shelfTools);
+      totalCapacityCm += shelf.lengthCm * shelf.levelCount;
+      totalUsedCm += fraction * shelf.lengthCm * shelf.levelCount;
+    }
+    final aggregateFraction =
+        totalCapacityCm == 0 ? 0.0 : (totalUsedCm / totalCapacityCm).clamp(0.0, 1.0);
 
-                    if (shelves.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No shelves yet.\nTap + to add one.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      );
-                    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Space occupied',
+                    style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  '${(aggregateFraction * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: occupancyColor(aggregateFraction),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: aggregateFraction,
+                minHeight: 8,
+                color: occupancyColor(aggregateFraction),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _OccupancyStatBlock(
+                    value: '${terrariums.length}',
+                    label: 'Total terrariums',
+                  ),
+                ),
+                Expanded(
+                  child: _OccupancyStatBlock(
+                    value: '$replenishDueCount',
+                    label: 'To replenish',
+                    color: replenishDueCount > 0 ? Colors.orange : null,
+                    onTap: replenishDueCount > 0
+                        ? () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const ReplenishDueScreen()))
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-                    double totalUsedCm = 0;
-                    double totalCapacityCm = 0;
-                    final fractionByShelfId = <int, double>{};
-                    for (final shelf in shelves) {
-                      final shelfTerrariums = allTerrariums
-                          .where((t) => t.shelfId == shelf.id)
-                          .toList();
-                      final shelfTools =
-                          allTools.where((t) => t.shelfId == shelf.id).toList();
-                      final fraction = occupancyFractionFor(
-                          shelf, shelfTerrariums, shelfTools);
-                      fractionByShelfId[shelf.id] = fraction;
-                      totalCapacityCm += shelf.lengthCm * shelf.levelCount;
-                      totalUsedCm +=
-                          fraction * shelf.lengthCm * shelf.levelCount;
-                    }
-                    final aggregateFraction = totalCapacityCm == 0
-                        ? 0.0
-                        : (totalUsedCm / totalCapacityCm).clamp(0.0, 1.0);
-                    final replenishDueCount =
-                        terrariumIdsNeedingReplenish(allSpecimens).length;
+class _ShelvesView extends StatelessWidget {
+  const _ShelvesView({
+    required this.shelves,
+    required this.terrariums,
+    required this.tools,
+  });
 
-                    return ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text('Space occupied',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall),
-                                    Text(
-                                      '${(aggregateFraction * 100).toStringAsFixed(0)}%',
-                                      style: TextStyle(
-                                        color:
-                                            occupancyColor(aggregateFraction),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    value: aggregateFraction,
-                                    minHeight: 8,
-                                    color: occupancyColor(aggregateFraction),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _OccupancyStatBlock(
-                                        value: '${allTerrariums.length}',
-                                        label: 'Total terrariums',
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _OccupancyStatBlock(
-                                        value: '$replenishDueCount',
-                                        label: 'To replenish',
-                                        color: replenishDueCount > 0
-                                            ? Colors.orange
-                                            : null,
-                                        onTap: replenishDueCount > 0
-                                            ? () => Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        const ReplenishDueScreen()))
-                                            : null,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        for (final shelf in shelves)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Card(
-                              child: ListTile(
-                                leading: const Icon(Icons.view_module_outlined),
-                                title: Text(shelf.name),
-                                subtitle: Text(
-                                    '${shelf.label} · ${shelf.levelCount} level(s) · ${shelf.lengthCm.toStringAsFixed(0)} cm'),
-                                trailing: Builder(builder: (context) {
-                                  final fraction =
-                                      fractionByShelfId[shelf.id] ?? 0.0;
-                                  return Text(
-                                    '${(fraction * 100).toStringAsFixed(0)}%',
-                                    style: TextStyle(
-                                      color: occupancyColor(fraction),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                    ),
-                                  );
-                                }),
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ShelfDetailScreen(shelfId: shelf.id),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
+  final List<Shelf> shelves;
+  final List<Terrarium> terrariums;
+  final List<Tool> tools;
+
+  @override
+  Widget build(BuildContext context) {
+    if (shelves.isEmpty) {
+      return Center(
+        child: Text(
+          'No shelves yet.\nTap + to add one.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      );
+    }
+
+    final fractionByShelfId = <int, double>{};
+    for (final shelf in shelves) {
+      final shelfTerrariums =
+          terrariums.where((t) => t.shelfId == shelf.id).toList();
+      final shelfTools = tools.where((t) => t.shelfId == shelf.id).toList();
+      fractionByShelfId[shelf.id] =
+          occupancyFractionFor(shelf, shelfTerrariums, shelfTools);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final shelf in shelves)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Card(
+              child: ListTile(
+                leading: const Icon(Icons.view_module_outlined),
+                title: Text(shelf.name),
+                subtitle: Text(
+                    '${shelf.label} · ${shelf.levelCount} level(s) · ${shelf.lengthCm.toStringAsFixed(0)} cm'),
+                trailing: Builder(builder: (context) {
+                  final fraction = fractionByShelfId[shelf.id] ?? 0.0;
+                  return Text(
+                    '${(fraction * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      color: occupancyColor(fraction),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  );
+                }),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ShelfDetailScreen(shelfId: shelf.id),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -288,10 +327,11 @@ class _OccupancyStatBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w800,
@@ -300,6 +340,7 @@ class _OccupancyStatBlock extends StatelessWidget {
         ),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 13,
             color: color ?? scheme.onSurfaceVariant,
@@ -314,76 +355,87 @@ class _OccupancyStatBlock extends StatelessWidget {
 }
 
 class _TerrariumsView extends StatelessWidget {
-  const _TerrariumsView({required this.db});
+  const _TerrariumsView({
+    required this.terrariums,
+    required this.shelves,
+    required this.tools,
+  });
 
-  final AppDatabase db;
+  final List<Terrarium> terrariums;
+  final List<Shelf> shelves;
+  final List<Tool> tools;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Terrarium>>(
-      stream: db.watchAllTerrariums(),
-      builder: (context, terrariumSnapshot) {
-        if (!terrariumSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final terrariums = terrariumSnapshot.data!;
-        return StreamBuilder<List<Shelf>>(
-          stream: db.watchAllShelves(),
-          builder: (context, shelfSnapshot) {
-            final shelves = shelfSnapshot.data ?? const <Shelf>[];
-            return StreamBuilder<List<Tool>>(
-              stream: db.watchAllTools(),
-              builder: (context, toolSnapshot) {
-                final tools = toolSnapshot.data ?? const <Tool>[];
+    if (terrariums.isEmpty) {
+      return Center(
+        child: Text(
+          'No terrariums yet.\nTap + to add one.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      );
+    }
 
-                if (terrariums.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No terrariums yet.\nTap + to add one.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  );
-                }
+    final labels = computeAllTerrariumLabels(shelves, terrariums, tools);
+    final shelfById = {for (final s in shelves) s.id: s};
 
-                final labels =
-                    computeAllTerrariumLabels(shelves, terrariums, tools);
-                final shelfById = {for (final s in shelves) s.id: s};
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final t in terrariums)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Card(
+              child: ListTile(
+                leading: const Icon(Icons.crop_square_outlined),
+                title: Text(labels[t.id] ?? '?'),
+                subtitle: Text([
+                  '${t.volumeLitres.toStringAsFixed(1)} L · ${t.shape}',
+                  t.shelfId == null
+                      ? (t.location?.isNotEmpty == true
+                          ? t.location!
+                          : 'Individual')
+                      : shelfById[t.shelfId]?.name ?? 'Shelf',
+                ].join(' · ')),
+                onTap: () => _showTerrariumActions(context, t),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 
-                return ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    for (final t in terrariums)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.crop_square_outlined),
-                            title: Text(labels[t.id] ?? '?'),
-                            subtitle: Text([
-                              '${t.volumeLitres.toStringAsFixed(1)} L · ${t.shape}',
-                              t.shelfId == null
-                                  ? (t.location?.isNotEmpty == true
-                                      ? t.location!
-                                      : 'Individual')
-                                  : shelfById[t.shelfId]?.name ?? 'Shelf',
-                            ].join(' · ')),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    TerrariumFormScreen(existing: t),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                );
+  void _showTerrariumActions(BuildContext context, Terrarium terrarium) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => TerrariumFormScreen(existing: terrarium),
+                ));
               },
-            );
-          },
-        );
-      },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_outlined),
+              title: const Text('Duplicate'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) =>
+                      TerrariumFormScreen(duplicateFrom: terrarium),
+                ));
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

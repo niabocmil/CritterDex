@@ -10,15 +10,57 @@ import 'terrarium_placement_picker_screen.dart';
 
 enum _Placement { individual, shelf }
 
+/// A not-yet-persisted terrarium placed earlier in the same batch-create
+/// loop, used only so each successive [findAutoPlacement] call sees its
+/// predecessors before they're written to the DB. Mirrors `_NewShelfItem` in
+/// `terrarium_placement_picker_screen.dart`, but carries a resolved
+/// level/positionXCm instead of leaving them null.
+class _PendingShelfItem implements ShelfItem {
+  _PendingShelfItem({
+    required this.id,
+    required this.footprintCm,
+    required this.itemHeightCm,
+    required this.level,
+    required this.positionXCm,
+  });
+
+  @override
+  final int id;
+  @override
+  final double footprintCm;
+  @override
+  final double itemHeightCm;
+  @override
+  final int? level;
+  @override
+  final double? positionXCm;
+  @override
+  ShelfItemKind get kind => ShelfItemKind.terrarium;
+  @override
+  int? get supportId => null;
+  @override
+  String? get supportKind => null;
+}
+
 /// Reusable add/edit-terrarium flow: shape/dimensions -> live volume ->
 /// individual-or-shelf placement. Pops with the new/edited terrarium's id on
 /// success, or null if cancelled. Used both from the Shelf tab and from
-/// specimen creation's terrarium-assignment step.
+/// specimen creation's terrarium-assignment step. Also doubles as the
+/// duplicate flow (prefills from [duplicateFrom]) and the batch-create flow
+/// ([isBatch] adds a count field and forces auto-place for count > 1).
 class TerrariumFormScreen extends StatefulWidget {
-  const TerrariumFormScreen({super.key, this.existing, this.preselectedShelfId});
+  const TerrariumFormScreen({
+    super.key,
+    this.existing,
+    this.preselectedShelfId,
+    this.duplicateFrom,
+    this.isBatch = false,
+  });
 
   final Terrarium? existing;
   final int? preselectedShelfId;
+  final Terrarium? duplicateFrom;
+  final bool isBatch;
 
   @override
   State<TerrariumFormScreen> createState() => _TerrariumFormScreenState();
@@ -31,6 +73,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
   final _diameterController = TextEditingController();
   final _heightController = TextEditingController();
   final _locationController = TextEditingController();
+  final _countController = TextEditingController(text: '2');
 
   String _shape = 'rectangular';
   TerrariumPurpose _purpose = TerrariumPurpose.general;
@@ -41,11 +84,15 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
   bool _saving = false;
 
   bool get _isEditing => widget.existing != null;
+  bool get _isBatch => widget.isBatch && !_isEditing;
+  int get _batchCount =>
+      _isBatch ? (int.tryParse(_countController.text.trim()) ?? 1).clamp(1, 999) : 1;
 
   @override
   void initState() {
     super.initState();
     final existing = widget.existing;
+    final duplicateFrom = widget.duplicateFrom;
     if (existing != null) {
       _shape = existing.shape;
       _lengthController.text = existing.lengthCm?.toString() ?? '';
@@ -56,6 +103,17 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
       _placement = existing.shelfId == null ? _Placement.individual : _Placement.shelf;
       _shelfId = existing.shelfId;
       _purpose = TerrariumPurpose.fromValue(existing.purpose);
+    } else if (duplicateFrom != null) {
+      _shape = duplicateFrom.shape;
+      _lengthController.text = duplicateFrom.lengthCm?.toString() ?? '';
+      _widthController.text = duplicateFrom.widthCm?.toString() ?? '';
+      _diameterController.text = duplicateFrom.diameterCm?.toString() ?? '';
+      _heightController.text = duplicateFrom.heightCm.toString();
+      _purpose = TerrariumPurpose.fromValue(duplicateFrom.purpose);
+      if (widget.preselectedShelfId != null) {
+        _placement = _Placement.shelf;
+        _shelfId = widget.preselectedShelfId;
+      }
     } else if (widget.preselectedShelfId != null) {
       _placement = _Placement.shelf;
       _shelfId = widget.preselectedShelfId;
@@ -69,6 +127,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
     _diameterController.dispose();
     _heightController.dispose();
     _locationController.dispose();
+    _countController.dispose();
     super.dispose();
   }
 
@@ -109,8 +168,25 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
         heightCm: height);
     final footprintWidth = _shape == 'cylinder' ? diameter! : length!;
 
+    final activityTypeOverride = widget.duplicateFrom != null
+        ? ActivityType.terrariumDuplicated
+        : ActivityType.terrariumAdded;
+
     setState(() => _saving = true);
     try {
+      if (_isBatch) {
+        final id = await _saveBatch(
+          db: db,
+          height: height,
+          length: length,
+          width: width,
+          diameter: diameter,
+          volume: volume,
+          footprintWidth: footprintWidth,
+        );
+        if (mounted) Navigator.of(context).pop(id);
+        return;
+      }
       if (_placement == _Placement.individual) {
         final sequence = await db.nextIndividualSequence();
         if (_isEditing) {
@@ -177,19 +253,22 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
           }
           if (mounted) Navigator.of(context).pop(existing.id);
         } else {
-          final id = await db.insertTerrarium(TerrariumsCompanion.insert(
-            shape: _shape,
-            lengthCm: Value(length),
-            widthCm: Value(width),
-            diameterCm: Value(diameter),
-            heightCm: height,
-            volumeLitres: volume,
-            purpose: Value(_purpose.name),
-            location: Value(_locationController.text.trim().isEmpty
-                ? null
-                : _locationController.text.trim()),
-            individualSequence: Value(sequence),
-          ));
+          final id = await db.insertTerrarium(
+            TerrariumsCompanion.insert(
+              shape: _shape,
+              lengthCm: Value(length),
+              widthCm: Value(width),
+              diameterCm: Value(diameter),
+              heightCm: height,
+              volumeLitres: volume,
+              purpose: Value(_purpose.name),
+              location: Value(_locationController.text.trim().isEmpty
+                  ? null
+                  : _locationController.text.trim()),
+              individualSequence: Value(sequence),
+            ),
+            activityTypeOverride: activityTypeOverride,
+          );
           if (mounted) Navigator.of(context).pop(id);
         }
       } else {
@@ -288,20 +367,23 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
           var id = -1;
           await db.transaction(() async {
             await applySiblingUpdates();
-            id = await db.insertTerrarium(TerrariumsCompanion.insert(
-              shape: _shape,
-              lengthCm: Value(length),
-              widthCm: Value(width),
-              diameterCm: Value(diameter),
-              heightCm: height,
-              volumeLitres: volume,
-              shelfId: Value(shelfId),
-              level: Value(level),
-              positionXCm: Value(positionXCm),
-              supportId: Value(supportId),
-              supportKind: Value(supportKind),
-              purpose: Value(_purpose.name),
-            ));
+            id = await db.insertTerrarium(
+              TerrariumsCompanion.insert(
+                shape: _shape,
+                lengthCm: Value(length),
+                widthCm: Value(width),
+                diameterCm: Value(diameter),
+                heightCm: height,
+                volumeLitres: volume,
+                shelfId: Value(shelfId),
+                level: Value(level),
+                positionXCm: Value(positionXCm),
+                supportId: Value(supportId),
+                supportKind: Value(supportKind),
+                purpose: Value(_purpose.name),
+              ),
+              activityTypeOverride: activityTypeOverride,
+            );
           });
           if (mounted) Navigator.of(context).pop(id);
         }
@@ -309,6 +391,100 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Batch-create path: count > 1 forces auto-place only (no manual
+  /// stacking), so a new terrarium can never end up depending on UI input
+  /// per-item. For shelf placement, each successive [findAutoPlacement] call
+  /// must see the terrariums placed earlier in this same loop before
+  /// they're persisted — tracked via synthetic [_PendingShelfItem]s appended
+  /// to a local working copy of the shelf's contents.
+  Future<int?> _saveBatch({
+    required AppDatabase db,
+    required double height,
+    required double? length,
+    required double? width,
+    required double? diameter,
+    required double volume,
+    required double footprintWidth,
+  }) async {
+    final count = _batchCount;
+    if (_placement == _Placement.individual) {
+      final firstSequence = await db.nextIndividualSequence();
+      final entries = [
+        for (var i = 0; i < count; i++)
+          TerrariumsCompanion.insert(
+            shape: _shape,
+            lengthCm: Value(length),
+            widthCm: Value(width),
+            diameterCm: Value(diameter),
+            heightCm: height,
+            volumeLitres: volume,
+            purpose: Value(_purpose.name),
+            location: Value(_locationController.text.trim().isEmpty
+                ? null
+                : _locationController.text.trim()),
+            individualSequence: Value(firstSequence + i),
+          ),
+      ];
+      final ids = await db.insertTerrariumsBatch(entries,
+          title: 'Batch-created $count terrariums');
+      return ids.isEmpty ? null : ids.first;
+    }
+
+    final shelfId = _shelfId;
+    if (shelfId == null) return null;
+    final shelf = await db.getShelfById(shelfId);
+    var existingOnShelf = <ShelfItem>[
+      ...(await db.getTerrariumsForShelf(shelfId)).map(TerrariumShelfItem.new),
+      ...(await db.getToolsForShelf(shelfId)).map(ToolShelfItem.new),
+    ];
+    final entries = <TerrariumsCompanion>[];
+    var nextSyntheticId = -1;
+    for (var i = 0; i < count; i++) {
+      PlacementResult placement;
+      try {
+        placement = findAutoPlacement(
+          shelf: shelf,
+          newFootprintWidthCm: footprintWidth,
+          newHeightCm: height,
+          existingOnShelf: existingOnShelf,
+        );
+      } on PlacementException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  '${e.message} (created ${entries.length} of $count)')));
+        }
+        break;
+      }
+      entries.add(TerrariumsCompanion.insert(
+        shape: _shape,
+        lengthCm: Value(length),
+        widthCm: Value(width),
+        diameterCm: Value(diameter),
+        heightCm: height,
+        volumeLitres: volume,
+        shelfId: Value(shelfId),
+        level: Value(placement.level),
+        positionXCm: Value(placement.positionXCm),
+        purpose: Value(_purpose.name),
+      ));
+      existingOnShelf = [
+        ...existingOnShelf,
+        _PendingShelfItem(
+          id: nextSyntheticId--,
+          footprintCm: footprintWidth,
+          itemHeightCm: height,
+          level: placement.level,
+          positionXCm: placement.positionXCm,
+        ),
+      ];
+    }
+    if (entries.isEmpty) return null;
+    final ids = await db.insertTerrariumsBatch(entries,
+        title: 'Batch-created ${entries.length} terrariums');
+    return ids.isEmpty ? null : ids.first;
   }
 
   String? _requiredNumber(String? v) {
@@ -324,7 +500,13 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit terrarium' : 'New terrarium'),
+        title: Text(_isEditing
+            ? 'Edit terrarium'
+            : widget.duplicateFrom != null
+                ? 'Duplicate terrarium'
+                : _isBatch
+                    ? 'Batch create terrariums'
+                    : 'New terrarium'),
         actions: [
           IconButton(
             onPressed: _saving ? null : _save,
@@ -420,6 +602,26 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
               selected: {_placement},
               onSelectionChanged: (s) => setState(() => _placement = s.first),
             ),
+            if (_isBatch) ...[
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _countController,
+                decoration: const InputDecoration(labelText: 'How many to create? *'),
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {
+                  if (_batchCount > 1) _useAutoPlace = true;
+                }),
+              ),
+              if (_placement == _Placement.shelf && _batchCount > 1) ...[
+                const SizedBox(height: 4),
+                Text(
+                  "Manual placement isn't available when creating more than one at a time — each will auto-place in the next empty space.",
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ],
             const SizedBox(height: 14),
             if (_placement == _Placement.individual)
               TextFormField(
@@ -462,9 +664,11 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Auto-place in next empty space'),
                         value: _useAutoPlace,
-                        onChanged: (v) => setState(() => _useAutoPlace = v),
+                        onChanged: _batchCount > 1
+                            ? null
+                            : (v) => setState(() => _useAutoPlace = v),
                       ),
-                      if (!_useAutoPlace) ...[
+                      if (!_useAutoPlace && _batchCount <= 1) ...[
                         const SizedBox(height: 8),
                         OutlinedButton.icon(
                           onPressed: _shelfId == null
@@ -512,7 +716,13 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: Text(_isEditing ? 'Save changes' : 'Create terrarium'),
+              child: Text(_isEditing
+                  ? 'Save changes'
+                  : _isBatch
+                      ? 'Create terrariums'
+                      : widget.duplicateFrom != null
+                          ? 'Create duplicate'
+                          : 'Create terrarium'),
             ),
           ],
         ),

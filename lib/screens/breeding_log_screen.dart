@@ -20,12 +20,36 @@ class BreedingLogScreen extends StatefulWidget {
 class _BreedingLogScreenState extends State<BreedingLogScreen> {
   final _noteController = TextEditingController();
   final _clutchController = TextEditingController();
+  final _reminderDaysController = TextEditingController();
+  final _reminderNoteController = TextEditingController();
 
   @override
   void dispose() {
     _noteController.dispose();
     _clutchController.dispose();
+    _reminderDaysController.dispose();
+    _reminderNoteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _setReminder(AppDatabase db, BreedingEvent event) async {
+    final days = int.tryParse(_reminderDaysController.text.trim());
+    if (days == null) return;
+    final note = _reminderNoteController.text.trim();
+    final dueDate = DateTime.now().add(Duration(days: days));
+    await db.insertBreedingReminder(BreedingRemindersCompanion.insert(
+      breedingEventId: event.id,
+      dueDate: dueDate,
+      note: Value(note.isEmpty ? null : note),
+    ));
+    await db.logActivity(
+      type: ActivityType.breedingReminderSet,
+      title: 'Reminder set for breeding log',
+      entityId: event.id,
+    );
+    _reminderDaysController.clear();
+    _reminderNoteController.clear();
+    if (mounted) setState(() {});
   }
 
   Future<void> _advanceStage(AppDatabase db, BreedingEvent event) async {
@@ -263,6 +287,73 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                         onPressed: () => _addNote(db, event),
                       ),
                     ],
+                  ),
+                  const Divider(height: 32),
+                  Text('Reminder', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 90,
+                        child: TextField(
+                          controller: _reminderDaysController,
+                          decoration:
+                              const InputDecoration(labelText: 'In (days)'),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _reminderNoteController,
+                          decoration:
+                              const InputDecoration(labelText: 'Note (optional)'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => _setReminder(db, event),
+                        child: const Text('Set'),
+                      ),
+                    ],
+                  ),
+                  StreamBuilder<List<BreedingReminder>>(
+                    stream: db.watchActiveRemindersForEvent(event.id),
+                    builder: (context, reminderSnapshot) {
+                      final activeReminders = reminderSnapshot.data ??
+                          const <BreedingReminder>[];
+                      if (activeReminders.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          const SizedBox(height: 8),
+                          for (final r in activeReminders)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.notifications_outlined),
+                              title: Text(DateFormat.yMMMd().format(r.dueDate)),
+                              subtitle: r.note == null ? null : Text(r.note!),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.check_circle_outline),
+                                    tooltip: 'Mark done',
+                                    onPressed: () =>
+                                        db.markBreedingReminderDone(r.id),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    tooltip: 'Delete',
+                                    onPressed: () =>
+                                        db.deleteBreedingReminder(r.id),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const Divider(height: 32),
                   Text('Timeline', style: Theme.of(context).textTheme.titleMedium),
