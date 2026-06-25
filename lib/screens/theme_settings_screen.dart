@@ -55,6 +55,33 @@ class ThemeSettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<Color?> _pickColor(
+      BuildContext context, String title, Color initial) async {
+    var picked = initial;
+    return showDialog<Color>(
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setDialogState) {
+        return AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: picked,
+              onColorChanged: (c) => setDialogState(() => picked = c),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.of(context).pop(picked),
+                child: const Text('Apply')),
+          ],
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeController = context.watch<ThemeController>();
@@ -103,6 +130,82 @@ class ThemeSettingsScreen extends StatelessWidget {
             onPressed: () => _openCustomize(context, themeController),
             icon: const Icon(Icons.color_lens_outlined),
             label: const Text('Customize'),
+          ),
+          const SizedBox(height: 24),
+          Text('Box & shelf colors', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: themeController.boxColor ??
+                        Theme.of(context).colorScheme.primaryContainer,
+                  ),
+                  title: const Text('Terrarium box color'),
+                  subtitle: const Text('Default color for terrarium boxes on a shelf'),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      if (themeController.boxColor != null)
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: 'Reset to theme default',
+                          onPressed: () => themeController.setBoxColor(null),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Choose color',
+                        onPressed: () async {
+                          final picked = await _pickColor(
+                              context,
+                              'Terrarium box color',
+                              themeController.boxColor ??
+                                  Theme.of(context).colorScheme.primaryContainer);
+                          if (picked != null) {
+                            await themeController.setBoxColor(picked);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: themeController.shelfColor ??
+                        Theme.of(context).colorScheme.surfaceContainerLow,
+                  ),
+                  title: const Text('Shelf color'),
+                  subtitle: const Text('Background color of each shelf level'),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      if (themeController.shelfColor != null)
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: 'Reset to theme default',
+                          onPressed: () => themeController.setShelfColor(null),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Choose color',
+                        onPressed: () async {
+                          final picked = await _pickColor(
+                              context,
+                              'Shelf color',
+                              themeController.shelfColor ??
+                                  Theme.of(context).colorScheme.surfaceContainerLow);
+                          if (picked != null) {
+                            await themeController.setShelfColor(picked);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

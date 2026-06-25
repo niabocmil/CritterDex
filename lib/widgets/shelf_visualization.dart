@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../models/terrarium_layout.dart';
 import '../models/terrarium_placement.dart';
+import '../theme/theme_controller.dart';
 import 'terrarium_slot.dart';
 import 'tool_slot.dart';
 
@@ -123,6 +125,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final shelfColor = context.watch<ThemeController>().shelfColor;
     final baseItems = _baseItems();
     final baseGeo = _computeGeometry(widget.shelf, baseItems);
     final dragging = _draggingKey != null;
@@ -145,7 +148,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
               rect: entry.value,
               child: Container(
                 decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
+                  color: shelfColor ?? scheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: scheme.outlineVariant),
                 ),
@@ -161,7 +164,12 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
+                  color: shelfColor == null
+                      ? scheme.onSurfaceVariant
+                      : ThemeData.estimateBrightnessForColor(shelfColor) ==
+                              Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
                 ),
               ),
             ),

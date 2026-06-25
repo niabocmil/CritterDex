@@ -7,14 +7,22 @@ class ThemeController extends ChangeNotifier {
   static const _prefsKey = 'app_theme_choice';
   static const _customColorKey = 'app_theme_custom_color';
   static const _customBrightnessKey = 'app_theme_custom_brightness';
+  static const _boxColorKey = 'app_theme_box_color';
+  static const _shelfColorKey = 'app_theme_shelf_color';
 
   AppThemeChoice _choice = AppThemeChoice.darkGreen;
   Color _customSeedColor = Colors.teal;
   Brightness _customBrightness = Brightness.light;
+  // Null means "use the active theme's derived default" — see
+  // shelf_visualization.dart / terrarium_slot.dart.
+  Color? _boxColor;
+  Color? _shelfColor;
 
   AppThemeChoice get choice => _choice;
   Color get customSeedColor => _customSeedColor;
   Brightness get customBrightness => _customBrightness;
+  Color? get boxColor => _boxColor;
+  Color? get shelfColor => _shelfColor;
 
   ThemeData get themeData {
     if (_choice == AppThemeChoice.custom) {
@@ -55,6 +63,14 @@ class ThemeController extends ChangeNotifier {
       _customBrightness =
           brightnessName == 'dark' ? Brightness.dark : Brightness.light;
     }
+    final boxColorValue = prefs.getInt(_boxColorKey);
+    if (boxColorValue != null) {
+      _boxColor = Color(boxColorValue);
+    }
+    final shelfColorValue = prefs.getInt(_shelfColorKey);
+    if (shelfColorValue != null) {
+      _shelfColor = Color(shelfColorValue);
+    }
     notifyListeners();
   }
 
@@ -75,5 +91,27 @@ class ThemeController extends ChangeNotifier {
     await prefs.setInt(_customColorKey, seedColor.toARGB32());
     await prefs.setString(
         _customBrightnessKey, brightness == Brightness.dark ? 'dark' : 'light');
+  }
+
+  Future<void> setBoxColor(Color? color) async {
+    _boxColor = color;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (color == null) {
+      await prefs.remove(_boxColorKey);
+    } else {
+      await prefs.setInt(_boxColorKey, color.toARGB32());
+    }
+  }
+
+  Future<void> setShelfColor(Color? color) async {
+    _shelfColor = color;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (color == null) {
+      await prefs.remove(_shelfColorKey);
+    } else {
+      await prefs.setInt(_shelfColorKey, color.toARGB32());
+    }
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
 import '../models/icon_resolver.dart';
+import '../theme/theme_controller.dart';
 
 const _breedingPink = Color(0xFFEC407A);
 
@@ -24,10 +26,17 @@ class TerrariumSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final boxColor = context.watch<ThemeController>().boxColor;
     final isBreeding =
         TerrariumPurpose.fromValue(terrarium.purpose) == TerrariumPurpose.breeding;
-    final baseColor = isBreeding ? _breedingPink : scheme.primaryContainer;
-    final onBaseColor = isBreeding ? Colors.white : scheme.onPrimaryContainer;
+    final baseColor = isBreeding ? _breedingPink : (boxColor ?? scheme.primaryContainer);
+    final onBaseColor = isBreeding
+        ? Colors.white
+        : boxColor == null
+            ? scheme.onPrimaryContainer
+            : ThemeData.estimateBrightnessForColor(boxColor) == Brightness.dark
+                ? Colors.white
+                : Colors.black;
 
     return Container(
       decoration: BoxDecoration(

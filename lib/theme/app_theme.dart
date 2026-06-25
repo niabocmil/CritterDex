@@ -56,19 +56,37 @@ class AppTheme {
     surfaceContainerHighest: const Color(0xFF262626),
   );
 
+  /// Re-hues [base] (a neutral on-surface/on-surface-variant color) toward
+  /// [accent]'s hue while keeping [base]'s own lightness, so default text
+  /// and icons visibly carry the chosen theme color without losing the
+  /// light/dark contrast that makes them readable against [base]'s surface.
+  static Color _tinted(Color base, Color accent) {
+    final baseHsl = HSLColor.fromColor(base);
+    final accentHsl = HSLColor.fromColor(accent);
+    return baseHsl
+        .withHue(accentHsl.hue)
+        .withSaturation((baseHsl.saturation + accentHsl.saturation * 0.6).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   static ThemeData _build(ColorScheme colorScheme) {
-    return ThemeData(
+    final tintedOnSurface = _tinted(colorScheme.onSurface, colorScheme.primary);
+    final tintedOnSurfaceVariant =
+        _tinted(colorScheme.onSurfaceVariant, colorScheme.primary);
+
+    final base = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
+        foregroundColor: tintedOnSurface,
+        iconTheme: IconThemeData(color: tintedOnSurface),
         elevation: 0,
         scrolledUnderElevation: 1,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: colorScheme.onSurface,
+          color: tintedOnSurface,
           fontSize: 22,
           fontWeight: FontWeight.w700,
         ),
@@ -83,7 +101,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
-        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        labelStyle: TextStyle(color: tintedOnSurfaceVariant),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -112,7 +130,7 @@ class AppTheme {
         elevation: 0,
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
-          TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+          TextStyle(fontSize: 12, color: tintedOnSurfaceVariant),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -138,6 +156,15 @@ class AppTheme {
         ),
       ),
       visualDensity: VisualDensity.standard,
+    );
+
+    return base.copyWith(
+      textTheme: base.textTheme.apply(
+          bodyColor: tintedOnSurface, displayColor: tintedOnSurface),
+      iconTheme: base.iconTheme.copyWith(color: tintedOnSurface),
+      primaryIconTheme: base.primaryIconTheme.copyWith(color: tintedOnSurface),
+      listTileTheme: base.listTileTheme.copyWith(
+          iconColor: tintedOnSurfaceVariant, textColor: tintedOnSurface),
     );
   }
 }

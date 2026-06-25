@@ -16,13 +16,76 @@ class AllActivitiesScreen extends StatefulWidget {
 
 class _AllActivitiesScreenState extends State<AllActivitiesScreen> {
   _Sort _sort = _Sort.latest;
-  final Set<ActivityCategory> _categoryFilter = {...ActivityCategory.values};
+  Set<ActivityCategory> _categoryFilter = {...ActivityCategory.values};
+
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setSheetState) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Categories', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final category in ActivityCategory.values)
+                        FilterChip(
+                          label: Text(category.label),
+                          selected: _categoryFilter.contains(category),
+                          onSelected: (sel) => setSheetState(() => setState(() {
+                            if (sel) {
+                              _categoryFilter.add(category);
+                            } else {
+                              _categoryFilter.remove(category);
+                            }
+                          })),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => setSheetState(() => setState(() {
+                        _categoryFilter = {...ActivityCategory.values};
+                      })),
+                      child: const Text('Clear filters'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
+    final filtersActive = _categoryFilter.length < ActivityCategory.values.length;
     return Scaffold(
-      appBar: AppBar(title: const Text('All activities')),
+      appBar: AppBar(
+        title: const Text('All activities'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.filter_list,
+                color: filtersActive ? Theme.of(context).colorScheme.primary : null),
+            tooltip: 'Categories',
+            onPressed: () => _showFilterSheet(context),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<ActivityLogEntry>>(
         stream: db.watchAllActivity(),
         builder: (context, snapshot) {
@@ -46,27 +109,6 @@ class _AllActivitiesScreenState extends State<AllActivitiesScreen> {
                   ],
                   selected: {_sort},
                   onSelectionChanged: (s) => setState(() => _sort = s.first),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final category in ActivityCategory.values)
-                      FilterChip(
-                        label: Text(category.label),
-                        selected: _categoryFilter.contains(category),
-                        onSelected: (sel) => setState(() {
-                          if (sel) {
-                            _categoryFilter.add(category);
-                          } else {
-                            _categoryFilter.remove(category);
-                          }
-                        }),
-                      ),
-                  ],
                 ),
               ),
               Expanded(
