@@ -71,6 +71,37 @@ List<ReminderItem> computeReminders({
     ));
   }
 
+  // Terrariums not yet due get a forward-looking reminder on their real
+  // projected due date, so they show up in the calendar in advance instead
+  // of only appearing the day they become due.
+  final dueTerrariumIds = specimensByTerrarium.keys.toSet();
+  final upcomingByTerrarium = <int, List<Specimen>>{};
+  for (final s in specimens) {
+    final terrariumId = s.terrariumId;
+    if (terrariumId == null || dueTerrariumIds.contains(terrariumId)) continue;
+    if (s.replenishIntervalDays == null || s.lastReplenishedAt == null) continue;
+    if (isReplenishDue(s)) continue;
+    upcomingByTerrarium.putIfAbsent(terrariumId, () => []).add(s);
+  }
+  for (final entry in upcomingByTerrarium.entries) {
+    final terrariumId = entry.key;
+    final candidates = entry.value;
+    final soonest =
+        candidates.reduce((a, b) => replenishDaysLeft(a) < replenishDaysLeft(b) ? a : b);
+    final dueDate = today.add(Duration(days: replenishDaysLeft(soonest)));
+    final label = labels[terrariumId] ?? '?';
+    items.add(ReminderItem(
+      source: ReminderSource.replenish,
+      dueDate: dueDate,
+      title: 'Replenish $label',
+      subtitle: candidates.length == 1
+          ? candidates.first.species
+          : '${candidates.length} specimens',
+      isMissed: false,
+      terrariumId: terrariumId,
+    ));
+  }
+
   final specimensById = {for (final s in specimens) s.id: s};
   final eventsById = {for (final e in breedingEvents) e.id: e};
   for (final reminder in breedingReminders) {

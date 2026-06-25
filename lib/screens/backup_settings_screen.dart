@@ -72,6 +72,37 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
     }
   }
 
+  Future<void> _eraseAllData(AppDatabase db) async {
+    final scheme = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Erase all data?'),
+        content: const Text(
+            'This permanently deletes every specimen, terrarium, shelf, tool, '
+            'breeding event and activity log in the app, along with all photos. '
+            'This cannot be undone. Consider exporting a backup first.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: scheme.error, foregroundColor: scheme.onError),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Erase everything')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await BackupService(db).eraseAllData();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('All data erased')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
@@ -101,6 +132,17 @@ class _BackupSettingsScreenState extends State<BackupSettingsScreen> {
                       title: const Text('Import backup'),
                       subtitle: const Text('Replace everything with a backup .zip'),
                       onTap: () => _runBusy(() => _importBackup(db)),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: Icon(Icons.delete_forever,
+                          color: Theme.of(context).colorScheme.error),
+                      title: Text('Erase all data',
+                          style:
+                              TextStyle(color: Theme.of(context).colorScheme.error)),
+                      subtitle: const Text(
+                          'Permanently delete everything in the app — no undo'),
+                      onTap: () => _runBusy(() => _eraseAllData(db)),
                     ),
                   ],
                 ),

@@ -143,4 +143,27 @@ class BackupService {
       }
     }
   }
+
+  /// Permanently wipes every row in every table plus all stored photos.
+  /// Irreversible — callers must confirm with the user before calling this.
+  Future<void> eraseAllData() async {
+    await db.transaction(() async {
+      await db.delete(db.activityLogEntries).go();
+      await db.delete(db.breedingReminders).go();
+      await db.delete(db.specimenLogEntries).go();
+      await db.delete(db.breedingLogEntries).go();
+      await db.delete(db.breedingEvents).go();
+      await db.delete(db.specimens).go();
+      await db.delete(db.terrariums).go();
+      await db.delete(db.tools).go();
+      await db.delete(db.shelves).go();
+    });
+
+    final docsDir = await getApplicationDocumentsDirectory();
+    final photosDir = Directory(p.join(docsDir.path, 'photos'));
+    if (await photosDir.exists()) {
+      await photosDir.delete(recursive: true);
+    }
+    await photosDir.create(recursive: true);
+  }
 }

@@ -192,3 +192,33 @@ enum ActivityType {
   static ActivityType fromValue(String value) => ActivityType.values
       .firstWhere((e) => e.name == value, orElse: () => ActivityType.specimenAdded);
 }
+
+enum ActivityCategory {
+  specimen,
+  terrarium,
+  breedingLog,
+  reminder;
+
+  String get label => switch (this) {
+        ActivityCategory.specimen => 'Specimen',
+        ActivityCategory.terrarium => 'Terrarium',
+        ActivityCategory.breedingLog => 'Breeding log',
+        ActivityCategory.reminder => 'Reminder',
+      };
+}
+
+extension ActivityTypeCategory on ActivityType {
+  ActivityCategory get category => switch (this) {
+        ActivityType.specimenAdded ||
+        ActivityType.specimensBatchAdded ||
+        ActivityType.statusChanged ||
+        ActivityType.replenished =>
+          ActivityCategory.specimen,
+        ActivityType.terrariumAdded ||
+        ActivityType.terrariumDuplicated ||
+        ActivityType.terrariumsBatchAdded =>
+          ActivityCategory.terrarium,
+        ActivityType.breedingEventAdded => ActivityCategory.breedingLog,
+        ActivityType.breedingReminderSet => ActivityCategory.reminder,
+      };
+}

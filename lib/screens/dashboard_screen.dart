@@ -77,15 +77,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     breedingEvents: events,
                                     breedingReminders: breedingReminders,
                                   );
+                                  final today =
+                                      DateUtils.dateOnly(DateTime.now());
                                   final missedReplenishCount = reminders
                                       .where((r) =>
                                           r.source == ReminderSource.replenish &&
                                           r.isMissed)
                                       .length;
+                                  // Replenish reminders that are due exactly
+                                  // today — distinct from reminders.where(!isMissed),
+                                  // which now also includes reminders projected for
+                                  // a future date.
                                   final dueTodayReplenishCount = reminders
                                       .where((r) =>
                                           r.source == ReminderSource.replenish &&
-                                          !r.isMissed)
+                                          r.dueDate == today)
                                       .length;
                                   final missedBreeding = reminders
                                       .where((r) =>
@@ -257,43 +263,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           ),
                                         )
                                       else ...[
-                                        Card(
-                                          child: Column(
-                                            children: [
-                                              for (final entry in visible)
-                                                ActivityTile(entry: entry),
-                                              if (!_recentExpanded &&
-                                                  recentActivity.length > 4)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          vertical: 4),
-                                                  child: TextButton(
-                                                    onPressed: () => setState(
-                                                        () => _recentExpanded =
-                                                            true),
-                                                    child: Text(
-                                                        'Show ${(recentActivity.length - 4).clamp(0, 16)} more'),
-                                                  ),
-                                                ),
-                                              if (_recentExpanded)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          vertical: 4),
-                                                  child: TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(context).push(
-                                                            MaterialPageRoute(
-                                                                builder: (_) =>
-                                                                    const AllActivitiesScreen())),
-                                                    child: const Text(
-                                                        'View all activities'),
-                                                  ),
-                                                ),
-                                            ],
+                                        for (final entry in visible)
+                                          Card(
+                                            margin:
+                                                const EdgeInsets.only(bottom: 8),
+                                            child: ActivityTile(entry: entry),
                                           ),
-                                        ),
+                                        if (!_recentExpanded &&
+                                            recentActivity.length > 4)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4),
+                                            child: TextButton(
+                                              onPressed: () => setState(
+                                                  () => _recentExpanded = true),
+                                              child: Text(
+                                                  'Show ${(recentActivity.length - 4).clamp(0, 16)} more'),
+                                            ),
+                                          ),
+                                        if (_recentExpanded)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                TextButton.icon(
+                                                  onPressed: () => setState(() =>
+                                                      _recentExpanded = false),
+                                                  icon: const Icon(
+                                                      Icons.expand_less),
+                                                  label: const Text('Show less'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context).push(
+                                                          MaterialPageRoute(
+                                                              builder: (_) =>
+                                                                  const AllActivitiesScreen())),
+                                                  child: const Text(
+                                                      'View all activities'),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                       ],
                                     ],
                                   );

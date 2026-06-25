@@ -27,23 +27,25 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
 
   void _shift(int direction) {
     setState(() {
-      _focusedDay = _view == _CalendarView.month
-          ? DateUtils.addMonthsToMonthDate(_focusedDay, direction)
-          : _focusedDay.add(Duration(days: 7 * direction));
+      _focusedDay = DateUtils.addMonthsToMonthDate(_focusedDay, direction);
     });
   }
 
   List<DateTime> _gridDays() {
-    if (_view == _CalendarView.week) {
-      final monday = _focusedDay.subtract(Duration(days: _focusedDay.weekday - 1));
-      return [for (var i = 0; i < 7; i++) monday.add(Duration(days: i))];
-    }
     final firstOfMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
     final leading = firstOfMonth.weekday - 1; // Monday-first grid
     final gridStart = firstOfMonth.subtract(Duration(days: leading));
     final daysInMonth = DateUtils.getDaysInMonth(_focusedDay.year, _focusedDay.month);
     final totalCells = ((leading + daysInMonth + 6) ~/ 7) * 7;
     return [for (var i = 0; i < totalCells; i++) gridStart.add(Duration(days: i))];
+  }
+
+  /// Today plus the next 6 days, always anchored to "now" — unlike the
+  /// month grid, the week view isn't navigable, so this never reads
+  /// [_focusedDay].
+  List<DateTime> _upcomingWeekDays() {
+    final today = DateUtils.dateOnly(DateTime.now());
+    return [for (var i = 0; i < 7; i++) today.add(Duration(days: i))];
   }
 
   void _showDaySheet(BuildContext context, DateTime day, List<ReminderItem> items) {
@@ -80,14 +82,7 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
                         subtitle: item.subtitle == null ? null : Text(item.subtitle!),
                         onTap: () {
                           Navigator.of(context).pop();
-                          if (item.source == ReminderSource.replenish) {
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => const ReplenishDueScreen()));
-                          } else if (item.breedingEventId != null) {
-                            Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => BreedingLogScreen(
-                                    breedingEventId: item.breedingEventId!)));
-                          }
+                          _openReminder(context, item);
                         },
                         trailing: item.source == ReminderSource.breeding
                             ? Row(
@@ -188,8 +183,6 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
 
   Widget _buildCalendar(
       BuildContext context, Map<DateTime, List<ReminderItem>> byDay) {
-    final days = _gridDays();
-    final today = DateUtils.dateOnly(DateTime.now());
     const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return Column(
@@ -198,71 +191,185 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: SegmentedButton<_CalendarView>(
             segments: const [
-              ButtonSegment(value: _CalendarView.month, label: Text('Month')),
               ButtonSegment(value: _CalendarView.week, label: Text('Week')),
+              ButtonSegment(value: _CalendarView.month, label: Text('Month')),
             ],
             selected: {_view},
             onSelectionChanged: (s) => setState(() => _view = s.first),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                  icon: const Icon(Icons.chevron_left), onPressed: () => _shift(-1)),
-              Text(
-                _view == _CalendarView.month
-                    ? MaterialLocalizations.of(context)
-                        .formatMonthYear(_focusedDay)
-                    : '${MaterialLocalizations.of(context).formatShortDate(days.first)} - ${MaterialLocalizations.of(context).formatShortDate(days.last)}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              IconButton(
-                  icon: const Icon(Icons.chevron_right), onPressed: () => _shift(1)),
-            ],
+        if (_view == _CalendarView.month) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () => _shift(-1)),
+                Text(
+                  MaterialLocalizations.of(context).formatMonthYear(_focusedDay),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () => _shift(1)),
+              ],
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              for (final label in weekdayLabels)
-                Expanded(
-                  child: Center(
-                    child: Text(label,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                for (final label in weekdayLabels)
+                  Expanded(
+                    child: Center(
+                      child: Text(label,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                for (final day in _gridDays())
+                  _DayCell(
+                    day: day,
+                    inFocusedMonth: day.month == _focusedDay.month,
+                    isToday: day == DateUtils.dateOnly(DateTime.now()),
+                    items: byDay[day] ?? const [],
+                    onTap: (items) => items.isEmpty
+                        ? null
+                        : _showDaySheet(context, day, items),
+                  ),
+              ],
+            ),
+          ),
+        ] else
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              children: [
+                for (final day in _upcomingWeekDays())
+                  _WeekDayRow(
+                    day: day,
+                    isToday: day == DateUtils.dateOnly(DateTime.now()),
+                    items: byDay[day] ?? const [],
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Opens the relevant detail screen for a reminder. Shared by the month
+/// view's day sheet and the week view's inline rows — the day sheet pops
+/// itself first since this doesn't know whether it's being called from a
+/// sheet.
+void _openReminder(BuildContext context, ReminderItem item) {
+  if (item.source == ReminderSource.replenish) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ReplenishDueScreen()));
+  } else if (item.breedingEventId != null) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            BreedingLogScreen(breedingEventId: item.breedingEventId!)));
+  }
+}
+
+class _WeekDayRow extends StatelessWidget {
+  const _WeekDayRow({
+    required this.day,
+    required this.isToday,
+    required this.items,
+  });
+
+  final DateTime day;
+  final bool isToday;
+  final List<ReminderItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: isToday ? scheme.primaryContainer.withValues(alpha: 0.3) : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isToday ? BorderSide(color: scheme.primary, width: 1.5) : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              MaterialLocalizations.of(context).formatMediumDate(day),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: isToday ? FontWeight.w700 : null,
+                  color: isToday ? scheme.primary : null),
+            ),
+            const SizedBox(height: 8),
+            if (items.isEmpty)
+              Text('No reminders',
+                  style: TextStyle(color: scheme.onSurfaceVariant))
+            else
+              for (final item in items)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _openReminder(context, item),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: item.isMissed ? scheme.errorContainer : scheme.surfaceContainerHighest,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.source == ReminderSource.replenish
+                              ? Icons.water_drop_outlined
+                              : Icons.favorite_outline,
+                          size: 18,
+                          color: item.isMissed ? scheme.error : null,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.title,
+                                  style: TextStyle(
+                                      color: item.isMissed ? scheme.error : null)),
+                              if (item.subtitle != null)
+                                Text(item.subtitle!,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: item.isMissed
+                                            ? scheme.error
+                                            : scheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-            ],
-          ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: GridView.count(
-            crossAxisCount: 7,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              for (final day in days)
-                _DayCell(
-                  day: day,
-                  inFocusedMonth:
-                      _view == _CalendarView.week || day.month == _focusedDay.month,
-                  isToday: day == today,
-                  items: byDay[day] ?? const [],
-                  onTap: (items) => items.isEmpty
-                      ? null
-                      : _showDaySheet(context, day, items),
-                ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
