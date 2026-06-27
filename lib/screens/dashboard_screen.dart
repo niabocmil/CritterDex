@@ -6,9 +6,12 @@ import '../models/enums.dart';
 import '../models/reminders.dart';
 import '../widgets/activity_tile.dart';
 import 'all_activities_screen.dart';
+import 'breeding_list_screen.dart';
 import 'breeding_log_screen.dart';
+import 'collected_species_screen.dart';
 import 'reminder_calendar_screen.dart';
 import 'replenish_due_screen.dart';
+import 'specimen_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -98,8 +101,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           r.source == ReminderSource.breeding &&
                                           r.isMissed)
                                       .toList();
-                                  final upcomingCount =
-                                      reminders.where((r) => !r.isMissed).length;
+                                  final upcomingWindow =
+                                      today.add(const Duration(days: 7));
+                                  final upcomingCount = reminders
+                                      .where((r) =>
+                                          !r.isMissed &&
+                                          !r.dueDate.isAfter(upcomingWindow))
+                                      .length;
 
                                   return ListView(
                                     padding:
@@ -113,6 +121,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               label: 'Specimens',
                                               value: '${specimens.length}',
                                               color: scheme.primary,
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const SpecimenListScreen(),
+                                              )),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -122,6 +135,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               label: 'Alive',
                                               value: '$alive',
                                               color: scheme.tertiary,
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) => const SpecimenListScreen(
+                                                    initialStatusFilter:
+                                                        SpecimenStatus.alive),
+                                              )),
                                             ),
                                           ),
                                         ],
@@ -135,6 +154,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               label: 'Species',
                                               value: '$speciesCount',
                                               color: scheme.secondary,
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const CollectedSpeciesScreen(),
+                                              )),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -144,6 +168,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               label: 'Breeding events',
                                               value: '${events.length}',
                                               color: scheme.error,
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const BreedingListScreen(),
+                                              )),
                                             ),
                                           ),
                                         ],
@@ -213,9 +242,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               const EdgeInsets.only(bottom: 10),
                                           child: Card(
                                             child: ListTile(
-                                              leading: Icon(
-                                                  Icons.water_drop_outlined,
-                                                  color: scheme.error),
+                                              leading: const Icon(
+                                                  Icons.water_drop_outlined),
                                               title: Text(
                                                   '$dueTodayReplenishCount terrarium${dueTodayReplenishCount == 1 ? '' : 's'} need${dueTodayReplenishCount == 1 ? 's' : ''} replenishing today'),
                                               trailing:
@@ -335,30 +363,37 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 10),
-            Text(value,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ],
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: 10),
+              Text(value,
+                  style:
+                      const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ],
+          ),
         ),
       ),
     );

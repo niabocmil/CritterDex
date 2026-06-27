@@ -15,10 +15,73 @@ import 'specimen_form_screen.dart';
 import 'terrarium_form_screen.dart';
 import 'tool_form_screen.dart';
 
-class ShelfDetailScreen extends StatelessWidget {
+class ShelfDetailScreen extends StatefulWidget {
   const ShelfDetailScreen({super.key, required this.shelfId});
 
   final int shelfId;
+
+  @override
+  State<ShelfDetailScreen> createState() => _ShelfDetailScreenState();
+}
+
+class _ShelfDetailScreenState extends State<ShelfDetailScreen> {
+  SpecimenIconType? _highlightIconType;
+
+  void _showHighlightSheet(
+      BuildContext context, Set<SpecimenIconType> presentTypes) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Highlight by species',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                if (presentTypes.isEmpty)
+                  Text('No specimens on this shelf yet.',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant))
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final type in presentTypes)
+                        ChoiceChip(
+                          label: Text(type.label),
+                          selected: _highlightIconType == type,
+                          onSelected: (_) {
+                            setState(() => _highlightIconType = type);
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                    ],
+                  ),
+                if (_highlightIconType != null) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() => _highlightIconType = null);
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Clear highlight'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Future<void> _handleMove(
     BuildContext context,
@@ -340,7 +403,7 @@ class ShelfDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
     return StreamBuilder<Shelf>(
-      stream: db.watchShelfById(shelfId),
+      stream: db.watchShelfById(widget.shelfId),
       builder: (context, shelfSnapshot) {
         if (!shelfSnapshot.hasData) {
           return const Scaffold(
@@ -349,18 +412,18 @@ class ShelfDetailScreen extends StatelessWidget {
         final shelf = shelfSnapshot.data!;
         return Scaffold(
           body: StreamBuilder<List<Terrarium>>(
-            stream: db.watchTerrariumsForShelf(shelfId),
+            stream: db.watchTerrariumsForShelf(widget.shelfId),
             builder: (context, terrariumSnapshot) {
               if (!terrariumSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               final terrariums = terrariumSnapshot.data!;
               return StreamBuilder<List<Tool>>(
-                stream: db.watchToolsForShelf(shelfId),
+                stream: db.watchToolsForShelf(widget.shelfId),
                 builder: (context, toolSnapshot) {
                   final tools = toolSnapshot.data ?? const <Tool>[];
                   return StreamBuilder<List<Specimen>>(
-                    stream: db.watchSpecimensForShelf(shelfId),
+                    stream: db.watchSpecimensForShelf(widget.shelfId),
                     builder: (context, specimenSnapshot) {
                       final specimens =
                           specimenSnapshot.data ?? const <Specimen>[];
@@ -376,6 +439,10 @@ class ShelfDetailScreen extends StatelessWidget {
                       ];
                       final replenishDueCount =
                           specimens.where(isReplenishDue).length;
+                      final presentIconTypes = specimens
+                          .map((s) =>
+                              SpecimenIconType.fromValue(s.speciesIconKey))
+                          .toSet();
 
                       return Stack(
                         children: [
@@ -386,6 +453,7 @@ class ShelfDetailScreen extends StatelessWidget {
                                 terrariums: terrariums,
                                 tools: tools,
                                 specimensByTerrariumId: specimensByTerrariumId,
+                                highlightIconType: _highlightIconType,
                                 onMove: ({
                                   required moving,
                                   required targetLevel,
@@ -422,11 +490,14 @@ class ShelfDetailScreen extends StatelessWidget {
                                   shelf: shelf,
                                   terrariumCount: terrariums.length,
                                   replenishDueCount: replenishDueCount,
+                                  highlightActive: _highlightIconType != null,
                                   onBack: () => Navigator.of(context).pop(),
                                   onEdit: () => Navigator.of(context).push(
                                       MaterialPageRoute(
                                           builder: (_) => ShelfFormScreen(
                                               existing: shelf))),
+                                  onHighlight: () => _showHighlightSheet(
+                                      context, presentIconTypes),
                                 ),
                               ),
                             ),
@@ -441,7 +512,7 @@ class ShelfDetailScreen extends StatelessWidget {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => TerrariumFormScreen(preselectedShelfId: shelfId),
+              builder: (_) => TerrariumFormScreen(preselectedShelfId: widget.shelfId),
             )),
             child: const Icon(Icons.add),
           ),
@@ -459,15 +530,19 @@ class _ShelfOverlayHeader extends StatelessWidget {
     required this.shelf,
     required this.terrariumCount,
     required this.replenishDueCount,
+    required this.highlightActive,
     required this.onBack,
     required this.onEdit,
+    required this.onHighlight,
   });
 
   final Shelf shelf;
   final int terrariumCount;
   final int replenishDueCount;
+  final bool highlightActive;
   final VoidCallback onBack;
   final VoidCallback onEdit;
+  final VoidCallback onHighlight;
 
   @override
   Widget build(BuildContext context) {
@@ -509,6 +584,12 @@ class _ShelfOverlayHeader extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              icon: Icon(Icons.filter_alt_outlined,
+                  color: highlightActive ? scheme.primary : null),
+              tooltip: 'Highlight by species',
+              onPressed: onHighlight,
             ),
             IconButton(
               icon: const Icon(Icons.edit_outlined),

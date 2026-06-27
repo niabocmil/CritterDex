@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:graphview/GraphView.dart';
 import 'package:provider/provider.dart';
 
 import '../data/database.dart';
@@ -7,6 +6,45 @@ import '../models/enums.dart';
 import '../models/lineage_utils.dart';
 import '../widgets/specimen_avatar.dart';
 import 'specimen_detail_screen.dart';
+
+const double _cardWidth = 120;
+const double _cardHeight = 118;
+const double _hGap = 24;
+const double _vGap = 56;
+
+/// Every ancestor/descendant of [focal], as a hop-distance from it (negative
+/// going up to parents, positive going down to children, 0 for focal
+/// itself) — BFS guarantees the first depth recorded for a given id is the
+/// shortest one, so a specimen reachable via two paths (e.g. a grandparent
+/// shared by both parents) still gets exactly one, unambiguous row.
+Map<int, int> _computeDepths(
+    Specimen focal, Map<int, Specimen> byId, List<Specimen> all) {
+  final depths = <int, int>{focal.id: 0};
+
+  final ancestorQueue = <Specimen>[focal];
+  while (ancestorQueue.isNotEmpty) {
+    final current = ancestorQueue.removeAt(0);
+    final depth = depths[current.id]!;
+    for (final parent in directParentsOf(current, byId)) {
+      if (depths.containsKey(parent.id)) continue;
+      depths[parent.id] = depth - 1;
+      ancestorQueue.add(parent);
+    }
+  }
+
+  final descendantQueue = <int>[focal.id];
+  while (descendantQueue.isNotEmpty) {
+    final currentId = descendantQueue.removeAt(0);
+    final depth = depths[currentId]!;
+    for (final child in directChildrenOf(currentId, all)) {
+      if (depths.containsKey(child.id)) continue;
+      depths[child.id] = depth + 1;
+      descendantQueue.add(child.id);
+    }
+  }
+
+  return depths;
+}
 
 class LineageScreen extends StatelessWidget {
   const LineageScreen({super.key, required this.specimenId});
@@ -32,15 +70,8 @@ class LineageScreen extends StatelessWidget {
             return const Center(child: Text('Specimen not found.'));
           }
 
-          final ancestors = allAncestorsOf(focal, byId);
-          final descendants = allDescendantsOf(specimenId, all);
-          final included = <int, Specimen>{
-            focal.id: focal,
-            for (final a in ancestors) a.id: a,
-            for (final d in descendants) d.id: d,
-          };
-
-          if (included.length == 1) {
+          final depths = _computeDepths(focal, byId, all);
+          if (depths.length == 1) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
@@ -55,28 +86,52 @@ class LineageScreen extends StatelessWidget {
               ),
             );
           }
+          final included = {for (final id in depths.keys) id: byId[id]!};
 
-          final graph = Graph()..isTree = true;
-          final nodeMap = <int, Node>{};
-          for (final s in included.values) {
-            final node = Node.Id(s.id);
-            nodeMap[s.id] = node;
-            graph.addNode(node);
+          // Group ids into rows by depth, most-ancestral row first (matches
+          // the old top-to-bottom orientation), each row ordered by id for a
+          // deterministic, stable layout.
+          final rowsByDepth = <int, List<int>>{};
+          for (final entry in depths.entries) {
+            rowsByDepth.putIfAbsent(entry.value, () => []).add(entry.key);
           }
-          for (final s in included.values) {
-            if (s.motherId != null && nodeMap.containsKey(s.motherId)) {
-              graph.addEdge(nodeMap[s.motherId]!, nodeMap[s.id]!);
-            }
-            if (s.fatherId != null && nodeMap.containsKey(s.fatherId)) {
-              graph.addEdge(nodeMap[s.fatherId]!, nodeMap[s.id]!);
-            }
+          final sortedDepths = rowsByDepth.keys.toList()..sort();
+          for (final ids in rowsByDepth.values) {
+            ids.sort();
           }
 
-          final config = BuchheimWalkerConfiguration()
-            ..siblingSeparation = 24
-            ..levelSeparation = 48
-            ..subtreeSeparation = 24
-            ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM;
+          final rowWidths = <int, double>{
+            for (final depth in sortedDepths)
+              depth: rowsByDepth[depth]!.length * _cardWidth +
+                  (rowsByDepth[depth]!.length - 1) * _hGap,
+          };
+          final totalWidth =
+              rowWidths.values.fold<double>(0, (a, b) => a > b ? a : b);
+
+          final rects = <int, Rect>{};
+          for (var rowIndex = 0; rowIndex < sortedDepths.length; rowIndex++) {
+            final depth = sortedDepths[rowIndex];
+            final ids = rowsByDepth[depth]!;
+            final rowWidth = rowWidths[depth]!;
+            final startX = (totalWidth - rowWidth) / 2;
+            final top = rowIndex * (_cardHeight + _vGap);
+            for (var col = 0; col < ids.length; col++) {
+              final left = startX + col * (_cardWidth + _hGap);
+              rects[ids[col]] = Rect.fromLTWH(left, top, _cardWidth, _cardHeight);
+            }
+          }
+          final totalHeight =
+              sortedDepths.length * _cardHeight + (sortedDepths.length - 1) * _vGap;
+
+          final edges = <(int, int)>[];
+          for (final s in included.values) {
+            if (s.motherId != null && included.containsKey(s.motherId)) {
+              edges.add((s.motherId!, s.id));
+            }
+            if (s.fatherId != null && included.containsKey(s.fatherId)) {
+              edges.add((s.fatherId!, s.id));
+            }
+          }
 
           return InteractiveViewer(
             constrained: false,
@@ -85,23 +140,31 @@ class LineageScreen extends StatelessWidget {
             maxScale: 2.5,
             child: Padding(
               padding: const EdgeInsets.all(40),
-              child: GraphView(
-                graph: graph,
-                algorithm:
-                    BuchheimWalkerAlgorithm(config, TreeEdgeRenderer(config)),
-                paint: Paint()
-                  ..color = Theme.of(context).colorScheme.outlineVariant
-                  ..strokeWidth = 2
-                  ..style = PaintingStyle.stroke,
-                builder: (node) {
-                  final id = node.key!.value as int;
-                  final specimen = included[id]!;
-                  final isFocal = id == specimenId;
-                  return _LineageNodeCard(
-                    specimen: specimen,
-                    highlighted: isFocal,
-                  );
-                },
+              child: SizedBox(
+                width: totalWidth,
+                height: totalHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _LineagePainter(
+                          rects: rects,
+                          edges: edges,
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ),
+                    for (final entry in rects.entries)
+                      Positioned.fromRect(
+                        rect: entry.value,
+                        child: _LineageNodeCard(
+                          specimen: included[entry.key]!,
+                          highlighted: entry.key == specimenId,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           );
@@ -109,6 +172,50 @@ class LineageScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LineagePainter extends CustomPainter {
+  _LineagePainter({
+    required this.rects,
+    required this.edges,
+    required this.color,
+  });
+
+  final Map<int, Rect> rects;
+  final List<(int, int)> edges;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    for (final (parentId, childId) in edges) {
+      final parentRect = rects[parentId];
+      final childRect = rects[childId];
+      if (parentRect == null || childRect == null) continue;
+      final start = parentRect.bottomCenter;
+      final end = childRect.topCenter;
+      final path = Path()
+        ..moveTo(start.dx, start.dy)
+        ..cubicTo(
+          start.dx,
+          start.dy + (end.dy - start.dy) / 2,
+          end.dx,
+          start.dy + (end.dy - start.dy) / 2,
+          end.dx,
+          end.dy,
+        );
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineagePainter oldDelegate) =>
+      oldDelegate.rects != rects ||
+      oldDelegate.edges != edges ||
+      oldDelegate.color != color;
 }
 
 class _LineageNodeCard extends StatelessWidget {
@@ -127,7 +234,7 @@ class _LineageNodeCard extends StatelessWidget {
         ),
       ),
       child: Container(
-        width: 120,
+        width: _cardWidth,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: highlighted ? scheme.primaryContainer : scheme.surfaceContainerLow,

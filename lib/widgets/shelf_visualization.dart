@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/database.dart';
+import '../models/enums.dart';
 import '../models/terrarium_layout.dart';
 import '../models/terrarium_placement.dart';
 import '../theme/theme_controller.dart';
@@ -31,6 +32,22 @@ const _gutterPx = 26.0;
 // viewport, there'd be no way to scroll the top level out from under the
 // header otherwise.
 const _topInsetPx = 96.0;
+// Extra blank scroll space (in shelf cm) above the topmost level and below
+// the "G" level, so a user can scroll either end away from the very top/
+// bottom edge of the phone — those edges are awkward to reach a thumb to
+// while operating a level near them.
+const _extraScrollCm = 30.0;
+const _extraScrollPx = _extraScrollCm * cmToPx;
+// Extra blank scroll space (in shelf cm) to the left and right of the
+// shelf row itself, for the same reason as [_extraScrollPx] but along the
+// horizontal axis.
+const _extraSideCm = 5.0;
+const _extraSidePx = _extraSideCm * cmToPx;
+// InteractiveViewer's scale floor/ceiling: pinch-zoom can go out to half
+// the canvas's normal cm:px size, but never in past it (the fixed ratio in
+// [cmToPx] is already tuned to be comfortably readable).
+const _minScale = 0.5;
+const _maxScale = 1.0;
 
 class ShelfVisualization extends StatefulWidget {
   const ShelfVisualization({
@@ -42,6 +59,7 @@ class ShelfVisualization extends StatefulWidget {
     required this.onTapTerrarium,
     required this.onTapTool,
     this.specimensByTerrariumId = const {},
+    this.highlightIconType,
   });
 
   final Shelf shelf;
@@ -51,6 +69,10 @@ class ShelfVisualization extends StatefulWidget {
   final ShelfMoveCallback onMove;
   final ValueChanged<Terrarium> onTapTerrarium;
   final ValueChanged<Tool> onTapTool;
+  // When set, terrariums holding a specimen of this icon type are ringed and
+  // everything else is dimmed (the shelf detail screen's "highlight by
+  // species" filter).
+  final SpecimenIconType? highlightIconType;
 
   @override
   State<ShelfVisualization> createState() => _ShelfVisualizationState();
@@ -70,6 +92,21 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
   // canvas pan out of the running for that whole gesture, so the item's own
   // long-press is the only drag-style recognizer left to win.
   bool _pointerDownOnItem = false;
+  // Drives manual panning for a gesture that starts on a box: InteractiveViewer's
+  // own pan is disabled for the whole gesture (see [_pointerDownOnItem] above),
+  // so a quick drag that was meant to pan the canvas — not long-press-drag the
+  // box — has no recognizer left to do it. This replays the same translation
+  // InteractiveViewer would have applied, from the raw pointer stream, only
+  // while no box-drag has actually started yet ([_draggingKey] is null).
+  final TransformationController _transformController =
+      TransformationController();
+  Offset? _lastPanPointerPosition;
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
+  }
 
   Offset? _globalToLocal(Offset global) {
     final box = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
@@ -157,7 +194,7 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
           for (final entry in baseGeo.levelRowRects.entries)
             Positioned(
               key: ValueKey('label_${entry.key}'),
-              left: 4,
+              left: _extraSidePx + 4,
               top: entry.value.top + entry.value.height / 2 - 8,
               child: Text(
                 levelDisplayLabel(entry.key),
@@ -228,8 +265,11 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
     // itself.
     return SizedBox.expand(
       child: InteractiveViewer(
+        transformationController: _transformController,
         panEnabled: !dragging && !_pointerDownOnItem,
-        scaleEnabled: false,
+        scaleEnabled: !dragging && !_pointerDownOnItem,
+        minScale: _minScale,
+        maxScale: _maxScale,
         constrained: false,
         child: canvas,
       ),
@@ -240,11 +280,18 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
       {bool isGhost = false}) {
     if (item is TerrariumShelfItem) {
       final t = item.terrarium;
+      final assigned = widget.specimensByTerrariumId[t.id] ?? const [];
+      final highlightType = widget.highlightIconType;
+      final matchesHighlight = highlightType != null &&
+          assigned.any(
+              (s) => SpecimenIconType.fromValue(s.speciesIconKey) == highlightType);
       return TerrariumSlot(
         terrarium: t,
         label: labelFor(t, widget.shelf, allItems),
-        assignedSpecimens: widget.specimensByTerrariumId[t.id] ?? const [],
+        assignedSpecimens: assigned,
         isGhost: isGhost,
+        isHighlighted: matchesHighlight,
+        isDimmed: highlightType != null && !matchesHighlight,
       );
     }
     final tool = (item as ToolShelfItem).tool;
@@ -253,9 +300,31 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
 
   Widget _buildItemGesture(ShelfItem item, List<ShelfItem> baseItems) {
     return Listener(
-      onPointerDown: (_) => setState(() => _pointerDownOnItem = true),
-      onPointerUp: (_) => setState(() => _pointerDownOnItem = false),
-      onPointerCancel: (_) => setState(() => _pointerDownOnItem = false),
+      onPointerDown: (event) {
+        _lastPanPointerPosition = event.position;
+        setState(() => _pointerDownOnItem = true);
+      },
+      onPointerMove: (event) {
+        // Only pan manually while no box-drag has started yet — once
+        // onLongPressStart fires, the existing drag-preview flow owns this
+        // gesture instead.
+        final last = _lastPanPointerPosition;
+        _lastPanPointerPosition = event.position;
+        if (_draggingKey != null || last == null) return;
+        final screenDelta = event.position - last;
+        final scale = _transformController.value.getMaxScaleOnAxis();
+        final localDelta = screenDelta / scale;
+        _transformController.value = Matrix4.copy(_transformController.value)
+          ..multiply(Matrix4.translationValues(localDelta.dx, localDelta.dy, 0));
+      },
+      onPointerUp: (_) {
+        _lastPanPointerPosition = null;
+        setState(() => _pointerDownOnItem = false);
+      },
+      onPointerCancel: (_) {
+        _lastPanPointerPosition = null;
+        setState(() => _pointerDownOnItem = false);
+      },
       child: _buildItemGestureDetector(item, baseItems),
     );
   }
@@ -371,11 +440,12 @@ _ShelfGeometry _computeGeometry(Shelf shelf, List<ShelfItem> items) {
   // Level 1 ("G", ground) renders at the BOTTOM of the stack; higher levels
   // stack upward above it — so we lay rows out from the top of the canvas
   // down, walking levels from the highest to the lowest.
-  var cursorY = _topInsetPx;
+  final rowLeftPx = _gutterPx + _extraSidePx;
+  var cursorY = _topInsetPx + _extraScrollPx;
   for (var level = shelf.levelCount; level >= 1; level--) {
     final rowTop = cursorY;
     levelRowRects[level] =
-        Rect.fromLTWH(_gutterPx, rowTop, rowWidthPx, rowHeightPx);
+        Rect.fromLTWH(rowLeftPx, rowTop, rowWidthPx, rowHeightPx);
 
     final itemsAtLevel = items.where((i) => i.level == level).toList();
     levelItems[level] = itemsAtLevel;
@@ -388,7 +458,7 @@ _ShelfGeometry _computeGeometry(Shelf shelf, List<ShelfItem> items) {
       // side-by-side on one larger box) is never stretched to match it.
       final wPx = item.footprintCm * cmToPx;
       final hPx = item.itemHeightCm * cmToPx;
-      final leftPx = _gutterPx + resolved.absoluteXCm * cmToPx;
+      final leftPx = rowLeftPx + resolved.absoluteXCm * cmToPx;
       // topHeightCm is the height of this item's own top surface above the
       // floor; subtracting its own height gives how far its bottom sits
       // above the floor (0 for a floor item, the support's topHeightCm for
@@ -406,8 +476,9 @@ _ShelfGeometry _computeGeometry(Shelf shelf, List<ShelfItem> items) {
     rects: rects,
     levelRowRects: levelRowRects,
     levelItems: levelItems,
-    totalWidthPx: _gutterPx + rowWidthPx,
-    totalHeightPx: (cursorY - _levelGapPx).clamp(0, double.infinity),
+    totalWidthPx: rowLeftPx + rowWidthPx + _extraSidePx,
+    totalHeightPx:
+        (cursorY - _levelGapPx + _extraScrollPx).clamp(0, double.infinity),
   );
 }
 
@@ -463,6 +534,7 @@ _DropTarget? _hitTest(_ShelfGeometry geo, Offset point, double draggingWidthPx,
     }
   }
 
-  final rawXCm = (point.dx - draggingWidthPx / 2 - _gutterPx) / cmToPx;
+  final rawXCm =
+      (point.dx - draggingWidthPx / 2 - _gutterPx - _extraSidePx) / cmToPx;
   return _DropTarget(level: bestLevel, positionXCm: rawXCm.clamp(0.0, double.infinity));
 }

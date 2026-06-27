@@ -135,6 +135,59 @@ Map<String, double> resolveRow({
   return result;
 }
 
+/// When [resolveRow] can't resolve the requested [moverX] (pushing whichever
+/// siblings overlap it would cross [minX]/[maxX]), this tries snapping the
+/// mover itself flush against the single nearest sibling it overlaps
+/// instead — landing directly on that sibling's left or right edge without
+/// moving anything else. This is what lets a drop land "closely side-by-side"
+/// when there isn't room to push a neighbor away on one side but there is
+/// free space on the mover's other side. Returns null if neither flush
+/// position is collision-free and in-bounds, in which case the caller should
+/// surface the original [MoveException].
+double? _flushFallbackX({
+  required double moverX,
+  required double moverWidth,
+  required List<ShelfItem> siblings,
+  required double minX,
+  required double maxX,
+}) {
+  final moverEnd = moverX + moverWidth;
+  final overlapping = siblings.where((s) {
+    final sEnd = s.positionXCm! + s.footprintCm;
+    return s.positionXCm! < moverEnd && sEnd > moverX;
+  }).toList();
+  if (overlapping.isEmpty) return null;
+
+  bool fitsAt(double x) {
+    final end = x + moverWidth;
+    if (x < minX || end > maxX) return false;
+    return siblings.every((s) {
+      final sEnd = s.positionXCm! + s.footprintCm;
+      return end <= s.positionXCm! || x >= sEnd;
+    });
+  }
+
+  final rightMost = overlapping.reduce((a, b) =>
+      a.positionXCm! + a.footprintCm > b.positionXCm! + b.footprintCm
+          ? a
+          : b);
+  final leftMost =
+      overlapping.reduce((a, b) => a.positionXCm! < b.positionXCm! ? a : b);
+
+  final flushRight = rightMost.positionXCm! + rightMost.footprintCm + minGapCm;
+  final flushLeft = leftMost.positionXCm! - minGapCm - moverWidth;
+
+  final rightFits = fitsAt(flushRight);
+  final leftFits = fitsAt(flushLeft);
+  if (!rightFits && !leftFits) return null;
+  if (rightFits && !leftFits) return flushRight;
+  if (leftFits && !rightFits) return flushLeft;
+  // Both fit: prefer whichever is closer to the original requested spot.
+  return (flushRight - moverX).abs() <= (flushLeft - moverX).abs()
+      ? flushRight
+      : flushLeft;
+}
+
 /// True if [item] transitively rests on [ancestor] anywhere along its
 /// support chain (within [allItems]) — used to reject a stack target that
 /// would create a cycle.
@@ -154,6 +207,25 @@ bool _restsOnTransitively(
     depth++;
   }
   return false;
+}
+
+/// Every item, at any depth, that transitively rests on [root] (directly or
+/// via another dependent) — used so moving [root] can carry its whole stack
+/// along to its new spot instead of being blocked by it.
+List<ShelfItem> _transitiveDependentsOf(
+    ShelfItem root, List<ShelfItem> allItems) {
+  final result = <ShelfItem>[];
+  final queue = <ShelfItem>[root];
+  while (queue.isNotEmpty) {
+    final current = queue.removeAt(0);
+    final directDependents = allItems.where((i) =>
+        i.supportId == current.id && i.supportKind == current.kind.name);
+    for (final dep in directDependents) {
+      result.add(dep);
+      queue.add(dep);
+    }
+  }
+  return result;
 }
 
 /// Computes the full set of placement updates needed to move [moving] to
@@ -179,21 +251,21 @@ List<ShelfPlacementUpdate> planMove({
   required List<ShelfItem> sourceShelfItems,
   required List<ShelfItem> targetShelfItems,
 }) {
-  if (moving.itemHeightCm > targetShelf.levelHeightCm) {
-    throw MoveException("Item is too tall for this shelf's levels.");
-  }
-
   bool isMoving(ShelfItem i) => i.id == moving.id && i.kind == moving.kind;
 
-  final dependents = sourceShelfItems
-      .where((i) =>
-          !isMoving(i) &&
-          i.supportId == moving.id &&
-          i.supportKind == moving.kind.name)
-      .toList();
-  if (dependents.isNotEmpty) {
-    throw MoveException('Move the item(s) resting on top of this one first.');
-  }
+  // Every item, at any depth, resting on [moving] — carried along to the new
+  // spot rather than blocking the move. Their positionXCm is already
+  // relative to [moving] (which doesn't change identity, only where it
+  // sits), so only their level/shelfId need updating to match.
+  final dependents = _transitiveDependentsOf(moving, sourceShelfItems);
+  // Height of the whole carried stack above moving's own bottom — resolving
+  // this isolated list treats [moving] as the floor reference regardless of
+  // its current (pre-move) support, which is exactly the height budget the
+  // new spot needs to accommodate.
+  final stackGeometry = resolveLevelGeometry([moving, ...dependents]);
+  final stackTopHeightCm = stackGeometry.values
+      .map((r) => r.topHeightCm)
+      .fold(0.0, (a, b) => a > b ? a : b);
 
   final updates = <ShelfPlacementUpdate>[];
 
@@ -211,7 +283,7 @@ List<ShelfPlacementUpdate> planMove({
     if (supportResolved == null) {
       throw MoveException('Target item not found on this level.');
     }
-    if (supportResolved.topHeightCm + moving.itemHeightCm >
+    if (supportResolved.topHeightCm + stackTopHeightCm >
         targetShelf.levelHeightCm) {
       throw MoveException('Stacking here would exceed the level height.');
     }
@@ -227,20 +299,36 @@ List<ShelfPlacementUpdate> planMove({
     final movingX =
         targetPositionXCm.clamp(0.0, maxStart < 0 ? 0.0 : maxStart);
 
-    final pushes = resolveRow(
-      moverX: movingX,
-      moverWidth: moving.footprintCm,
-      siblings: dependentsOfTarget,
-      minX: 0.0,
-      maxX: stackOnTarget.footprintCm,
-    );
+    Map<String, double> pushes;
+    double resolvedMovingX;
+    try {
+      pushes = resolveRow(
+        moverX: movingX,
+        moverWidth: moving.footprintCm,
+        siblings: dependentsOfTarget,
+        minX: 0.0,
+        maxX: stackOnTarget.footprintCm,
+      );
+      resolvedMovingX = movingX;
+    } on MoveException {
+      final flushX = _flushFallbackX(
+        moverX: movingX,
+        moverWidth: moving.footprintCm,
+        siblings: dependentsOfTarget,
+        minX: 0.0,
+        maxX: stackOnTarget.footprintCm,
+      );
+      if (flushX == null) rethrow;
+      pushes = const {};
+      resolvedMovingX = flushX;
+    }
 
     updates.add(ShelfPlacementUpdate(
       kind: moving.kind,
       id: moving.id,
       shelfId: targetShelf.id,
       level: targetLevel,
-      positionXCm: movingX,
+      positionXCm: resolvedMovingX,
       supportId: stackOnTarget.id,
       supportKind: stackOnTarget.kind.name,
     ));
@@ -259,6 +347,10 @@ List<ShelfPlacementUpdate> planMove({
       }
     }
   } else {
+    if (stackTopHeightCm > targetShelf.levelHeightCm) {
+      throw MoveException("Item is too tall for this shelf's levels.");
+    }
+
     final floorSiblings = targetShelfItems
         .where((i) =>
             !isMoving(i) && i.level == targetLevel && i.supportId == null)
@@ -268,20 +360,36 @@ List<ShelfPlacementUpdate> planMove({
     final movingX =
         targetPositionXCm.clamp(0.0, maxStart < 0 ? 0.0 : maxStart);
 
-    final pushes = resolveRow(
-      moverX: movingX,
-      moverWidth: moving.footprintCm,
-      siblings: floorSiblings,
-      minX: 0.0,
-      maxX: targetShelf.lengthCm,
-    );
+    Map<String, double> pushes;
+    double resolvedMovingX;
+    try {
+      pushes = resolveRow(
+        moverX: movingX,
+        moverWidth: moving.footprintCm,
+        siblings: floorSiblings,
+        minX: 0.0,
+        maxX: targetShelf.lengthCm,
+      );
+      resolvedMovingX = movingX;
+    } on MoveException {
+      final flushX = _flushFallbackX(
+        moverX: movingX,
+        moverWidth: moving.footprintCm,
+        siblings: floorSiblings,
+        minX: 0.0,
+        maxX: targetShelf.lengthCm,
+      );
+      if (flushX == null) rethrow;
+      pushes = const {};
+      resolvedMovingX = flushX;
+    }
 
     updates.add(ShelfPlacementUpdate(
       kind: moving.kind,
       id: moving.id,
       shelfId: targetShelf.id,
       level: targetLevel,
-      positionXCm: movingX,
+      positionXCm: resolvedMovingX,
       supportId: null,
       supportKind: null,
     ));
@@ -299,6 +407,18 @@ List<ShelfPlacementUpdate> planMove({
         ));
       }
     }
+  }
+
+  for (final dep in dependents) {
+    updates.add(ShelfPlacementUpdate(
+      kind: dep.kind,
+      id: dep.id,
+      shelfId: targetShelf.id,
+      level: targetLevel,
+      positionXCm: dep.positionXCm ?? 0.0,
+      supportId: dep.supportId,
+      supportKind: dep.supportKind,
+    ));
   }
 
   return updates;

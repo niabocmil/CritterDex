@@ -29,6 +29,7 @@ LazyDatabase _openConnection() {
   SpecimenLogEntries,
   ActivityLogEntries,
   BreedingReminders,
+  SpeciesInfos,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -36,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -83,6 +84,15 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(activityLogEntries);
             await m.createTable(breedingReminders);
             await _backfillActivityLog();
+          }
+          if (from < 7) {
+            await m.createTable(speciesInfos);
+            await m.addColumn(breedingEvents, breedingEvents.terrariumId);
+            await m.addColumn(
+                breedingEvents, breedingEvents.motherPreviousTerrariumId);
+            await m.addColumn(
+                breedingEvents, breedingEvents.fatherPreviousTerrariumId);
+            await m.addColumn(breedingEvents, breedingEvents.failedAt);
           }
         },
       );
@@ -611,6 +621,41 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deleteTool(int id) =>
       (delete(tools)..where((t) => t.id.equals(id))).go();
+
+  // ---------- Species info ----------
+
+  Future<SpeciesInfo?> getSpeciesInfo(String species) =>
+      (select(speciesInfos)..where((s) => s.speciesName.equals(species)))
+          .getSingleOrNull();
+
+  Stream<SpeciesInfo?> watchSpeciesInfo(String species) =>
+      (select(speciesInfos)..where((s) => s.speciesName.equals(species)))
+          .watchSingleOrNull();
+
+  Future<void> upsertSpeciesInfo(
+    String species, {
+    String? description,
+    String? specialNotes,
+    String? region,
+    String? lengthRangeText,
+    String? temperatureRangeText,
+  }) async {
+    final existing = await getSpeciesInfo(species);
+    final companion = SpeciesInfosCompanion(
+      speciesName: Value(species),
+      description: Value(description),
+      specialNotes: Value(specialNotes),
+      region: Value(region),
+      lengthRangeText: Value(lengthRangeText),
+      temperatureRangeText: Value(temperatureRangeText),
+    );
+    if (existing == null) {
+      await into(speciesInfos).insert(companion);
+    } else {
+      await (update(speciesInfos)..where((s) => s.id.equals(existing.id)))
+          .write(companion);
+    }
+  }
 
   // ---------- Bin ----------
 

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../models/terrarium_layout.dart';
 import '../widgets/specimen_avatar.dart';
 import 'specimen_form_screen.dart';
 
@@ -111,6 +112,113 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
     }
   }
 
+  Future<void> _assignTerrarium(AppDatabase db, BreedingEvent event,
+      Specimen? mother, Specimen? father) async {
+    if (mother == null || father == null) return;
+    final shelves = await db.getAllShelves();
+    final terrariums = await db.getAllTerrariums();
+    final tools = await db.getAllTools();
+    final allSpecimens = await db.getAllSpecimens();
+    final occupied =
+        allSpecimens.map((s) => s.terrariumId).whereType<int>().toSet();
+    final empty = terrariums
+        .where((t) =>
+            TerrariumPurpose.fromValue(t.purpose) == TerrariumPurpose.breeding &&
+            !occupied.contains(t.id))
+        .toList();
+    final labels = computeAllTerrariumLabels(shelves, terrariums, tools);
+
+    if (!mounted) return;
+    final selectedId = await showModalBottomSheet<int?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, scrollController) {
+            if (empty.isEmpty) {
+              return const Center(
+                  child: Text('No empty breeding terrariums available.'));
+            }
+            return ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text('Assign breeding terrarium',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                for (final t in empty)
+                  ListTile(
+                    leading: const Icon(Icons.crop_square_outlined),
+                    title: Text(labels[t.id] ?? '—'),
+                    subtitle: Text(
+                        '${t.volumeLitres.toStringAsFixed(1)} L · ${t.shape}'),
+                    onTap: () => Navigator.of(context).pop(t.id),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (selectedId == null) return;
+
+    await db.transaction(() async {
+      await db.updateBreedingEvent(event.copyWith(
+        terrariumId: Value(selectedId),
+        motherPreviousTerrariumId: Value(mother.terrariumId),
+        fatherPreviousTerrariumId: Value(father.terrariumId),
+      ));
+      await db.updateSpecimen(mother.copyWith(terrariumId: Value(selectedId)));
+      await db.updateSpecimen(father.copyWith(terrariumId: Value(selectedId)));
+    });
+  }
+
+  Future<void> _moveParentsBack(AppDatabase db, BreedingEvent event,
+      Specimen? mother, Specimen? father) async {
+    await db.transaction(() async {
+      if (mother != null) {
+        await db.updateSpecimen(mother.copyWith(
+            terrariumId: Value(event.motherPreviousTerrariumId)));
+      }
+      if (father != null) {
+        await db.updateSpecimen(father.copyWith(
+            terrariumId: Value(event.fatherPreviousTerrariumId)));
+      }
+      await db.updateBreedingEvent(event.copyWith(
+        terrariumId: const Value(null),
+        motherPreviousTerrariumId: const Value(null),
+        fatherPreviousTerrariumId: const Value(null),
+      ));
+    });
+  }
+
+  Future<void> _markFailed(AppDatabase db, BreedingEvent event) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark breeding attempt as failed?'),
+        content: const Text(
+            'This marks the attempt failed and stops further stage progress. '
+            'You can still view its history.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Mark failed')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await db.updateBreedingEvent(event.copyWith(failedAt: Value(DateTime.now())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final db = context.read<AppDatabase>();
@@ -144,8 +252,13 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                   PopupMenuButton<String>(
                     onSelected: (v) {
                       if (v == 'delete') _confirmDelete(db, event);
+                      if (v == 'fail') _markFailed(db, event);
                     },
                     itemBuilder: (context) => [
+                      if (event.failedAt == null)
+                        const PopupMenuItem(
+                            value: 'fail',
+                            child: Text('Mark failed breeding attempt')),
                       const PopupMenuItem(
                           value: 'delete', child: Text('Delete event')),
                     ],
@@ -203,6 +316,31 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                       ),
                     ],
                   ),
+                  if (event.failedAt != null) ...[
+                    const SizedBox(height: 12),
+                    Chip(
+                      avatar: Icon(Icons.error_outline,
+                          color: Theme.of(context).colorScheme.onErrorContainer),
+                      label: const Text('Failed breeding attempt'),
+                      backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                    ),
+                  ],
+                  const Divider(height: 32),
+                  Text('Breeding terrarium',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 10),
+                  if (event.terrariumId == null)
+                    FilledButton.tonalIcon(
+                      onPressed: () => _assignTerrarium(db, event, mother, father),
+                      icon: const Icon(Icons.crop_square_outlined),
+                      label: const Text('Assign breeding terrarium'),
+                    )
+                  else
+                    FilledButton.tonalIcon(
+                      onPressed: () => _moveParentsBack(db, event, mother, father),
+                      icon: const Icon(Icons.undo),
+                      label: const Text('Move parents back to their terrarium'),
+                    ),
                   const SizedBox(height: 20),
                   Text('Progress', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 10),
@@ -219,7 +357,7 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (stage.next != null)
+                  if (stage.next != null && event.failedAt == null)
                     FilledButton.icon(
                       onPressed: () => _advanceStage(db, event),
                       icon: const Icon(Icons.arrow_forward),

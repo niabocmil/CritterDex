@@ -22,7 +22,9 @@ enum _SortOption {
 }
 
 class SpecimenListScreen extends StatefulWidget {
-  const SpecimenListScreen({super.key});
+  const SpecimenListScreen({super.key, this.initialStatusFilter});
+
+  final SpecimenStatus? initialStatusFilter;
 
   @override
   State<SpecimenListScreen> createState() => _SpecimenListScreenState();
@@ -34,6 +36,13 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
   _SortOption _sort = _SortOption.latest;
   Set<String> _speciesFilter = {};
   Set<SpecimenSex> _sexFilter = {};
+  Set<SpecimenIconType> _iconFilter = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _statusFilter = widget.initialStatusFilter;
+  }
 
   void _showAddMenu(BuildContext context) {
     showModalBottomSheet(
@@ -67,12 +76,27 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
     );
   }
 
-  void _showFilterSheet(BuildContext context, List<String> allSpecies) {
+  void _showFilterSheet(BuildContext context, List<Specimen> allSpecimens) {
+    final presentIconTypes = allSpecimens
+        .map((s) => SpecimenIconType.fromValue(s.speciesIconKey))
+        .toSet();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
         return StatefulBuilder(builder: (context, setSheetState) {
+          // Species selection is gated by the icon filter: with no icon
+          // selected there's no species list to show at all (per the
+          // worked example — pick a category first, then narrow by name).
+          final availableSpecies = _iconFilter.isEmpty
+              ? <String>[]
+              : (allSpecimens
+                      .where((s) => _iconFilter.contains(
+                          SpecimenIconType.fromValue(s.speciesIconKey)))
+                      .map((s) => s.species)
+                      .toSet()
+                      .toList()
+                    ..sort());
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -80,26 +104,58 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Species', style: Theme.of(context).textTheme.titleSmall),
+                  Text('Categories', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final species in allSpecies)
+                      for (final type in presentIconTypes)
                         FilterChip(
-                          label: Text(species),
-                          selected: _speciesFilter.contains(species),
+                          label: Text(type.label),
+                          selected: _iconFilter.contains(type),
                           onSelected: (sel) => setSheetState(() => setState(() {
                             if (sel) {
-                              _speciesFilter.add(species);
+                              _iconFilter.add(type);
                             } else {
-                              _speciesFilter.remove(species);
+                              _iconFilter.remove(type);
+                              _speciesFilter.removeWhere((species) => !allSpecimens.any((s) =>
+                                  s.species == species &&
+                                  _iconFilter.contains(
+                                      SpecimenIconType.fromValue(s.speciesIconKey))));
                             }
                           })),
                         ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+                  Text('Species', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  if (availableSpecies.isEmpty)
+                    Text(
+                      'Pick a category above to narrow by species name.',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final species in availableSpecies)
+                          FilterChip(
+                            label: Text(species),
+                            selected: _speciesFilter.contains(species),
+                            onSelected: (sel) => setSheetState(() => setState(() {
+                              if (sel) {
+                                _speciesFilter.add(species);
+                              } else {
+                                _speciesFilter.remove(species);
+                              }
+                            })),
+                          ),
+                      ],
+                    ),
                   const SizedBox(height: 18),
                   Text('Sex', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
@@ -128,6 +184,7 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
                       onPressed: () => setSheetState(() => setState(() {
                         _speciesFilter = {};
                         _sexFilter = {};
+                        _iconFilter = {};
                       })),
                       child: const Text('Clear filters'),
                     ),
@@ -178,9 +235,9 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
       stream: db.watchAllSpecimens(),
       builder: (context, snapshot) {
         final all = snapshot.data ?? const [];
-        final allSpecies = all.map((s) => s.species).toSet().toList()..sort();
-        final filtersActive =
-            _speciesFilter.isNotEmpty || _sexFilter.isNotEmpty;
+        final filtersActive = _speciesFilter.isNotEmpty ||
+            _sexFilter.isNotEmpty ||
+            _iconFilter.isNotEmpty;
         final filtered = all.where((s) {
           final matchesQuery = _query.isEmpty ||
               s.species.toLowerCase().contains(_query) ||
@@ -191,7 +248,13 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
               _speciesFilter.isEmpty || _speciesFilter.contains(s.species);
           final matchesSex = _sexFilter.isEmpty ||
               _sexFilter.contains(SpecimenSex.fromValue(s.sex));
-          return matchesQuery && matchesStatus && matchesSpecies && matchesSex;
+          final matchesIcon = _iconFilter.isEmpty ||
+              _iconFilter.contains(SpecimenIconType.fromValue(s.speciesIconKey));
+          return matchesQuery &&
+              matchesStatus &&
+              matchesSpecies &&
+              matchesSex &&
+              matchesIcon;
         }).toList();
         final sorted = _sortSpecimens(filtered);
 
@@ -205,7 +268,7 @@ class _SpecimenListScreenState extends State<SpecimenListScreen> {
                         ? Theme.of(context).colorScheme.primary
                         : null),
                 tooltip: 'Categories',
-                onPressed: () => _showFilterSheet(context, allSpecies),
+                onPressed: () => _showFilterSheet(context, all),
               ),
               PopupMenuButton<_SortOption>(
                 icon: const Icon(Icons.sort),

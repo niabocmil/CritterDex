@@ -52,6 +52,18 @@ class BreedingEvents extends Table {
   IntColumn get clutchSize => integer().nullable()();
   TextColumn get stage => text().withDefault(const Constant('mating'))();
   TextColumn get notes => text().nullable()();
+  // The breeding terrarium currently holding both parents, if assigned via
+  // "Assign breeding terrarium". Null when no assignment is active.
+  IntColumn get terrariumId =>
+      integer().nullable().references(Terrariums, #id)();
+  // Each parent's terrariumId captured at the moment of assignment above, so
+  // "Move parents back to their terrarium" has somewhere to restore to.
+  IntColumn get motherPreviousTerrariumId => integer().nullable()();
+  IntColumn get fatherPreviousTerrariumId => integer().nullable()();
+  // Null = not failed. Set when the user marks this breeding attempt as
+  // failed — mirrors BreedingReminders.completedAt's nullable-timestamp
+  // convention.
+  DateTimeColumn get failedAt => dateTime().nullable()();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
 }
@@ -171,4 +183,18 @@ class BreedingReminders extends Table {
   // update; without this, an overdue one-off reminder could never leave the
   // high-contrast "missed" state once it passed its due date.
   DateTimeColumn get completedAt => dateTime().nullable()();
+}
+
+/// Reference info about a species as a concept (not any one specimen) —
+/// one row per species name, created the first time the user fills any of
+/// this in from the Collected Species section.
+@DataClassName('SpeciesInfo')
+class SpeciesInfos extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get speciesName => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get specialNotes => text().nullable()();
+  TextColumn get region => text().nullable()();
+  TextColumn get lengthRangeText => text().nullable()();
+  TextColumn get temperatureRangeText => text().nullable()();
 }

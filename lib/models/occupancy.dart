@@ -4,14 +4,21 @@ import '../data/database.dart';
 import 'terrarium_layout.dart';
 
 /// Fraction (0..1) of [shelf]'s total capacity (length × levels) used by
-/// [terrariums] + [tools] currently placed on it.
+/// [terrariums] + [tools] currently placed on it. Stacked items
+/// (`supportId != null`) are excluded from the sum — they share their
+/// support's horizontal footprint rather than consuming additional length on
+/// the level, so counting them too would double-count that space.
 double occupancyFractionFor(
   Shelf shelf,
   List<Terrarium> terrariums,
   List<Tool> tools,
 ) {
-  final used = terrariums.fold<double>(0.0, (sum, t) => sum + footprintWidthCm(t)) +
-      tools.fold<double>(0.0, (sum, t) => sum + t.lengthCm);
+  final used = terrariums
+          .where((t) => t.supportId == null)
+          .fold<double>(0.0, (sum, t) => sum + footprintWidthCm(t)) +
+      tools
+          .where((t) => t.supportId == null)
+          .fold<double>(0.0, (sum, t) => sum + t.lengthCm);
   final capacity = shelf.lengthCm * shelf.levelCount;
   return capacity == 0 ? 0.0 : (used / capacity).clamp(0.0, 1.0);
 }

@@ -56,23 +56,34 @@ class AppTheme {
     surfaceContainerHighest: const Color(0xFF262626),
   );
 
-  /// Re-hues [base] (a neutral on-surface/on-surface-variant color) toward
-  /// [accent]'s hue while keeping [base]'s own lightness, so default text
-  /// and icons visibly carry the chosen theme color without losing the
-  /// light/dark contrast that makes them readable against [base]'s surface.
-  static Color _tinted(Color base, Color accent) {
-    final baseHsl = HSLColor.fromColor(base);
-    final accentHsl = HSLColor.fromColor(accent);
-    return baseHsl
-        .withHue(accentHsl.hue)
-        .withSaturation((baseHsl.saturation + accentHsl.saturation * 0.6).clamp(0.0, 1.0))
-        .toColor();
-  }
+  /// Overrides on-surface/on-surface-variant with the theme's primary color
+  /// (full and dimmed) so every default text/icon color — and every place in
+  /// the app that reads `colorScheme.onSurface`/`onSurfaceVariant` directly —
+  /// matches the selected theme color, the same way Material's default
+  /// button styling already colors the Customize button with `primary`.
+  static ThemeData _build(ColorScheme rawScheme) {
+    final colorScheme = rawScheme.copyWith(
+      onSurface: rawScheme.primary,
+      onSurfaceVariant: rawScheme.primary.withValues(alpha: 0.7),
+    );
 
-  static ThemeData _build(ColorScheme colorScheme) {
-    final tintedOnSurface = _tinted(colorScheme.onSurface, colorScheme.primary);
-    final tintedOnSurfaceVariant =
-        _tinted(colorScheme.onSurfaceVariant, colorScheme.primary);
+    // Material's default press/hover/focus state layer on tiles and controls
+    // is a low-opacity wash of `onSurface`. Since onSurface is now the theme
+    // color (for text/icons), pull this overlay from the original neutral
+    // onSurface instead, so selecting/pressing a tile darkens it neutrally
+    // rather than tinting its background with the theme color.
+    final neutralOverlay = WidgetStateProperty.resolveWith<Color?>((states) {
+      if (states.contains(WidgetState.pressed)) {
+        return rawScheme.onSurface.withValues(alpha: 0.1);
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return rawScheme.onSurface.withValues(alpha: 0.08);
+      }
+      if (states.contains(WidgetState.focused)) {
+        return rawScheme.onSurface.withValues(alpha: 0.1);
+      }
+      return null;
+    });
 
     final base = ThemeData(
       useMaterial3: true,
@@ -80,13 +91,13 @@ class AppTheme {
       scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
-        foregroundColor: tintedOnSurface,
-        iconTheme: IconThemeData(color: tintedOnSurface),
+        foregroundColor: colorScheme.onSurface,
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
         elevation: 0,
         scrolledUnderElevation: 1,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: tintedOnSurface,
+          color: colorScheme.onSurface,
           fontSize: 22,
           fontWeight: FontWeight.w700,
         ),
@@ -101,7 +112,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
-        labelStyle: TextStyle(color: tintedOnSurfaceVariant),
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -130,7 +141,7 @@ class AppTheme {
         elevation: 0,
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.all(
-          TextStyle(fontSize: 12, color: tintedOnSurfaceVariant),
+          TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -155,16 +166,20 @@ class AppTheme {
           ),
         ),
       ),
+      checkboxTheme: CheckboxThemeData(overlayColor: neutralOverlay),
+      radioTheme: RadioThemeData(overlayColor: neutralOverlay),
       visualDensity: VisualDensity.standard,
     );
 
     return base.copyWith(
       textTheme: base.textTheme.apply(
-          bodyColor: tintedOnSurface, displayColor: tintedOnSurface),
-      iconTheme: base.iconTheme.copyWith(color: tintedOnSurface),
-      primaryIconTheme: base.primaryIconTheme.copyWith(color: tintedOnSurface),
+          bodyColor: colorScheme.onSurface, displayColor: colorScheme.onSurface),
+      iconTheme: base.iconTheme.copyWith(color: colorScheme.onSurface),
+      primaryIconTheme: base.primaryIconTheme.copyWith(color: colorScheme.onSurface),
       listTileTheme: base.listTileTheme.copyWith(
-          iconColor: tintedOnSurfaceVariant, textColor: tintedOnSurface),
+        iconColor: colorScheme.onSurfaceVariant,
+        textColor: colorScheme.onSurface,
+      ),
     );
   }
 }

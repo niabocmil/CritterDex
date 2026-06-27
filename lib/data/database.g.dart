@@ -2912,6 +2912,53 @@ class $BreedingEventsTable extends BreedingEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _terrariumIdMeta = const VerificationMeta(
+    'terrariumId',
+  );
+  @override
+  late final GeneratedColumn<int> terrariumId = GeneratedColumn<int>(
+    'terrarium_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES terrariums (id)',
+    ),
+  );
+  static const VerificationMeta _motherPreviousTerrariumIdMeta =
+      const VerificationMeta('motherPreviousTerrariumId');
+  @override
+  late final GeneratedColumn<int> motherPreviousTerrariumId =
+      GeneratedColumn<int>(
+        'mother_previous_terrarium_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _fatherPreviousTerrariumIdMeta =
+      const VerificationMeta('fatherPreviousTerrariumId');
+  @override
+  late final GeneratedColumn<int> fatherPreviousTerrariumId =
+      GeneratedColumn<int>(
+        'father_previous_terrarium_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _failedAtMeta = const VerificationMeta(
+    'failedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> failedAt = GeneratedColumn<DateTime>(
+    'failed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2933,6 +2980,10 @@ class $BreedingEventsTable extends BreedingEvents
     clutchSize,
     stage,
     notes,
+    terrariumId,
+    motherPreviousTerrariumId,
+    fatherPreviousTerrariumId,
+    failedAt,
     createdAt,
   ];
   @override
@@ -2992,6 +3043,39 @@ class $BreedingEventsTable extends BreedingEvents
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('terrarium_id')) {
+      context.handle(
+        _terrariumIdMeta,
+        terrariumId.isAcceptableOrUnknown(
+          data['terrarium_id']!,
+          _terrariumIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mother_previous_terrarium_id')) {
+      context.handle(
+        _motherPreviousTerrariumIdMeta,
+        motherPreviousTerrariumId.isAcceptableOrUnknown(
+          data['mother_previous_terrarium_id']!,
+          _motherPreviousTerrariumIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('father_previous_terrarium_id')) {
+      context.handle(
+        _fatherPreviousTerrariumIdMeta,
+        fatherPreviousTerrariumId.isAcceptableOrUnknown(
+          data['father_previous_terrarium_id']!,
+          _fatherPreviousTerrariumIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('failed_at')) {
+      context.handle(
+        _failedAtMeta,
+        failedAt.isAcceptableOrUnknown(data['failed_at']!, _failedAtMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3035,6 +3119,22 @@ class $BreedingEventsTable extends BreedingEvents
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      terrariumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}terrarium_id'],
+      ),
+      motherPreviousTerrariumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mother_previous_terrarium_id'],
+      ),
+      fatherPreviousTerrariumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}father_previous_terrarium_id'],
+      ),
+      failedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}failed_at'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3056,6 +3156,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
   final int? clutchSize;
   final String stage;
   final String? notes;
+  final int? terrariumId;
+  final int? motherPreviousTerrariumId;
+  final int? fatherPreviousTerrariumId;
+  final DateTime? failedAt;
   final DateTime createdAt;
   const BreedingEvent({
     required this.id,
@@ -3065,6 +3169,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
     this.clutchSize,
     required this.stage,
     this.notes,
+    this.terrariumId,
+    this.motherPreviousTerrariumId,
+    this.fatherPreviousTerrariumId,
+    this.failedAt,
     required this.createdAt,
   });
   @override
@@ -3080,6 +3188,22 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
     map['stage'] = Variable<String>(stage);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || terrariumId != null) {
+      map['terrarium_id'] = Variable<int>(terrariumId);
+    }
+    if (!nullToAbsent || motherPreviousTerrariumId != null) {
+      map['mother_previous_terrarium_id'] = Variable<int>(
+        motherPreviousTerrariumId,
+      );
+    }
+    if (!nullToAbsent || fatherPreviousTerrariumId != null) {
+      map['father_previous_terrarium_id'] = Variable<int>(
+        fatherPreviousTerrariumId,
+      );
+    }
+    if (!nullToAbsent || failedAt != null) {
+      map['failed_at'] = Variable<DateTime>(failedAt);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -3098,6 +3222,20 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      terrariumId: terrariumId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(terrariumId),
+      motherPreviousTerrariumId:
+          motherPreviousTerrariumId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(motherPreviousTerrariumId),
+      fatherPreviousTerrariumId:
+          fatherPreviousTerrariumId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fatherPreviousTerrariumId),
+      failedAt: failedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failedAt),
       createdAt: Value(createdAt),
     );
   }
@@ -3115,6 +3253,14 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
       clutchSize: serializer.fromJson<int?>(json['clutchSize']),
       stage: serializer.fromJson<String>(json['stage']),
       notes: serializer.fromJson<String?>(json['notes']),
+      terrariumId: serializer.fromJson<int?>(json['terrariumId']),
+      motherPreviousTerrariumId: serializer.fromJson<int?>(
+        json['motherPreviousTerrariumId'],
+      ),
+      fatherPreviousTerrariumId: serializer.fromJson<int?>(
+        json['fatherPreviousTerrariumId'],
+      ),
+      failedAt: serializer.fromJson<DateTime?>(json['failedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3129,6 +3275,14 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
       'clutchSize': serializer.toJson<int?>(clutchSize),
       'stage': serializer.toJson<String>(stage),
       'notes': serializer.toJson<String?>(notes),
+      'terrariumId': serializer.toJson<int?>(terrariumId),
+      'motherPreviousTerrariumId': serializer.toJson<int?>(
+        motherPreviousTerrariumId,
+      ),
+      'fatherPreviousTerrariumId': serializer.toJson<int?>(
+        fatherPreviousTerrariumId,
+      ),
+      'failedAt': serializer.toJson<DateTime?>(failedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3141,6 +3295,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
     Value<int?> clutchSize = const Value.absent(),
     String? stage,
     Value<String?> notes = const Value.absent(),
+    Value<int?> terrariumId = const Value.absent(),
+    Value<int?> motherPreviousTerrariumId = const Value.absent(),
+    Value<int?> fatherPreviousTerrariumId = const Value.absent(),
+    Value<DateTime?> failedAt = const Value.absent(),
     DateTime? createdAt,
   }) => BreedingEvent(
     id: id ?? this.id,
@@ -3150,6 +3308,14 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
     clutchSize: clutchSize.present ? clutchSize.value : this.clutchSize,
     stage: stage ?? this.stage,
     notes: notes.present ? notes.value : this.notes,
+    terrariumId: terrariumId.present ? terrariumId.value : this.terrariumId,
+    motherPreviousTerrariumId: motherPreviousTerrariumId.present
+        ? motherPreviousTerrariumId.value
+        : this.motherPreviousTerrariumId,
+    fatherPreviousTerrariumId: fatherPreviousTerrariumId.present
+        ? fatherPreviousTerrariumId.value
+        : this.fatherPreviousTerrariumId,
+    failedAt: failedAt.present ? failedAt.value : this.failedAt,
     createdAt: createdAt ?? this.createdAt,
   );
   BreedingEvent copyWithCompanion(BreedingEventsCompanion data) {
@@ -3163,6 +3329,16 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
           : this.clutchSize,
       stage: data.stage.present ? data.stage.value : this.stage,
       notes: data.notes.present ? data.notes.value : this.notes,
+      terrariumId: data.terrariumId.present
+          ? data.terrariumId.value
+          : this.terrariumId,
+      motherPreviousTerrariumId: data.motherPreviousTerrariumId.present
+          ? data.motherPreviousTerrariumId.value
+          : this.motherPreviousTerrariumId,
+      fatherPreviousTerrariumId: data.fatherPreviousTerrariumId.present
+          ? data.fatherPreviousTerrariumId.value
+          : this.fatherPreviousTerrariumId,
+      failedAt: data.failedAt.present ? data.failedAt.value : this.failedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3177,6 +3353,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
           ..write('clutchSize: $clutchSize, ')
           ..write('stage: $stage, ')
           ..write('notes: $notes, ')
+          ..write('terrariumId: $terrariumId, ')
+          ..write('motherPreviousTerrariumId: $motherPreviousTerrariumId, ')
+          ..write('fatherPreviousTerrariumId: $fatherPreviousTerrariumId, ')
+          ..write('failedAt: $failedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3191,6 +3371,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
     clutchSize,
     stage,
     notes,
+    terrariumId,
+    motherPreviousTerrariumId,
+    fatherPreviousTerrariumId,
+    failedAt,
     createdAt,
   );
   @override
@@ -3204,6 +3388,10 @@ class BreedingEvent extends DataClass implements Insertable<BreedingEvent> {
           other.clutchSize == this.clutchSize &&
           other.stage == this.stage &&
           other.notes == this.notes &&
+          other.terrariumId == this.terrariumId &&
+          other.motherPreviousTerrariumId == this.motherPreviousTerrariumId &&
+          other.fatherPreviousTerrariumId == this.fatherPreviousTerrariumId &&
+          other.failedAt == this.failedAt &&
           other.createdAt == this.createdAt);
 }
 
@@ -3215,6 +3403,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
   final Value<int?> clutchSize;
   final Value<String> stage;
   final Value<String?> notes;
+  final Value<int?> terrariumId;
+  final Value<int?> motherPreviousTerrariumId;
+  final Value<int?> fatherPreviousTerrariumId;
+  final Value<DateTime?> failedAt;
   final Value<DateTime> createdAt;
   const BreedingEventsCompanion({
     this.id = const Value.absent(),
@@ -3224,6 +3416,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
     this.clutchSize = const Value.absent(),
     this.stage = const Value.absent(),
     this.notes = const Value.absent(),
+    this.terrariumId = const Value.absent(),
+    this.motherPreviousTerrariumId = const Value.absent(),
+    this.fatherPreviousTerrariumId = const Value.absent(),
+    this.failedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   BreedingEventsCompanion.insert({
@@ -3234,6 +3430,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
     this.clutchSize = const Value.absent(),
     this.stage = const Value.absent(),
     this.notes = const Value.absent(),
+    this.terrariumId = const Value.absent(),
+    this.motherPreviousTerrariumId = const Value.absent(),
+    this.fatherPreviousTerrariumId = const Value.absent(),
+    this.failedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : motherId = Value(motherId),
        fatherId = Value(fatherId),
@@ -3246,6 +3446,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
     Expression<int>? clutchSize,
     Expression<String>? stage,
     Expression<String>? notes,
+    Expression<int>? terrariumId,
+    Expression<int>? motherPreviousTerrariumId,
+    Expression<int>? fatherPreviousTerrariumId,
+    Expression<DateTime>? failedAt,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -3256,6 +3460,12 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
       if (clutchSize != null) 'clutch_size': clutchSize,
       if (stage != null) 'stage': stage,
       if (notes != null) 'notes': notes,
+      if (terrariumId != null) 'terrarium_id': terrariumId,
+      if (motherPreviousTerrariumId != null)
+        'mother_previous_terrarium_id': motherPreviousTerrariumId,
+      if (fatherPreviousTerrariumId != null)
+        'father_previous_terrarium_id': fatherPreviousTerrariumId,
+      if (failedAt != null) 'failed_at': failedAt,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -3268,6 +3478,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
     Value<int?>? clutchSize,
     Value<String>? stage,
     Value<String?>? notes,
+    Value<int?>? terrariumId,
+    Value<int?>? motherPreviousTerrariumId,
+    Value<int?>? fatherPreviousTerrariumId,
+    Value<DateTime?>? failedAt,
     Value<DateTime>? createdAt,
   }) {
     return BreedingEventsCompanion(
@@ -3278,6 +3492,12 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
       clutchSize: clutchSize ?? this.clutchSize,
       stage: stage ?? this.stage,
       notes: notes ?? this.notes,
+      terrariumId: terrariumId ?? this.terrariumId,
+      motherPreviousTerrariumId:
+          motherPreviousTerrariumId ?? this.motherPreviousTerrariumId,
+      fatherPreviousTerrariumId:
+          fatherPreviousTerrariumId ?? this.fatherPreviousTerrariumId,
+      failedAt: failedAt ?? this.failedAt,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -3306,6 +3526,22 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (terrariumId.present) {
+      map['terrarium_id'] = Variable<int>(terrariumId.value);
+    }
+    if (motherPreviousTerrariumId.present) {
+      map['mother_previous_terrarium_id'] = Variable<int>(
+        motherPreviousTerrariumId.value,
+      );
+    }
+    if (fatherPreviousTerrariumId.present) {
+      map['father_previous_terrarium_id'] = Variable<int>(
+        fatherPreviousTerrariumId.value,
+      );
+    }
+    if (failedAt.present) {
+      map['failed_at'] = Variable<DateTime>(failedAt.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3322,6 +3558,10 @@ class BreedingEventsCompanion extends UpdateCompanion<BreedingEvent> {
           ..write('clutchSize: $clutchSize, ')
           ..write('stage: $stage, ')
           ..write('notes: $notes, ')
+          ..write('terrariumId: $terrariumId, ')
+          ..write('motherPreviousTerrariumId: $motherPreviousTerrariumId, ')
+          ..write('fatherPreviousTerrariumId: $fatherPreviousTerrariumId, ')
+          ..write('failedAt: $failedAt, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -5506,6 +5746,497 @@ class BreedingRemindersCompanion extends UpdateCompanion<BreedingReminder> {
   }
 }
 
+class $SpeciesInfosTable extends SpeciesInfos
+    with TableInfo<$SpeciesInfosTable, SpeciesInfo> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SpeciesInfosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _speciesNameMeta = const VerificationMeta(
+    'speciesName',
+  );
+  @override
+  late final GeneratedColumn<String> speciesName = GeneratedColumn<String>(
+    'species_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _specialNotesMeta = const VerificationMeta(
+    'specialNotes',
+  );
+  @override
+  late final GeneratedColumn<String> specialNotes = GeneratedColumn<String>(
+    'special_notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _regionMeta = const VerificationMeta('region');
+  @override
+  late final GeneratedColumn<String> region = GeneratedColumn<String>(
+    'region',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lengthRangeTextMeta = const VerificationMeta(
+    'lengthRangeText',
+  );
+  @override
+  late final GeneratedColumn<String> lengthRangeText = GeneratedColumn<String>(
+    'length_range_text',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _temperatureRangeTextMeta =
+      const VerificationMeta('temperatureRangeText');
+  @override
+  late final GeneratedColumn<String> temperatureRangeText =
+      GeneratedColumn<String>(
+        'temperature_range_text',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    speciesName,
+    description,
+    specialNotes,
+    region,
+    lengthRangeText,
+    temperatureRangeText,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'species_infos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SpeciesInfo> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('species_name')) {
+      context.handle(
+        _speciesNameMeta,
+        speciesName.isAcceptableOrUnknown(
+          data['species_name']!,
+          _speciesNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_speciesNameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('special_notes')) {
+      context.handle(
+        _specialNotesMeta,
+        specialNotes.isAcceptableOrUnknown(
+          data['special_notes']!,
+          _specialNotesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('region')) {
+      context.handle(
+        _regionMeta,
+        region.isAcceptableOrUnknown(data['region']!, _regionMeta),
+      );
+    }
+    if (data.containsKey('length_range_text')) {
+      context.handle(
+        _lengthRangeTextMeta,
+        lengthRangeText.isAcceptableOrUnknown(
+          data['length_range_text']!,
+          _lengthRangeTextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('temperature_range_text')) {
+      context.handle(
+        _temperatureRangeTextMeta,
+        temperatureRangeText.isAcceptableOrUnknown(
+          data['temperature_range_text']!,
+          _temperatureRangeTextMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SpeciesInfo map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SpeciesInfo(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      speciesName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}species_name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      specialNotes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}special_notes'],
+      ),
+      region: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region'],
+      ),
+      lengthRangeText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}length_range_text'],
+      ),
+      temperatureRangeText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}temperature_range_text'],
+      ),
+    );
+  }
+
+  @override
+  $SpeciesInfosTable createAlias(String alias) {
+    return $SpeciesInfosTable(attachedDatabase, alias);
+  }
+}
+
+class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
+  final int id;
+  final String speciesName;
+  final String? description;
+  final String? specialNotes;
+  final String? region;
+  final String? lengthRangeText;
+  final String? temperatureRangeText;
+  const SpeciesInfo({
+    required this.id,
+    required this.speciesName,
+    this.description,
+    this.specialNotes,
+    this.region,
+    this.lengthRangeText,
+    this.temperatureRangeText,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['species_name'] = Variable<String>(speciesName);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || specialNotes != null) {
+      map['special_notes'] = Variable<String>(specialNotes);
+    }
+    if (!nullToAbsent || region != null) {
+      map['region'] = Variable<String>(region);
+    }
+    if (!nullToAbsent || lengthRangeText != null) {
+      map['length_range_text'] = Variable<String>(lengthRangeText);
+    }
+    if (!nullToAbsent || temperatureRangeText != null) {
+      map['temperature_range_text'] = Variable<String>(temperatureRangeText);
+    }
+    return map;
+  }
+
+  SpeciesInfosCompanion toCompanion(bool nullToAbsent) {
+    return SpeciesInfosCompanion(
+      id: Value(id),
+      speciesName: Value(speciesName),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      specialNotes: specialNotes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(specialNotes),
+      region: region == null && nullToAbsent
+          ? const Value.absent()
+          : Value(region),
+      lengthRangeText: lengthRangeText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lengthRangeText),
+      temperatureRangeText: temperatureRangeText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(temperatureRangeText),
+    );
+  }
+
+  factory SpeciesInfo.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SpeciesInfo(
+      id: serializer.fromJson<int>(json['id']),
+      speciesName: serializer.fromJson<String>(json['speciesName']),
+      description: serializer.fromJson<String?>(json['description']),
+      specialNotes: serializer.fromJson<String?>(json['specialNotes']),
+      region: serializer.fromJson<String?>(json['region']),
+      lengthRangeText: serializer.fromJson<String?>(json['lengthRangeText']),
+      temperatureRangeText: serializer.fromJson<String?>(
+        json['temperatureRangeText'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'speciesName': serializer.toJson<String>(speciesName),
+      'description': serializer.toJson<String?>(description),
+      'specialNotes': serializer.toJson<String?>(specialNotes),
+      'region': serializer.toJson<String?>(region),
+      'lengthRangeText': serializer.toJson<String?>(lengthRangeText),
+      'temperatureRangeText': serializer.toJson<String?>(temperatureRangeText),
+    };
+  }
+
+  SpeciesInfo copyWith({
+    int? id,
+    String? speciesName,
+    Value<String?> description = const Value.absent(),
+    Value<String?> specialNotes = const Value.absent(),
+    Value<String?> region = const Value.absent(),
+    Value<String?> lengthRangeText = const Value.absent(),
+    Value<String?> temperatureRangeText = const Value.absent(),
+  }) => SpeciesInfo(
+    id: id ?? this.id,
+    speciesName: speciesName ?? this.speciesName,
+    description: description.present ? description.value : this.description,
+    specialNotes: specialNotes.present ? specialNotes.value : this.specialNotes,
+    region: region.present ? region.value : this.region,
+    lengthRangeText: lengthRangeText.present
+        ? lengthRangeText.value
+        : this.lengthRangeText,
+    temperatureRangeText: temperatureRangeText.present
+        ? temperatureRangeText.value
+        : this.temperatureRangeText,
+  );
+  SpeciesInfo copyWithCompanion(SpeciesInfosCompanion data) {
+    return SpeciesInfo(
+      id: data.id.present ? data.id.value : this.id,
+      speciesName: data.speciesName.present
+          ? data.speciesName.value
+          : this.speciesName,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      specialNotes: data.specialNotes.present
+          ? data.specialNotes.value
+          : this.specialNotes,
+      region: data.region.present ? data.region.value : this.region,
+      lengthRangeText: data.lengthRangeText.present
+          ? data.lengthRangeText.value
+          : this.lengthRangeText,
+      temperatureRangeText: data.temperatureRangeText.present
+          ? data.temperatureRangeText.value
+          : this.temperatureRangeText,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpeciesInfo(')
+          ..write('id: $id, ')
+          ..write('speciesName: $speciesName, ')
+          ..write('description: $description, ')
+          ..write('specialNotes: $specialNotes, ')
+          ..write('region: $region, ')
+          ..write('lengthRangeText: $lengthRangeText, ')
+          ..write('temperatureRangeText: $temperatureRangeText')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    speciesName,
+    description,
+    specialNotes,
+    region,
+    lengthRangeText,
+    temperatureRangeText,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpeciesInfo &&
+          other.id == this.id &&
+          other.speciesName == this.speciesName &&
+          other.description == this.description &&
+          other.specialNotes == this.specialNotes &&
+          other.region == this.region &&
+          other.lengthRangeText == this.lengthRangeText &&
+          other.temperatureRangeText == this.temperatureRangeText);
+}
+
+class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
+  final Value<int> id;
+  final Value<String> speciesName;
+  final Value<String?> description;
+  final Value<String?> specialNotes;
+  final Value<String?> region;
+  final Value<String?> lengthRangeText;
+  final Value<String?> temperatureRangeText;
+  const SpeciesInfosCompanion({
+    this.id = const Value.absent(),
+    this.speciesName = const Value.absent(),
+    this.description = const Value.absent(),
+    this.specialNotes = const Value.absent(),
+    this.region = const Value.absent(),
+    this.lengthRangeText = const Value.absent(),
+    this.temperatureRangeText = const Value.absent(),
+  });
+  SpeciesInfosCompanion.insert({
+    this.id = const Value.absent(),
+    required String speciesName,
+    this.description = const Value.absent(),
+    this.specialNotes = const Value.absent(),
+    this.region = const Value.absent(),
+    this.lengthRangeText = const Value.absent(),
+    this.temperatureRangeText = const Value.absent(),
+  }) : speciesName = Value(speciesName);
+  static Insertable<SpeciesInfo> custom({
+    Expression<int>? id,
+    Expression<String>? speciesName,
+    Expression<String>? description,
+    Expression<String>? specialNotes,
+    Expression<String>? region,
+    Expression<String>? lengthRangeText,
+    Expression<String>? temperatureRangeText,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (speciesName != null) 'species_name': speciesName,
+      if (description != null) 'description': description,
+      if (specialNotes != null) 'special_notes': specialNotes,
+      if (region != null) 'region': region,
+      if (lengthRangeText != null) 'length_range_text': lengthRangeText,
+      if (temperatureRangeText != null)
+        'temperature_range_text': temperatureRangeText,
+    });
+  }
+
+  SpeciesInfosCompanion copyWith({
+    Value<int>? id,
+    Value<String>? speciesName,
+    Value<String?>? description,
+    Value<String?>? specialNotes,
+    Value<String?>? region,
+    Value<String?>? lengthRangeText,
+    Value<String?>? temperatureRangeText,
+  }) {
+    return SpeciesInfosCompanion(
+      id: id ?? this.id,
+      speciesName: speciesName ?? this.speciesName,
+      description: description ?? this.description,
+      specialNotes: specialNotes ?? this.specialNotes,
+      region: region ?? this.region,
+      lengthRangeText: lengthRangeText ?? this.lengthRangeText,
+      temperatureRangeText: temperatureRangeText ?? this.temperatureRangeText,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (speciesName.present) {
+      map['species_name'] = Variable<String>(speciesName.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (specialNotes.present) {
+      map['special_notes'] = Variable<String>(specialNotes.value);
+    }
+    if (region.present) {
+      map['region'] = Variable<String>(region.value);
+    }
+    if (lengthRangeText.present) {
+      map['length_range_text'] = Variable<String>(lengthRangeText.value);
+    }
+    if (temperatureRangeText.present) {
+      map['temperature_range_text'] = Variable<String>(
+        temperatureRangeText.value,
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpeciesInfosCompanion(')
+          ..write('id: $id, ')
+          ..write('speciesName: $speciesName, ')
+          ..write('description: $description, ')
+          ..write('specialNotes: $specialNotes, ')
+          ..write('region: $region, ')
+          ..write('lengthRangeText: $lengthRangeText, ')
+          ..write('temperatureRangeText: $temperatureRangeText')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5522,6 +6253,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ActivityLogEntriesTable(this);
   late final $BreedingRemindersTable breedingReminders =
       $BreedingRemindersTable(this);
+  late final $SpeciesInfosTable speciesInfos = $SpeciesInfosTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5536,6 +6268,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     specimenLogEntries,
     activityLogEntries,
     breedingReminders,
+    speciesInfos,
   ];
 }
 
@@ -6038,6 +6771,24 @@ final class $$TerrariumsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$BreedingEventsTable, List<BreedingEvent>>
+  _breedingEventsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.breedingEvents,
+    aliasName: 'terrariums__id__breeding_events__terrarium_id',
+  );
+
+  $$BreedingEventsTableProcessedTableManager get breedingEventsRefs {
+    final manager = $$BreedingEventsTableTableManager(
+      $_db,
+      $_db.breedingEvents,
+    ).filter((f) => f.terrariumId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_breedingEventsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$TerrariumsTableFilterComposer
@@ -6178,6 +6929,31 @@ class $$TerrariumsTableFilterComposer
           }) => $$SpecimensTableFilterComposer(
             $db: $db,
             $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> breedingEventsRefs(
+    Expression<bool> Function($$BreedingEventsTableFilterComposer f) f,
+  ) {
+    final $$BreedingEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.breedingEvents,
+      getReferencedColumn: (t) => t.terrariumId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BreedingEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.breedingEvents,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6435,6 +7211,31 @@ class $$TerrariumsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> breedingEventsRefs<T extends Object>(
+    Expression<T> Function($$BreedingEventsTableAnnotationComposer a) f,
+  ) {
+    final $$BreedingEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.breedingEvents,
+      getReferencedColumn: (t) => t.terrariumId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BreedingEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.breedingEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$TerrariumsTableTableManager
@@ -6450,7 +7251,11 @@ class $$TerrariumsTableTableManager
           $$TerrariumsTableUpdateCompanionBuilder,
           (Terrarium, $$TerrariumsTableReferences),
           Terrarium,
-          PrefetchHooks Function({bool shelfId, bool specimensRefs})
+          PrefetchHooks Function({
+            bool shelfId,
+            bool specimensRefs,
+            bool breedingEventsRefs,
+          })
         > {
   $$TerrariumsTableTableManager(_$AppDatabase db, $TerrariumsTable table)
     : super(
@@ -6555,69 +7360,99 @@ class $$TerrariumsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({shelfId = false, specimensRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (specimensRefs) db.specimens],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (shelfId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.shelfId,
-                                referencedTable: $$TerrariumsTableReferences
-                                    ._shelfIdTable(db),
-                                referencedColumn: $$TerrariumsTableReferences
-                                    ._shelfIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                shelfId = false,
+                specimensRefs = false,
+                breedingEventsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (specimensRefs) db.specimens,
+                    if (breedingEventsRefs) db.breedingEvents,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shelfId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shelfId,
+                                    referencedTable: $$TerrariumsTableReferences
+                                        ._shelfIdTable(db),
+                                    referencedColumn:
+                                        $$TerrariumsTableReferences
+                                            ._shelfIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (specimensRefs)
+                        await $_getPrefetchedData<
+                          Terrarium,
+                          $TerrariumsTable,
+                          Specimen
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TerrariumsTableReferences
+                              ._specimensRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TerrariumsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).specimensRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.terrariumId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (breedingEventsRefs)
+                        await $_getPrefetchedData<
+                          Terrarium,
+                          $TerrariumsTable,
+                          BreedingEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TerrariumsTableReferences
+                              ._breedingEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TerrariumsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).breedingEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.terrariumId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (specimensRefs)
-                    await $_getPrefetchedData<
-                      Terrarium,
-                      $TerrariumsTable,
-                      Specimen
-                    >(
-                      currentTable: table,
-                      referencedTable: $$TerrariumsTableReferences
-                          ._specimensRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$TerrariumsTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).specimensRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.terrariumId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -6634,7 +7469,11 @@ typedef $$TerrariumsTableProcessedTableManager =
       $$TerrariumsTableUpdateCompanionBuilder,
       (Terrarium, $$TerrariumsTableReferences),
       Terrarium,
-      PrefetchHooks Function({bool shelfId, bool specimensRefs})
+      PrefetchHooks Function({
+        bool shelfId,
+        bool specimensRefs,
+        bool breedingEventsRefs,
+      })
     >;
 typedef $$SpecimensTableCreateCompanionBuilder =
     SpecimensCompanion Function({
@@ -7600,6 +8439,10 @@ typedef $$BreedingEventsTableCreateCompanionBuilder =
       Value<int?> clutchSize,
       Value<String> stage,
       Value<String?> notes,
+      Value<int?> terrariumId,
+      Value<int?> motherPreviousTerrariumId,
+      Value<int?> fatherPreviousTerrariumId,
+      Value<DateTime?> failedAt,
       Value<DateTime> createdAt,
     });
 typedef $$BreedingEventsTableUpdateCompanionBuilder =
@@ -7611,6 +8454,10 @@ typedef $$BreedingEventsTableUpdateCompanionBuilder =
       Value<int?> clutchSize,
       Value<String> stage,
       Value<String?> notes,
+      Value<int?> terrariumId,
+      Value<int?> motherPreviousTerrariumId,
+      Value<int?> fatherPreviousTerrariumId,
+      Value<DateTime?> failedAt,
       Value<DateTime> createdAt,
     });
 
@@ -7650,6 +8497,23 @@ final class $$BreedingEventsTableReferences
       $_db.specimens,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_fatherIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TerrariumsTable _terrariumIdTable(_$AppDatabase db) => db.terrariums
+      .createAlias('breeding_events__terrarium_id__terrariums__id');
+
+  $$TerrariumsTableProcessedTableManager? get terrariumId {
+    final $_column = $_itemColumn<int>('terrarium_id');
+    if ($_column == null) return null;
+    final manager = $$TerrariumsTableTableManager(
+      $_db,
+      $_db.terrariums,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_terrariumIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7734,6 +8598,21 @@ class $$BreedingEventsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get motherPreviousTerrariumId => $composableBuilder(
+    column: $table.motherPreviousTerrariumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fatherPreviousTerrariumId => $composableBuilder(
+    column: $table.fatherPreviousTerrariumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get failedAt => $composableBuilder(
+    column: $table.failedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -7776,6 +8655,29 @@ class $$BreedingEventsTableFilterComposer
           }) => $$SpecimensTableFilterComposer(
             $db: $db,
             $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TerrariumsTableFilterComposer get terrariumId {
+    final $$TerrariumsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.terrariumId,
+      referencedTable: $db.terrariums,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TerrariumsTableFilterComposer(
+            $db: $db,
+            $table: $db.terrariums,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7870,6 +8772,21 @@ class $$BreedingEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get motherPreviousTerrariumId => $composableBuilder(
+    column: $table.motherPreviousTerrariumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fatherPreviousTerrariumId => $composableBuilder(
+    column: $table.fatherPreviousTerrariumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get failedAt => $composableBuilder(
+    column: $table.failedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7920,6 +8837,29 @@ class $$BreedingEventsTableOrderingComposer
     );
     return composer;
   }
+
+  $$TerrariumsTableOrderingComposer get terrariumId {
+    final $$TerrariumsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.terrariumId,
+      referencedTable: $db.terrariums,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TerrariumsTableOrderingComposer(
+            $db: $db,
+            $table: $db.terrariums,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$BreedingEventsTableAnnotationComposer
@@ -7947,6 +8887,19 @@ class $$BreedingEventsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get motherPreviousTerrariumId => $composableBuilder(
+    column: $table.motherPreviousTerrariumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fatherPreviousTerrariumId => $composableBuilder(
+    column: $table.fatherPreviousTerrariumId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get failedAt =>
+      $composableBuilder(column: $table.failedAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -7988,6 +8941,29 @@ class $$BreedingEventsTableAnnotationComposer
           }) => $$SpecimensTableAnnotationComposer(
             $db: $db,
             $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TerrariumsTableAnnotationComposer get terrariumId {
+    final $$TerrariumsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.terrariumId,
+      referencedTable: $db.terrariums,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TerrariumsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.terrariums,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8066,6 +9042,7 @@ class $$BreedingEventsTableTableManager
           PrefetchHooks Function({
             bool motherId,
             bool fatherId,
+            bool terrariumId,
             bool breedingLogEntriesRefs,
             bool breedingRemindersRefs,
           })
@@ -8092,6 +9069,10 @@ class $$BreedingEventsTableTableManager
                 Value<int?> clutchSize = const Value.absent(),
                 Value<String> stage = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> terrariumId = const Value.absent(),
+                Value<int?> motherPreviousTerrariumId = const Value.absent(),
+                Value<int?> fatherPreviousTerrariumId = const Value.absent(),
+                Value<DateTime?> failedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BreedingEventsCompanion(
                 id: id,
@@ -8101,6 +9082,10 @@ class $$BreedingEventsTableTableManager
                 clutchSize: clutchSize,
                 stage: stage,
                 notes: notes,
+                terrariumId: terrariumId,
+                motherPreviousTerrariumId: motherPreviousTerrariumId,
+                fatherPreviousTerrariumId: fatherPreviousTerrariumId,
+                failedAt: failedAt,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -8112,6 +9097,10 @@ class $$BreedingEventsTableTableManager
                 Value<int?> clutchSize = const Value.absent(),
                 Value<String> stage = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> terrariumId = const Value.absent(),
+                Value<int?> motherPreviousTerrariumId = const Value.absent(),
+                Value<int?> fatherPreviousTerrariumId = const Value.absent(),
+                Value<DateTime?> failedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BreedingEventsCompanion.insert(
                 id: id,
@@ -8121,6 +9110,10 @@ class $$BreedingEventsTableTableManager
                 clutchSize: clutchSize,
                 stage: stage,
                 notes: notes,
+                terrariumId: terrariumId,
+                motherPreviousTerrariumId: motherPreviousTerrariumId,
+                fatherPreviousTerrariumId: fatherPreviousTerrariumId,
+                failedAt: failedAt,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -8135,6 +9128,7 @@ class $$BreedingEventsTableTableManager
               ({
                 motherId = false,
                 fatherId = false,
+                terrariumId = false,
                 breedingLogEntriesRefs = false,
                 breedingRemindersRefs = false,
               }) {
@@ -8186,6 +9180,21 @@ class $$BreedingEventsTableTableManager
                                     referencedColumn:
                                         $$BreedingEventsTableReferences
                                             ._fatherIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (terrariumId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.terrariumId,
+                                    referencedTable:
+                                        $$BreedingEventsTableReferences
+                                            ._terrariumIdTable(db),
+                                    referencedColumn:
+                                        $$BreedingEventsTableReferences
+                                            ._terrariumIdTable(db)
                                             .id,
                                   )
                                   as T;
@@ -8260,6 +9269,7 @@ typedef $$BreedingEventsTableProcessedTableManager =
       PrefetchHooks Function({
         bool motherId,
         bool fatherId,
+        bool terrariumId,
         bool breedingLogEntriesRefs,
         bool breedingRemindersRefs,
       })
@@ -9928,6 +10938,248 @@ typedef $$BreedingRemindersTableProcessedTableManager =
       BreedingReminder,
       PrefetchHooks Function({bool breedingEventId})
     >;
+typedef $$SpeciesInfosTableCreateCompanionBuilder =
+    SpeciesInfosCompanion Function({
+      Value<int> id,
+      required String speciesName,
+      Value<String?> description,
+      Value<String?> specialNotes,
+      Value<String?> region,
+      Value<String?> lengthRangeText,
+      Value<String?> temperatureRangeText,
+    });
+typedef $$SpeciesInfosTableUpdateCompanionBuilder =
+    SpeciesInfosCompanion Function({
+      Value<int> id,
+      Value<String> speciesName,
+      Value<String?> description,
+      Value<String?> specialNotes,
+      Value<String?> region,
+      Value<String?> lengthRangeText,
+      Value<String?> temperatureRangeText,
+    });
+
+class $$SpeciesInfosTableFilterComposer
+    extends Composer<_$AppDatabase, $SpeciesInfosTable> {
+  $$SpeciesInfosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get speciesName => $composableBuilder(
+    column: $table.speciesName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get specialNotes => $composableBuilder(
+    column: $table.specialNotes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get region => $composableBuilder(
+    column: $table.region,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lengthRangeText => $composableBuilder(
+    column: $table.lengthRangeText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get temperatureRangeText => $composableBuilder(
+    column: $table.temperatureRangeText,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SpeciesInfosTableOrderingComposer
+    extends Composer<_$AppDatabase, $SpeciesInfosTable> {
+  $$SpeciesInfosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get speciesName => $composableBuilder(
+    column: $table.speciesName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get specialNotes => $composableBuilder(
+    column: $table.specialNotes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get region => $composableBuilder(
+    column: $table.region,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lengthRangeText => $composableBuilder(
+    column: $table.lengthRangeText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get temperatureRangeText => $composableBuilder(
+    column: $table.temperatureRangeText,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SpeciesInfosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SpeciesInfosTable> {
+  $$SpeciesInfosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get speciesName => $composableBuilder(
+    column: $table.speciesName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get specialNotes => $composableBuilder(
+    column: $table.specialNotes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get region =>
+      $composableBuilder(column: $table.region, builder: (column) => column);
+
+  GeneratedColumn<String> get lengthRangeText => $composableBuilder(
+    column: $table.lengthRangeText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get temperatureRangeText => $composableBuilder(
+    column: $table.temperatureRangeText,
+    builder: (column) => column,
+  );
+}
+
+class $$SpeciesInfosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SpeciesInfosTable,
+          SpeciesInfo,
+          $$SpeciesInfosTableFilterComposer,
+          $$SpeciesInfosTableOrderingComposer,
+          $$SpeciesInfosTableAnnotationComposer,
+          $$SpeciesInfosTableCreateCompanionBuilder,
+          $$SpeciesInfosTableUpdateCompanionBuilder,
+          (
+            SpeciesInfo,
+            BaseReferences<_$AppDatabase, $SpeciesInfosTable, SpeciesInfo>,
+          ),
+          SpeciesInfo,
+          PrefetchHooks Function()
+        > {
+  $$SpeciesInfosTableTableManager(_$AppDatabase db, $SpeciesInfosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SpeciesInfosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SpeciesInfosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SpeciesInfosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> speciesName = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> specialNotes = const Value.absent(),
+                Value<String?> region = const Value.absent(),
+                Value<String?> lengthRangeText = const Value.absent(),
+                Value<String?> temperatureRangeText = const Value.absent(),
+              }) => SpeciesInfosCompanion(
+                id: id,
+                speciesName: speciesName,
+                description: description,
+                specialNotes: specialNotes,
+                region: region,
+                lengthRangeText: lengthRangeText,
+                temperatureRangeText: temperatureRangeText,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String speciesName,
+                Value<String?> description = const Value.absent(),
+                Value<String?> specialNotes = const Value.absent(),
+                Value<String?> region = const Value.absent(),
+                Value<String?> lengthRangeText = const Value.absent(),
+                Value<String?> temperatureRangeText = const Value.absent(),
+              }) => SpeciesInfosCompanion.insert(
+                id: id,
+                speciesName: speciesName,
+                description: description,
+                specialNotes: specialNotes,
+                region: region,
+                lengthRangeText: lengthRangeText,
+                temperatureRangeText: temperatureRangeText,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SpeciesInfosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SpeciesInfosTable,
+      SpeciesInfo,
+      $$SpeciesInfosTableFilterComposer,
+      $$SpeciesInfosTableOrderingComposer,
+      $$SpeciesInfosTableAnnotationComposer,
+      $$SpeciesInfosTableCreateCompanionBuilder,
+      $$SpeciesInfosTableUpdateCompanionBuilder,
+      (
+        SpeciesInfo,
+        BaseReferences<_$AppDatabase, $SpeciesInfosTable, SpeciesInfo>,
+      ),
+      SpeciesInfo,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9950,4 +11202,6 @@ class $AppDatabaseManager {
       $$ActivityLogEntriesTableTableManager(_db, _db.activityLogEntries);
   $$BreedingRemindersTableTableManager get breedingReminders =>
       $$BreedingRemindersTableTableManager(_db, _db.breedingReminders);
+  $$SpeciesInfosTableTableManager get speciesInfos =>
+      $$SpeciesInfosTableTableManager(_db, _db.speciesInfos);
 }

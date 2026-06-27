@@ -120,8 +120,14 @@ class BreedingListScreen extends StatelessWidget {
                                   const SizedBox(height: 6),
                                   Chip(
                                     visualDensity: VisualDensity.compact,
-                                    label: Text(stage.label,
+                                    label: Text(
+                                        event.failedAt != null
+                                            ? 'Failed'
+                                            : stage.label,
                                         style: const TextStyle(fontSize: 11)),
+                                    backgroundColor: event.failedAt != null
+                                        ? Theme.of(context).colorScheme.errorContainer
+                                        : null,
                                   ),
                                 ],
                               ),
