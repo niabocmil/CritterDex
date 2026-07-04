@@ -69,7 +69,7 @@ class GrowthChart extends StatelessWidget {
           height: 220,
           child: LineChart(
             LineChartData(
-              minY: sharedRange.min,
+              minY: 0,
               maxY: sharedRange.max,
               minX: 0,
               maxX: 1,
