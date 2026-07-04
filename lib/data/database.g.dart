@@ -1621,10 +1621,10 @@ class $SpecimensTable extends Specimens
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _sizeCmMeta = const VerificationMeta('sizeCm');
+  static const VerificationMeta _sizeMmMeta = const VerificationMeta('sizeMm');
   @override
-  late final GeneratedColumn<double> sizeCm = GeneratedColumn<double>(
-    'size_cm',
+  late final GeneratedColumn<double> sizeMm = GeneratedColumn<double>(
+    'size_mm',
     aliasedName,
     true,
     type: DriftSqlType.double,
@@ -1800,7 +1800,7 @@ class $SpecimensTable extends Specimens
     dateAcquired,
     dateOfBirth,
     weightGrams,
-    sizeCm,
+    sizeMm,
     lifeStage,
     beetleFamily,
     replenishIntervalDays,
@@ -1887,10 +1887,10 @@ class $SpecimensTable extends Specimens
         ),
       );
     }
-    if (data.containsKey('size_cm')) {
+    if (data.containsKey('size_mm')) {
       context.handle(
-        _sizeCmMeta,
-        sizeCm.isAcceptableOrUnknown(data['size_cm']!, _sizeCmMeta),
+        _sizeMmMeta,
+        sizeMm.isAcceptableOrUnknown(data['size_mm']!, _sizeMmMeta),
       );
     }
     if (data.containsKey('life_stage')) {
@@ -2036,9 +2036,9 @@ class $SpecimensTable extends Specimens
         DriftSqlType.double,
         data['${effectivePrefix}weight_grams'],
       ),
-      sizeCm: attachedDatabase.typeMapping.read(
+      sizeMm: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
-        data['${effectivePrefix}size_cm'],
+        data['${effectivePrefix}size_mm'],
       ),
       lifeStage: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2114,7 +2114,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   final DateTime? dateAcquired;
   final DateTime? dateOfBirth;
   final double? weightGrams;
-  final double? sizeCm;
+  final double? sizeMm;
   final String? lifeStage;
   final String? beetleFamily;
   final int? replenishIntervalDays;
@@ -2138,7 +2138,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     this.dateAcquired,
     this.dateOfBirth,
     this.weightGrams,
-    this.sizeCm,
+    this.sizeMm,
     this.lifeStage,
     this.beetleFamily,
     this.replenishIntervalDays,
@@ -2173,8 +2173,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     if (!nullToAbsent || weightGrams != null) {
       map['weight_grams'] = Variable<double>(weightGrams);
     }
-    if (!nullToAbsent || sizeCm != null) {
-      map['size_cm'] = Variable<double>(sizeCm);
+    if (!nullToAbsent || sizeMm != null) {
+      map['size_mm'] = Variable<double>(sizeMm);
     }
     if (!nullToAbsent || lifeStage != null) {
       map['life_stage'] = Variable<String>(lifeStage);
@@ -2233,9 +2233,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       weightGrams: weightGrams == null && nullToAbsent
           ? const Value.absent()
           : Value(weightGrams),
-      sizeCm: sizeCm == null && nullToAbsent
+      sizeMm: sizeMm == null && nullToAbsent
           ? const Value.absent()
-          : Value(sizeCm),
+          : Value(sizeMm),
       lifeStage: lifeStage == null && nullToAbsent
           ? const Value.absent()
           : Value(lifeStage),
@@ -2291,7 +2291,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       dateAcquired: serializer.fromJson<DateTime?>(json['dateAcquired']),
       dateOfBirth: serializer.fromJson<DateTime?>(json['dateOfBirth']),
       weightGrams: serializer.fromJson<double?>(json['weightGrams']),
-      sizeCm: serializer.fromJson<double?>(json['sizeCm']),
+      sizeMm: serializer.fromJson<double?>(json['sizeMm']),
       lifeStage: serializer.fromJson<String?>(json['lifeStage']),
       beetleFamily: serializer.fromJson<String?>(json['beetleFamily']),
       replenishIntervalDays: serializer.fromJson<int?>(
@@ -2326,7 +2326,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       'dateAcquired': serializer.toJson<DateTime?>(dateAcquired),
       'dateOfBirth': serializer.toJson<DateTime?>(dateOfBirth),
       'weightGrams': serializer.toJson<double?>(weightGrams),
-      'sizeCm': serializer.toJson<double?>(sizeCm),
+      'sizeMm': serializer.toJson<double?>(sizeMm),
       'lifeStage': serializer.toJson<String?>(lifeStage),
       'beetleFamily': serializer.toJson<String?>(beetleFamily),
       'replenishIntervalDays': serializer.toJson<int?>(replenishIntervalDays),
@@ -2353,7 +2353,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     Value<DateTime?> dateAcquired = const Value.absent(),
     Value<DateTime?> dateOfBirth = const Value.absent(),
     Value<double?> weightGrams = const Value.absent(),
-    Value<double?> sizeCm = const Value.absent(),
+    Value<double?> sizeMm = const Value.absent(),
     Value<String?> lifeStage = const Value.absent(),
     Value<String?> beetleFamily = const Value.absent(),
     Value<int?> replenishIntervalDays = const Value.absent(),
@@ -2377,7 +2377,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     dateAcquired: dateAcquired.present ? dateAcquired.value : this.dateAcquired,
     dateOfBirth: dateOfBirth.present ? dateOfBirth.value : this.dateOfBirth,
     weightGrams: weightGrams.present ? weightGrams.value : this.weightGrams,
-    sizeCm: sizeCm.present ? sizeCm.value : this.sizeCm,
+    sizeMm: sizeMm.present ? sizeMm.value : this.sizeMm,
     lifeStage: lifeStage.present ? lifeStage.value : this.lifeStage,
     beetleFamily: beetleFamily.present ? beetleFamily.value : this.beetleFamily,
     replenishIntervalDays: replenishIntervalDays.present
@@ -2419,7 +2419,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       weightGrams: data.weightGrams.present
           ? data.weightGrams.value
           : this.weightGrams,
-      sizeCm: data.sizeCm.present ? data.sizeCm.value : this.sizeCm,
+      sizeMm: data.sizeMm.present ? data.sizeMm.value : this.sizeMm,
       lifeStage: data.lifeStage.present ? data.lifeStage.value : this.lifeStage,
       beetleFamily: data.beetleFamily.present
           ? data.beetleFamily.value
@@ -2460,7 +2460,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ..write('dateAcquired: $dateAcquired, ')
           ..write('dateOfBirth: $dateOfBirth, ')
           ..write('weightGrams: $weightGrams, ')
-          ..write('sizeCm: $sizeCm, ')
+          ..write('sizeMm: $sizeMm, ')
           ..write('lifeStage: $lifeStage, ')
           ..write('beetleFamily: $beetleFamily, ')
           ..write('replenishIntervalDays: $replenishIntervalDays, ')
@@ -2489,7 +2489,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     dateAcquired,
     dateOfBirth,
     weightGrams,
-    sizeCm,
+    sizeMm,
     lifeStage,
     beetleFamily,
     replenishIntervalDays,
@@ -2517,7 +2517,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           other.dateAcquired == this.dateAcquired &&
           other.dateOfBirth == this.dateOfBirth &&
           other.weightGrams == this.weightGrams &&
-          other.sizeCm == this.sizeCm &&
+          other.sizeMm == this.sizeMm &&
           other.lifeStage == this.lifeStage &&
           other.beetleFamily == this.beetleFamily &&
           other.replenishIntervalDays == this.replenishIntervalDays &&
@@ -2543,7 +2543,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
   final Value<DateTime?> dateAcquired;
   final Value<DateTime?> dateOfBirth;
   final Value<double?> weightGrams;
-  final Value<double?> sizeCm;
+  final Value<double?> sizeMm;
   final Value<String?> lifeStage;
   final Value<String?> beetleFamily;
   final Value<int?> replenishIntervalDays;
@@ -2567,7 +2567,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.dateAcquired = const Value.absent(),
     this.dateOfBirth = const Value.absent(),
     this.weightGrams = const Value.absent(),
-    this.sizeCm = const Value.absent(),
+    this.sizeMm = const Value.absent(),
     this.lifeStage = const Value.absent(),
     this.beetleFamily = const Value.absent(),
     this.replenishIntervalDays = const Value.absent(),
@@ -2592,7 +2592,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.dateAcquired = const Value.absent(),
     this.dateOfBirth = const Value.absent(),
     this.weightGrams = const Value.absent(),
-    this.sizeCm = const Value.absent(),
+    this.sizeMm = const Value.absent(),
     this.lifeStage = const Value.absent(),
     this.beetleFamily = const Value.absent(),
     this.replenishIntervalDays = const Value.absent(),
@@ -2617,7 +2617,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Expression<DateTime>? dateAcquired,
     Expression<DateTime>? dateOfBirth,
     Expression<double>? weightGrams,
-    Expression<double>? sizeCm,
+    Expression<double>? sizeMm,
     Expression<String>? lifeStage,
     Expression<String>? beetleFamily,
     Expression<int>? replenishIntervalDays,
@@ -2642,7 +2642,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       if (dateAcquired != null) 'date_acquired': dateAcquired,
       if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
       if (weightGrams != null) 'weight_grams': weightGrams,
-      if (sizeCm != null) 'size_cm': sizeCm,
+      if (sizeMm != null) 'size_mm': sizeMm,
       if (lifeStage != null) 'life_stage': lifeStage,
       if (beetleFamily != null) 'beetle_family': beetleFamily,
       if (replenishIntervalDays != null)
@@ -2671,7 +2671,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Value<DateTime?>? dateAcquired,
     Value<DateTime?>? dateOfBirth,
     Value<double?>? weightGrams,
-    Value<double?>? sizeCm,
+    Value<double?>? sizeMm,
     Value<String?>? lifeStage,
     Value<String?>? beetleFamily,
     Value<int?>? replenishIntervalDays,
@@ -2696,7 +2696,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       dateAcquired: dateAcquired ?? this.dateAcquired,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       weightGrams: weightGrams ?? this.weightGrams,
-      sizeCm: sizeCm ?? this.sizeCm,
+      sizeMm: sizeMm ?? this.sizeMm,
       lifeStage: lifeStage ?? this.lifeStage,
       beetleFamily: beetleFamily ?? this.beetleFamily,
       replenishIntervalDays:
@@ -2743,8 +2743,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     if (weightGrams.present) {
       map['weight_grams'] = Variable<double>(weightGrams.value);
     }
-    if (sizeCm.present) {
-      map['size_cm'] = Variable<double>(sizeCm.value);
+    if (sizeMm.present) {
+      map['size_mm'] = Variable<double>(sizeMm.value);
     }
     if (lifeStage.present) {
       map['life_stage'] = Variable<String>(lifeStage.value);
@@ -2806,7 +2806,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           ..write('dateAcquired: $dateAcquired, ')
           ..write('dateOfBirth: $dateOfBirth, ')
           ..write('weightGrams: $weightGrams, ')
-          ..write('sizeCm: $sizeCm, ')
+          ..write('sizeMm: $sizeMm, ')
           ..write('lifeStage: $lifeStage, ')
           ..write('beetleFamily: $beetleFamily, ')
           ..write('replenishIntervalDays: $replenishIntervalDays, ')
@@ -4937,6 +4937,369 @@ class SpecimenLogEntriesCompanion extends UpdateCompanion<SpecimenLogEntry> {
   }
 }
 
+class $SpecimenMeasurementsTable extends SpecimenMeasurements
+    with TableInfo<$SpecimenMeasurementsTable, SpecimenMeasurement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SpecimenMeasurementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _specimenIdMeta = const VerificationMeta(
+    'specimenId',
+  );
+  @override
+  late final GeneratedColumn<int> specimenId = GeneratedColumn<int>(
+    'specimen_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES specimens (id)',
+    ),
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _weightGramsMeta = const VerificationMeta(
+    'weightGrams',
+  );
+  @override
+  late final GeneratedColumn<double> weightGrams = GeneratedColumn<double>(
+    'weight_grams',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sizeMmMeta = const VerificationMeta('sizeMm');
+  @override
+  late final GeneratedColumn<double> sizeMm = GeneratedColumn<double>(
+    'size_mm',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    specimenId,
+    timestamp,
+    weightGrams,
+    sizeMm,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'specimen_measurements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SpecimenMeasurement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('specimen_id')) {
+      context.handle(
+        _specimenIdMeta,
+        specimenId.isAcceptableOrUnknown(data['specimen_id']!, _specimenIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_specimenIdMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    }
+    if (data.containsKey('weight_grams')) {
+      context.handle(
+        _weightGramsMeta,
+        weightGrams.isAcceptableOrUnknown(
+          data['weight_grams']!,
+          _weightGramsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('size_mm')) {
+      context.handle(
+        _sizeMmMeta,
+        sizeMm.isAcceptableOrUnknown(data['size_mm']!, _sizeMmMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SpecimenMeasurement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SpecimenMeasurement(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      specimenId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}specimen_id'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+      weightGrams: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}weight_grams'],
+      ),
+      sizeMm: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}size_mm'],
+      ),
+    );
+  }
+
+  @override
+  $SpecimenMeasurementsTable createAlias(String alias) {
+    return $SpecimenMeasurementsTable(attachedDatabase, alias);
+  }
+}
+
+class SpecimenMeasurement extends DataClass
+    implements Insertable<SpecimenMeasurement> {
+  final int id;
+  final int specimenId;
+  final DateTime timestamp;
+  final double? weightGrams;
+  final double? sizeMm;
+  const SpecimenMeasurement({
+    required this.id,
+    required this.specimenId,
+    required this.timestamp,
+    this.weightGrams,
+    this.sizeMm,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['specimen_id'] = Variable<int>(specimenId);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    if (!nullToAbsent || weightGrams != null) {
+      map['weight_grams'] = Variable<double>(weightGrams);
+    }
+    if (!nullToAbsent || sizeMm != null) {
+      map['size_mm'] = Variable<double>(sizeMm);
+    }
+    return map;
+  }
+
+  SpecimenMeasurementsCompanion toCompanion(bool nullToAbsent) {
+    return SpecimenMeasurementsCompanion(
+      id: Value(id),
+      specimenId: Value(specimenId),
+      timestamp: Value(timestamp),
+      weightGrams: weightGrams == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weightGrams),
+      sizeMm: sizeMm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sizeMm),
+    );
+  }
+
+  factory SpecimenMeasurement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SpecimenMeasurement(
+      id: serializer.fromJson<int>(json['id']),
+      specimenId: serializer.fromJson<int>(json['specimenId']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+      weightGrams: serializer.fromJson<double?>(json['weightGrams']),
+      sizeMm: serializer.fromJson<double?>(json['sizeMm']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'specimenId': serializer.toJson<int>(specimenId),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+      'weightGrams': serializer.toJson<double?>(weightGrams),
+      'sizeMm': serializer.toJson<double?>(sizeMm),
+    };
+  }
+
+  SpecimenMeasurement copyWith({
+    int? id,
+    int? specimenId,
+    DateTime? timestamp,
+    Value<double?> weightGrams = const Value.absent(),
+    Value<double?> sizeMm = const Value.absent(),
+  }) => SpecimenMeasurement(
+    id: id ?? this.id,
+    specimenId: specimenId ?? this.specimenId,
+    timestamp: timestamp ?? this.timestamp,
+    weightGrams: weightGrams.present ? weightGrams.value : this.weightGrams,
+    sizeMm: sizeMm.present ? sizeMm.value : this.sizeMm,
+  );
+  SpecimenMeasurement copyWithCompanion(SpecimenMeasurementsCompanion data) {
+    return SpecimenMeasurement(
+      id: data.id.present ? data.id.value : this.id,
+      specimenId: data.specimenId.present
+          ? data.specimenId.value
+          : this.specimenId,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+      weightGrams: data.weightGrams.present
+          ? data.weightGrams.value
+          : this.weightGrams,
+      sizeMm: data.sizeMm.present ? data.sizeMm.value : this.sizeMm,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpecimenMeasurement(')
+          ..write('id: $id, ')
+          ..write('specimenId: $specimenId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('weightGrams: $weightGrams, ')
+          ..write('sizeMm: $sizeMm')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, specimenId, timestamp, weightGrams, sizeMm);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SpecimenMeasurement &&
+          other.id == this.id &&
+          other.specimenId == this.specimenId &&
+          other.timestamp == this.timestamp &&
+          other.weightGrams == this.weightGrams &&
+          other.sizeMm == this.sizeMm);
+}
+
+class SpecimenMeasurementsCompanion
+    extends UpdateCompanion<SpecimenMeasurement> {
+  final Value<int> id;
+  final Value<int> specimenId;
+  final Value<DateTime> timestamp;
+  final Value<double?> weightGrams;
+  final Value<double?> sizeMm;
+  const SpecimenMeasurementsCompanion({
+    this.id = const Value.absent(),
+    this.specimenId = const Value.absent(),
+    this.timestamp = const Value.absent(),
+    this.weightGrams = const Value.absent(),
+    this.sizeMm = const Value.absent(),
+  });
+  SpecimenMeasurementsCompanion.insert({
+    this.id = const Value.absent(),
+    required int specimenId,
+    this.timestamp = const Value.absent(),
+    this.weightGrams = const Value.absent(),
+    this.sizeMm = const Value.absent(),
+  }) : specimenId = Value(specimenId);
+  static Insertable<SpecimenMeasurement> custom({
+    Expression<int>? id,
+    Expression<int>? specimenId,
+    Expression<DateTime>? timestamp,
+    Expression<double>? weightGrams,
+    Expression<double>? sizeMm,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (specimenId != null) 'specimen_id': specimenId,
+      if (timestamp != null) 'timestamp': timestamp,
+      if (weightGrams != null) 'weight_grams': weightGrams,
+      if (sizeMm != null) 'size_mm': sizeMm,
+    });
+  }
+
+  SpecimenMeasurementsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? specimenId,
+    Value<DateTime>? timestamp,
+    Value<double?>? weightGrams,
+    Value<double?>? sizeMm,
+  }) {
+    return SpecimenMeasurementsCompanion(
+      id: id ?? this.id,
+      specimenId: specimenId ?? this.specimenId,
+      timestamp: timestamp ?? this.timestamp,
+      weightGrams: weightGrams ?? this.weightGrams,
+      sizeMm: sizeMm ?? this.sizeMm,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (specimenId.present) {
+      map['specimen_id'] = Variable<int>(specimenId.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    if (weightGrams.present) {
+      map['weight_grams'] = Variable<double>(weightGrams.value);
+    }
+    if (sizeMm.present) {
+      map['size_mm'] = Variable<double>(sizeMm.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SpecimenMeasurementsCompanion(')
+          ..write('id: $id, ')
+          ..write('specimenId: $specimenId, ')
+          ..write('timestamp: $timestamp, ')
+          ..write('weightGrams: $weightGrams, ')
+          ..write('sizeMm: $sizeMm')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ActivityLogEntriesTable extends ActivityLogEntries
     with TableInfo<$ActivityLogEntriesTable, ActivityLogEntry> {
   @override
@@ -6249,6 +6612,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ToolsTable tools = $ToolsTable(this);
   late final $SpecimenLogEntriesTable specimenLogEntries =
       $SpecimenLogEntriesTable(this);
+  late final $SpecimenMeasurementsTable specimenMeasurements =
+      $SpecimenMeasurementsTable(this);
   late final $ActivityLogEntriesTable activityLogEntries =
       $ActivityLogEntriesTable(this);
   late final $BreedingRemindersTable breedingReminders =
@@ -6266,6 +6631,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     breedingLogEntries,
     tools,
     specimenLogEntries,
+    specimenMeasurements,
     activityLogEntries,
     breedingReminders,
     speciesInfos,
@@ -7485,7 +7851,7 @@ typedef $$SpecimensTableCreateCompanionBuilder =
       Value<DateTime?> dateAcquired,
       Value<DateTime?> dateOfBirth,
       Value<double?> weightGrams,
-      Value<double?> sizeCm,
+      Value<double?> sizeMm,
       Value<String?> lifeStage,
       Value<String?> beetleFamily,
       Value<int?> replenishIntervalDays,
@@ -7511,7 +7877,7 @@ typedef $$SpecimensTableUpdateCompanionBuilder =
       Value<DateTime?> dateAcquired,
       Value<DateTime?> dateOfBirth,
       Value<double?> weightGrams,
-      Value<double?> sizeCm,
+      Value<double?> sizeMm,
       Value<String?> lifeStage,
       Value<String?> beetleFamily,
       Value<int?> replenishIntervalDays,
@@ -7603,6 +7969,31 @@ final class $$SpecimensTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $SpecimenMeasurementsTable,
+    List<SpecimenMeasurement>
+  >
+  _specimenMeasurementsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.specimenMeasurements,
+        aliasName: 'specimens__id__specimen_measurements__specimen_id',
+      );
+
+  $$SpecimenMeasurementsTableProcessedTableManager
+  get specimenMeasurementsRefs {
+    final manager = $$SpecimenMeasurementsTableTableManager(
+      $_db,
+      $_db.specimenMeasurements,
+    ).filter((f) => f.specimenId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _specimenMeasurementsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$SpecimensTableFilterComposer
@@ -7654,8 +8045,8 @@ class $$SpecimensTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get sizeCm => $composableBuilder(
-    column: $table.sizeCm,
+  ColumnFilters<double> get sizeMm => $composableBuilder(
+    column: $table.sizeMm,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7807,6 +8198,31 @@ class $$SpecimensTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> specimenMeasurementsRefs(
+    Expression<bool> Function($$SpecimenMeasurementsTableFilterComposer f) f,
+  ) {
+    final $$SpecimenMeasurementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.specimenMeasurements,
+      getReferencedColumn: (t) => t.specimenId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimenMeasurementsTableFilterComposer(
+            $db: $db,
+            $table: $db.specimenMeasurements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$SpecimensTableOrderingComposer
@@ -7858,8 +8274,8 @@ class $$SpecimensTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get sizeCm => $composableBuilder(
-    column: $table.sizeCm,
+  ColumnOrderings<double> get sizeMm => $composableBuilder(
+    column: $table.sizeMm,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -8029,8 +8445,8 @@ class $$SpecimensTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get sizeCm =>
-      $composableBuilder(column: $table.sizeCm, builder: (column) => column);
+  GeneratedColumn<double> get sizeMm =>
+      $composableBuilder(column: $table.sizeMm, builder: (column) => column);
 
   GeneratedColumn<String> get lifeStage =>
       $composableBuilder(column: $table.lifeStage, builder: (column) => column);
@@ -8169,6 +8585,32 @@ class $$SpecimensTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> specimenMeasurementsRefs<T extends Object>(
+    Expression<T> Function($$SpecimenMeasurementsTableAnnotationComposer a) f,
+  ) {
+    final $$SpecimenMeasurementsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.specimenMeasurements,
+          getReferencedColumn: (t) => t.specimenId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SpecimenMeasurementsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.specimenMeasurements,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$SpecimensTableTableManager
@@ -8189,6 +8631,7 @@ class $$SpecimensTableTableManager
             bool fatherId,
             bool terrariumId,
             bool specimenLogEntriesRefs,
+            bool specimenMeasurementsRefs,
           })
         > {
   $$SpecimensTableTableManager(_$AppDatabase db, $SpecimensTable table)
@@ -8212,7 +8655,7 @@ class $$SpecimensTableTableManager
                 Value<DateTime?> dateAcquired = const Value.absent(),
                 Value<DateTime?> dateOfBirth = const Value.absent(),
                 Value<double?> weightGrams = const Value.absent(),
-                Value<double?> sizeCm = const Value.absent(),
+                Value<double?> sizeMm = const Value.absent(),
                 Value<String?> lifeStage = const Value.absent(),
                 Value<String?> beetleFamily = const Value.absent(),
                 Value<int?> replenishIntervalDays = const Value.absent(),
@@ -8236,7 +8679,7 @@ class $$SpecimensTableTableManager
                 dateAcquired: dateAcquired,
                 dateOfBirth: dateOfBirth,
                 weightGrams: weightGrams,
-                sizeCm: sizeCm,
+                sizeMm: sizeMm,
                 lifeStage: lifeStage,
                 beetleFamily: beetleFamily,
                 replenishIntervalDays: replenishIntervalDays,
@@ -8262,7 +8705,7 @@ class $$SpecimensTableTableManager
                 Value<DateTime?> dateAcquired = const Value.absent(),
                 Value<DateTime?> dateOfBirth = const Value.absent(),
                 Value<double?> weightGrams = const Value.absent(),
-                Value<double?> sizeCm = const Value.absent(),
+                Value<double?> sizeMm = const Value.absent(),
                 Value<String?> lifeStage = const Value.absent(),
                 Value<String?> beetleFamily = const Value.absent(),
                 Value<int?> replenishIntervalDays = const Value.absent(),
@@ -8286,7 +8729,7 @@ class $$SpecimensTableTableManager
                 dateAcquired: dateAcquired,
                 dateOfBirth: dateOfBirth,
                 weightGrams: weightGrams,
-                sizeCm: sizeCm,
+                sizeMm: sizeMm,
                 lifeStage: lifeStage,
                 beetleFamily: beetleFamily,
                 replenishIntervalDays: replenishIntervalDays,
@@ -8316,11 +8759,13 @@ class $$SpecimensTableTableManager
                 fatherId = false,
                 terrariumId = false,
                 specimenLogEntriesRefs = false,
+                specimenMeasurementsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (specimenLogEntriesRefs) db.specimenLogEntries,
+                    if (specimenMeasurementsRefs) db.specimenMeasurements,
                   ],
                   addJoins:
                       <
@@ -8403,6 +8848,27 @@ class $$SpecimensTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (specimenMeasurementsRefs)
+                        await $_getPrefetchedData<
+                          Specimen,
+                          $SpecimensTable,
+                          SpecimenMeasurement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SpecimensTableReferences
+                              ._specimenMeasurementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SpecimensTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).specimenMeasurementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.specimenId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -8428,6 +8894,7 @@ typedef $$SpecimensTableProcessedTableManager =
         bool fatherId,
         bool terrariumId,
         bool specimenLogEntriesRefs,
+        bool specimenMeasurementsRefs,
       })
     >;
 typedef $$BreedingEventsTableCreateCompanionBuilder =
@@ -10360,6 +10827,338 @@ typedef $$SpecimenLogEntriesTableProcessedTableManager =
       SpecimenLogEntry,
       PrefetchHooks Function({bool specimenId})
     >;
+typedef $$SpecimenMeasurementsTableCreateCompanionBuilder =
+    SpecimenMeasurementsCompanion Function({
+      Value<int> id,
+      required int specimenId,
+      Value<DateTime> timestamp,
+      Value<double?> weightGrams,
+      Value<double?> sizeMm,
+    });
+typedef $$SpecimenMeasurementsTableUpdateCompanionBuilder =
+    SpecimenMeasurementsCompanion Function({
+      Value<int> id,
+      Value<int> specimenId,
+      Value<DateTime> timestamp,
+      Value<double?> weightGrams,
+      Value<double?> sizeMm,
+    });
+
+final class $$SpecimenMeasurementsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $SpecimenMeasurementsTable,
+          SpecimenMeasurement
+        > {
+  $$SpecimenMeasurementsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SpecimensTable _specimenIdTable(_$AppDatabase db) => db.specimens
+      .createAlias('specimen_measurements__specimen_id__specimens__id');
+
+  $$SpecimensTableProcessedTableManager get specimenId {
+    final $_column = $_itemColumn<int>('specimen_id')!;
+
+    final manager = $$SpecimensTableTableManager(
+      $_db,
+      $_db.specimens,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_specimenIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SpecimenMeasurementsTableFilterComposer
+    extends Composer<_$AppDatabase, $SpecimenMeasurementsTable> {
+  $$SpecimenMeasurementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get weightGrams => $composableBuilder(
+    column: $table.weightGrams,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sizeMm => $composableBuilder(
+    column: $table.sizeMm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SpecimensTableFilterComposer get specimenId {
+    final $$SpecimensTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableFilterComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenMeasurementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SpecimenMeasurementsTable> {
+  $$SpecimenMeasurementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get weightGrams => $composableBuilder(
+    column: $table.weightGrams,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get sizeMm => $composableBuilder(
+    column: $table.sizeMm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SpecimensTableOrderingComposer get specimenId {
+    final $$SpecimensTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableOrderingComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenMeasurementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SpecimenMeasurementsTable> {
+  $$SpecimenMeasurementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+
+  GeneratedColumn<double> get weightGrams => $composableBuilder(
+    column: $table.weightGrams,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get sizeMm =>
+      $composableBuilder(column: $table.sizeMm, builder: (column) => column);
+
+  $$SpecimensTableAnnotationComposer get specimenId {
+    final $$SpecimensTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.specimenId,
+      referencedTable: $db.specimens,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SpecimensTableAnnotationComposer(
+            $db: $db,
+            $table: $db.specimens,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SpecimenMeasurementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SpecimenMeasurementsTable,
+          SpecimenMeasurement,
+          $$SpecimenMeasurementsTableFilterComposer,
+          $$SpecimenMeasurementsTableOrderingComposer,
+          $$SpecimenMeasurementsTableAnnotationComposer,
+          $$SpecimenMeasurementsTableCreateCompanionBuilder,
+          $$SpecimenMeasurementsTableUpdateCompanionBuilder,
+          (SpecimenMeasurement, $$SpecimenMeasurementsTableReferences),
+          SpecimenMeasurement,
+          PrefetchHooks Function({bool specimenId})
+        > {
+  $$SpecimenMeasurementsTableTableManager(
+    _$AppDatabase db,
+    $SpecimenMeasurementsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SpecimenMeasurementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SpecimenMeasurementsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SpecimenMeasurementsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> specimenId = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<double?> weightGrams = const Value.absent(),
+                Value<double?> sizeMm = const Value.absent(),
+              }) => SpecimenMeasurementsCompanion(
+                id: id,
+                specimenId: specimenId,
+                timestamp: timestamp,
+                weightGrams: weightGrams,
+                sizeMm: sizeMm,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int specimenId,
+                Value<DateTime> timestamp = const Value.absent(),
+                Value<double?> weightGrams = const Value.absent(),
+                Value<double?> sizeMm = const Value.absent(),
+              }) => SpecimenMeasurementsCompanion.insert(
+                id: id,
+                specimenId: specimenId,
+                timestamp: timestamp,
+                weightGrams: weightGrams,
+                sizeMm: sizeMm,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SpecimenMeasurementsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({specimenId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (specimenId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.specimenId,
+                                referencedTable:
+                                    $$SpecimenMeasurementsTableReferences
+                                        ._specimenIdTable(db),
+                                referencedColumn:
+                                    $$SpecimenMeasurementsTableReferences
+                                        ._specimenIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SpecimenMeasurementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SpecimenMeasurementsTable,
+      SpecimenMeasurement,
+      $$SpecimenMeasurementsTableFilterComposer,
+      $$SpecimenMeasurementsTableOrderingComposer,
+      $$SpecimenMeasurementsTableAnnotationComposer,
+      $$SpecimenMeasurementsTableCreateCompanionBuilder,
+      $$SpecimenMeasurementsTableUpdateCompanionBuilder,
+      (SpecimenMeasurement, $$SpecimenMeasurementsTableReferences),
+      SpecimenMeasurement,
+      PrefetchHooks Function({bool specimenId})
+    >;
 typedef $$ActivityLogEntriesTableCreateCompanionBuilder =
     ActivityLogEntriesCompanion Function({
       Value<int> id,
@@ -11198,6 +11997,8 @@ class $AppDatabaseManager {
       $$ToolsTableTableManager(_db, _db.tools);
   $$SpecimenLogEntriesTableTableManager get specimenLogEntries =>
       $$SpecimenLogEntriesTableTableManager(_db, _db.specimenLogEntries);
+  $$SpecimenMeasurementsTableTableManager get specimenMeasurements =>
+      $$SpecimenMeasurementsTableTableManager(_db, _db.specimenMeasurements);
   $$ActivityLogEntriesTableTableManager get activityLogEntries =>
       $$ActivityLogEntriesTableTableManager(_db, _db.activityLogEntries);
   $$BreedingRemindersTableTableManager get breedingReminders =>

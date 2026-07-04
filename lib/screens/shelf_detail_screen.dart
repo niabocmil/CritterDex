@@ -254,8 +254,8 @@ class _ShelfDetailScreenState extends State<ShelfDetailScreen> {
                         title: Text(s.name?.isNotEmpty == true ? s.name! : s.species),
                         subtitle: Text([
                           if (s.species.isNotEmpty) s.species,
-                          if (s.sizeCm != null)
-                            '${s.sizeCm!.toStringAsFixed(1)} cm',
+                          if (s.sizeMm != null)
+                            '${s.sizeMm!.toStringAsFixed(1)} mm',
                           if (s.weightGrams != null)
                             '${s.weightGrams!.toStringAsFixed(1)} g',
                         ].join(' · ')),

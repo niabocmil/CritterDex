@@ -33,7 +33,7 @@ class ExcelExportService {
       TextCellValue('Replenish interval (days)'),
       TextCellValue('Last replenished'),
       TextCellValue('Weight (g)'),
-      TextCellValue('Size (cm)'),
+      TextCellValue('Size (mm)'),
       TextCellValue('Date of birth'),
       TextCellValue('Date acquired'),
       TextCellValue('Notes'),
@@ -55,7 +55,7 @@ class ExcelExportService {
           DoubleCellValue(s.weightGrams!)
         else
           TextCellValue(''),
-        if (s.sizeCm != null) DoubleCellValue(s.sizeCm!) else TextCellValue(''),
+        if (s.sizeMm != null) DoubleCellValue(s.sizeMm!) else TextCellValue(''),
         TextCellValue(s.dateOfBirth?.toIso8601String() ?? ''),
         TextCellValue(s.dateAcquired?.toIso8601String() ?? ''),
         TextCellValue(s.notes ?? ''),

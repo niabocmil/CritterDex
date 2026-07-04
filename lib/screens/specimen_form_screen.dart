@@ -93,7 +93,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _dateOfBirth = existing.dateOfBirth;
       _ageUnknown = existing.dateOfBirth == null;
       _weightController.text = existing.weightGrams?.toString() ?? '';
-      _sizeController.text = existing.sizeCm?.toString() ?? '';
+      _sizeController.text = existing.sizeMm?.toString() ?? '';
       _lifeStage = BeetleLifeStage.fromValue(existing.lifeStage);
       _beetleFamily = BeetleFamily.fromValue(existing.beetleFamily);
       _photoPath = existing.photoPath;
@@ -221,7 +221,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
           weightGrams: Value(weight),
-          sizeCm: Value(size),
+          sizeMm: Value(size),
           lifeStage: Value(lifeStage),
           beetleFamily: Value(beetleFamily),
           replenishIntervalDays: Value(replenishIntervalDays),
@@ -248,7 +248,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
               dateAcquired: Value(_dateAcquired),
               dateOfBirth: Value(dob),
               weightGrams: Value(weight),
-              sizeCm: Value(size),
+              sizeMm: Value(size),
               lifeStage: Value(lifeStage),
               beetleFamily: Value(beetleFamily),
               replenishIntervalDays: Value(replenishIntervalDays),
@@ -275,7 +275,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
           weightGrams: Value(weight),
-          sizeCm: Value(size),
+          sizeMm: Value(size),
           lifeStage: Value(lifeStage),
           beetleFamily: Value(beetleFamily),
           replenishIntervalDays: Value(replenishIntervalDays),
@@ -570,7 +570,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
             Expanded(
               child: TextFormField(
                 controller: _sizeController,
-                decoration: const InputDecoration(labelText: 'Size (cm)'),
+                decoration: const InputDecoration(labelText: 'Size (mm)'),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
               ),

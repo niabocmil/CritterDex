@@ -9,7 +9,10 @@ class Specimens extends Table {
   DateTimeColumn get dateAcquired => dateTime().nullable()();
   DateTimeColumn get dateOfBirth => dateTime().nullable()();
   RealColumn get weightGrams => real().nullable()();
-  RealColumn get sizeCm => real().nullable()();
+  // Millimetres. Was centimetres (`size_cm`) through schema v7; v8's
+  // migration backfills this from the old column via raw SQL since the
+  // column itself is no longer declared here.
+  RealColumn get sizeMm => real().nullable()();
   TextColumn get lifeStage => text().nullable()();
   TextColumn get beetleFamily => text().nullable()();
   IntColumn get replenishIntervalDays => integer().nullable()();
@@ -42,6 +45,20 @@ class SpecimenLogEntries extends Table {
   DateTimeColumn get timestamp =>
       dateTime().withDefault(currentDateAndTime)();
   TextColumn get note => text()();
+}
+
+/// One row per "record weight/size" entry for a specimen, kept forever so
+/// the specimen detail page can chart growth over time. Distinct from
+/// [SpecimenLogEntries] (free-text notes) even though both feed the same
+/// on-screen timeline.
+@DataClassName('SpecimenMeasurement')
+class SpecimenMeasurements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get specimenId => integer().references(Specimens, #id)();
+  DateTimeColumn get timestamp =>
+      dateTime().withDefault(currentDateAndTime)();
+  RealColumn get weightGrams => real().nullable()();
+  RealColumn get sizeMm => real().nullable()();
 }
 
 class BreedingEvents extends Table {

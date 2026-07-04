@@ -29,6 +29,8 @@ class BackupService {
     final breedingEvents = await db.select(db.breedingEvents).get();
     final logEntries = await db.select(db.breedingLogEntries).get();
     final specimenLogEntries = await db.select(db.specimenLogEntries).get();
+    final specimenMeasurements =
+        await db.select(db.specimenMeasurements).get();
 
     final data = {
       'version': 1,
@@ -39,6 +41,8 @@ class BackupService {
       'breedingEvents': breedingEvents.map((b) => b.toJson()).toList(),
       'breedingLogEntries': logEntries.map((e) => e.toJson()).toList(),
       'specimenLogEntries': specimenLogEntries.map((e) => e.toJson()).toList(),
+      'specimenMeasurements':
+          specimenMeasurements.map((e) => e.toJson()).toList(),
     };
 
     final archive = Archive();
@@ -96,8 +100,13 @@ class BackupService {
     final specimenLogEntries =
         (data['specimenLogEntries'] as List?)?.cast<Map<String, dynamic>>() ??
             [];
+    // Older (pre-v8) backups won't have a 'specimenMeasurements' key.
+    final specimenMeasurements =
+        (data['specimenMeasurements'] as List?)?.cast<Map<String, dynamic>>() ??
+            [];
 
     await db.transaction(() async {
+      await db.delete(db.specimenMeasurements).go();
       await db.delete(db.specimenLogEntries).go();
       await db.delete(db.breedingLogEntries).go();
       await db.delete(db.breedingEvents).go();
@@ -127,6 +136,9 @@ class BackupService {
       for (final row in specimenLogEntries) {
         await db.into(db.specimenLogEntries).insert(SpecimenLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
       }
+      for (final row in specimenMeasurements) {
+        await db.into(db.specimenMeasurements).insert(SpecimenMeasurement.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
     });
 
     final docsDir = await getApplicationDocumentsDirectory();
@@ -150,6 +162,7 @@ class BackupService {
     await db.transaction(() async {
       await db.delete(db.activityLogEntries).go();
       await db.delete(db.breedingReminders).go();
+      await db.delete(db.specimenMeasurements).go();
       await db.delete(db.specimenLogEntries).go();
       await db.delete(db.breedingLogEntries).go();
       await db.delete(db.breedingEvents).go();

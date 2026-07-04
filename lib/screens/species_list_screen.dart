@@ -53,8 +53,8 @@ class SpeciesListScreen extends StatelessWidget {
               final specimens = bySpecies[species]!;
               double? longest;
               for (final s in specimens) {
-                if (s.sizeCm != null && (longest == null || s.sizeCm! > longest)) {
-                  longest = s.sizeCm!;
+                if (s.sizeMm != null && (longest == null || s.sizeMm! > longest)) {
+                  longest = s.sizeMm!;
                 }
               }
               final latest = specimens
@@ -90,7 +90,7 @@ class SpeciesListScreen extends StatelessWidget {
                               Text(
                                 longest == null
                                     ? '${specimens.length} specimen(s)'
-                                    : 'Longest: ${longest.toStringAsFixed(1)} cm · ${specimens.length} specimen(s)',
+                                    : 'Longest: ${longest.toStringAsFixed(1)} mm · ${specimens.length} specimen(s)',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context)

@@ -10,11 +10,35 @@ import '../models/enums.dart';
 import '../models/lineage_utils.dart';
 import '../models/replenish.dart';
 import '../models/terrarium_layout.dart';
+import '../widgets/growth_chart.dart';
 import '../widgets/specimen_avatar.dart';
 import '../widgets/terrarium_picker_sheet.dart';
 import 'lineage_screen.dart';
 import 'specimen_form_screen.dart';
 import 'terrarium_form_screen.dart';
+
+/// A single row in the merged timeline: either a free-text note
+/// ([SpecimenLogEntry]) or a weight/size record ([SpecimenMeasurement]),
+/// shown together sorted by [timestamp].
+class _TimelineEntry {
+  _TimelineEntry.note(SpecimenLogEntry entry)
+      : timestamp = entry.timestamp,
+        icon = Icons.notes,
+        title = entry.note;
+
+  _TimelineEntry.measurement(SpecimenMeasurement entry)
+      : timestamp = entry.timestamp,
+        icon = Icons.monitor_weight_outlined,
+        title = [
+          if (entry.weightGrams != null)
+            '${entry.weightGrams!.toStringAsFixed(1)} g',
+          if (entry.sizeMm != null) '${entry.sizeMm!.toStringAsFixed(1)} mm',
+        ].join(' · ');
+
+  final DateTime timestamp;
+  final IconData icon;
+  final String title;
+}
 
 Future<(Terrarium, String)?> _loadAssignedTerrarium(
     AppDatabase db, int terrariumId) async {
@@ -65,6 +89,60 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
     ));
     _noteController.clear();
     setState(() {});
+  }
+
+  Future<void> _recordMeasurement(
+      BuildContext context, AppDatabase db, Specimen specimen) async {
+    final weightController = TextEditingController(
+        text: specimen.weightGrams?.toString() ?? '');
+    final sizeController =
+        TextEditingController(text: specimen.sizeMm?.toString() ?? '');
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Record weight & size'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: weightController,
+                decoration: const InputDecoration(labelText: 'Weight (g)'),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: sizeController,
+                decoration: const InputDecoration(labelText: 'Size (mm)'),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (result != true) return;
+      final weight = double.tryParse(weightController.text.trim());
+      final size = double.tryParse(sizeController.text.trim());
+      if (weight == null && size == null) return;
+      await db.recordSpecimenMeasurement(specimen,
+          weightGrams: weight, sizeMm: size);
+    } finally {
+      weightController.dispose();
+      sizeController.dispose();
+    }
   }
 
   @override
@@ -195,11 +273,11 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                                   label: Text(
                                       '${specimen.weightGrams!.toStringAsFixed(1)} g'),
                                 ),
-                              if (specimen.sizeCm != null)
+                              if (specimen.sizeMm != null)
                                 Chip(
                                   avatar: const Icon(Icons.straighten, size: 16),
                                   label: Text(
-                                      '${specimen.sizeCm!.toStringAsFixed(1)} cm'),
+                                      '${specimen.sizeMm!.toStringAsFixed(1)} mm'),
                                 ),
                               if (specimen.lifeStage != null)
                                 Chip(
@@ -226,15 +304,52 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                             ),
                           ],
                           const SizedBox(height: 20),
-                          FilledButton.tonalIcon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    LineageScreen(specimenId: specimen.id),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          LineageScreen(specimenId: specimen.id),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.account_tree_outlined),
+                                  label: const Text('View family tree'),
+                                ),
                               ),
-                            ),
-                            icon: const Icon(Icons.account_tree_outlined),
-                            label: const Text('View family tree'),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _recordMeasurement(context, db, specimen),
+                                  icon: const Icon(Icons.monitor_weight_outlined),
+                                  label: const Text('Record weight & size'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          StreamBuilder<List<SpecimenMeasurement>>(
+                            stream: db.watchMeasurementsForSpecimen(specimen.id),
+                            builder: (context, measurementSnapshot) {
+                              final measurements = measurementSnapshot.data ??
+                                  const <SpecimenMeasurement>[];
+                              if (measurements.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 24),
+                                  Text('Growth',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium),
+                                  const SizedBox(height: 12),
+                                  GrowthChart(measurements: measurements),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
                           if (specimen.terrariumId != null)
@@ -395,23 +510,39 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                             stream:
                                 db.watchLogEntriesForSpecimen(specimen.id),
                             builder: (context, logSnapshot) {
-                              final entries =
+                              final notes =
                                   logSnapshot.data ?? const <SpecimenLogEntry>[];
-                              if (entries.isEmpty) {
-                                return const Text('No timeline entries yet.');
-                              }
-                              return Column(
-                                children: [
-                                  for (final entry in entries.reversed)
-                                    ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: const Icon(Icons.notes),
-                                      title: Text(entry.note),
-                                      subtitle: Text(DateFormat.yMMMd()
-                                          .add_jm()
-                                          .format(entry.timestamp)),
-                                    ),
-                                ],
+                              return StreamBuilder<List<SpecimenMeasurement>>(
+                                stream: db
+                                    .watchMeasurementsForSpecimen(specimen.id),
+                                builder: (context, measurementSnapshot) {
+                                  final measurements =
+                                      measurementSnapshot.data ??
+                                          const <SpecimenMeasurement>[];
+                                  final items = [
+                                    for (final note in notes)
+                                      _TimelineEntry.note(note),
+                                    for (final m in measurements)
+                                      _TimelineEntry.measurement(m),
+                                  ]..sort((a, b) =>
+                                      b.timestamp.compareTo(a.timestamp));
+                                  if (items.isEmpty) {
+                                    return const Text('No timeline entries yet.');
+                                  }
+                                  return Column(
+                                    children: [
+                                      for (final entry in items)
+                                        ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          leading: Icon(entry.icon),
+                                          title: Text(entry.title),
+                                          subtitle: Text(DateFormat.yMMMd()
+                                              .add_jm()
+                                              .format(entry.timestamp)),
+                                        ),
+                                    ],
+                                  );
+                                },
                               );
                             },
                           ),

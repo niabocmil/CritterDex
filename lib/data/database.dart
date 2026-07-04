@@ -27,6 +27,7 @@ LazyDatabase _openConnection() {
   Terrariums,
   Tools,
   SpecimenLogEntries,
+  SpecimenMeasurements,
   ActivityLogEntries,
   BreedingReminders,
   SpeciesInfos,
@@ -37,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,7 +53,11 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(specimens, specimens.speciesIconKey);
             await m.addColumn(specimens, specimens.dateOfBirth);
             await m.addColumn(specimens, specimens.weightGrams);
-            await m.addColumn(specimens, specimens.sizeCm);
+            // size_cm no longer exists on the Specimens table (see the v8
+            // migration below, which converts it to size_mm), but it still
+            // needs to be created here via raw SQL for anyone upgrading
+            // from v1 so that v8's conversion has a column to read from.
+            await customStatement('ALTER TABLE specimens ADD COLUMN size_cm REAL');
             await m.addColumn(specimens, specimens.lifeStage);
             await m.addColumn(specimens, specimens.terrariumId);
             await m.addColumn(specimens, specimens.sourceBreedingEventId);
@@ -93,6 +98,16 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(
                 breedingEvents, breedingEvents.fatherPreviousTerrariumId);
             await m.addColumn(breedingEvents, breedingEvents.failedAt);
+          }
+          if (from < 8) {
+            await m.addColumn(specimens, specimens.sizeMm);
+            // size_cm still physically exists on upgrading databases even
+            // though it's no longer declared on the Specimens table above;
+            // read/write it as raw SQL to convert cm -> mm.
+            await customStatement(
+                'UPDATE specimens SET size_mm = size_cm * 10 WHERE size_cm IS NOT NULL');
+            await m.createTable(specimenMeasurements);
+            await _backfillSpecimenMeasurements();
           }
         },
       );
@@ -269,6 +284,23 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// One-time v7 -> v8 migration helper: seeds one initial growth-chart
+  /// point per pre-existing specimen that already had a weight and/or size
+  /// recorded, using the specimen's own createdAt, so the graph isn't empty
+  /// right after upgrading.
+  Future<void> _backfillSpecimenMeasurements() async {
+    final allSpecimens = await select(specimens).get();
+    for (final s in allSpecimens) {
+      if (s.weightGrams == null && s.sizeMm == null) continue;
+      await into(specimenMeasurements).insert(SpecimenMeasurementsCompanion.insert(
+        specimenId: s.id,
+        timestamp: Value(s.createdAt),
+        weightGrams: Value(s.weightGrams),
+        sizeMm: Value(s.sizeMm),
+      ));
+    }
+  }
+
   // ---------- Activity log ----------
 
   Future<void> logActivity({
@@ -419,6 +451,39 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> insertSpecimenLogEntry(SpecimenLogEntriesCompanion entry) =>
       into(specimenLogEntries).insert(entry);
+
+  // ---------- Specimen measurements (weight/size growth) ----------
+
+  Stream<List<SpecimenMeasurement>> watchMeasurementsForSpecimen(
+      int specimenId) {
+    return (select(specimenMeasurements)
+          ..where((e) => e.specimenId.equals(specimenId))
+          ..orderBy([(e) => OrderingTerm.asc(e.timestamp)]))
+        .watch();
+  }
+
+  /// Records a new weight/size measurement and mirrors it onto the
+  /// specimen's own current weightGrams/sizeMm fields, so chips elsewhere in
+  /// the app that show "current" values stay in sync without re-reading the
+  /// measurement history.
+  Future<void> recordSpecimenMeasurement(
+    Specimen specimen, {
+    double? weightGrams,
+    double? sizeMm,
+  }) async {
+    await transaction(() async {
+      await into(specimenMeasurements).insert(SpecimenMeasurementsCompanion.insert(
+        specimenId: specimen.id,
+        weightGrams: Value(weightGrams),
+        sizeMm: Value(sizeMm),
+      ));
+      await update(specimens).replace(specimen.copyWith(
+        weightGrams:
+            weightGrams != null ? Value(weightGrams) : const Value.absent(),
+        sizeMm: sizeMm != null ? Value(sizeMm) : const Value.absent(),
+      ));
+    });
+  }
 
   // ---------- Breeding events ----------
 

@@ -56,10 +56,10 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
             }
             for (final s in specimens) {
               if (BeetleLifeStage.fromValue(s.lifeStage) != BeetleLifeStage.adult ||
-                  s.sizeCm == null) {
+                  s.sizeMm == null) {
                 continue;
               }
-              if (lengthRecord == null || s.sizeCm! > lengthRecord.sizeCm!) {
+              if (lengthRecord == null || s.sizeMm! > lengthRecord.sizeMm!) {
                 lengthRecord = s;
               }
             }
@@ -71,8 +71,8 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
               }
             }
             for (final s in specimens) {
-              if (s.sizeCm == null) continue;
-              if (lengthRecord == null || s.sizeCm! > lengthRecord.sizeCm!) {
+              if (s.sizeMm == null) continue;
+              if (lengthRecord == null || s.sizeMm! > lengthRecord.sizeMm!) {
                 lengthRecord = s;
               }
             }
@@ -135,7 +135,7 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
                       _RecordTile(
                         label: isBeetle ? 'Longest (Adult)' : 'Longest',
                         specimen: lengthRecord,
-                        valueText: '${lengthRecord.sizeCm!.toStringAsFixed(1)} cm',
+                        valueText: '${lengthRecord.sizeMm!.toStringAsFixed(1)} mm',
                       ),
                   ],
                   const Divider(height: 32),
@@ -312,8 +312,8 @@ class _SpecimenRow extends StatelessWidget {
                         [
                           if (specimen.weightGrams != null)
                             '${specimen.weightGrams!.toStringAsFixed(1)} g',
-                          if (specimen.sizeCm != null)
-                            '${specimen.sizeCm!.toStringAsFixed(1)} cm',
+                          if (specimen.sizeMm != null)
+                            '${specimen.sizeMm!.toStringAsFixed(1)} mm',
                         ].join(' · '),
                         style: TextStyle(fontSize: 12, color: subtitleColor)),
                   ],
