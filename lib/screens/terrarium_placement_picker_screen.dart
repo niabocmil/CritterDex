@@ -131,7 +131,14 @@ class _TerrariumPlacementPickerScreenState
       sourceShelfItems: all,
       targetShelfItems: all,
     );
-    final moverUpdate = updates.firstWhere((u) => u.id == -1);
+    final moverUpdate = updates.firstWhere(
+      (u) => u.id == -1,
+      // planMove should always include the mover's own update; falling back
+      // to a MoveException (already handled by the caller) instead of an
+      // uncaught StateError if that assumption is ever wrong.
+      orElse: () =>
+          throw MoveException('Could not compute a valid position here.'),
+    );
     final siblingUpdates = updates.where((u) => u.id != -1).toList();
     return PlacementChoice(
       level: moverUpdate.level,

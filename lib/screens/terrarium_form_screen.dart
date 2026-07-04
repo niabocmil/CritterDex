@@ -698,7 +698,7 @@ class _TerrariumFormScreenState extends State<TerrariumFormScreen> {
                                       ),
                                     ),
                                   );
-                                  if (result != null) {
+                                  if (result != null && mounted) {
                                     setState(() => _manualChoice = result);
                                   }
                                 },

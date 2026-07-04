@@ -80,7 +80,7 @@ class _ToolFormScreenState extends State<ToolFormScreen> {
         ],
       ),
     );
-    if (confirmed == true) setState(() => _color = picked);
+    if (confirmed == true && mounted) setState(() => _color = picked);
   }
 
   String? _requiredNumber(String? v) {
@@ -330,7 +330,7 @@ class _ToolFormScreenState extends State<ToolFormScreen> {
                                     ),
                                   ),
                                 );
-                                if (result != null) {
+                                if (result != null && mounted) {
                                   setState(() => _manualChoice = result);
                                 }
                               },

@@ -88,7 +88,7 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
       note: note,
     ));
     _noteController.clear();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _recordMeasurement(

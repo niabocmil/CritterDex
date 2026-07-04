@@ -225,7 +225,11 @@ class _ShelfVisualizationState extends State<ShelfVisualization> {
             Builder(builder: (context) {
               final key = shelfItemKey(item);
               final isDragging = key == _draggingKey;
-              final rect = (isDragging ? baseGeo.rects[key] : geo.rects[key])!;
+              // No rect means this item's level didn't fall in 1..levelCount
+              // (e.g. bad/partial data) — skip it rather than crash the
+              // whole shelf view.
+              final rect = isDragging ? baseGeo.rects[key] : geo.rects[key];
+              if (rect == null) return const SizedBox.shrink();
               return AnimatedPositioned(
                 key: ValueKey(key),
                 duration: const Duration(milliseconds: 150),

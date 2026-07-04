@@ -345,6 +345,17 @@ class AppDatabase extends _$AppDatabase {
   Future<int> deleteBreedingReminder(int id) =>
       (delete(breedingReminders)..where((r) => r.id.equals(id))).go();
 
+  /// Resolves every still-active reminder for one event — used when the
+  /// event itself stops needing attention (marked failed, or advanced to
+  /// [BreedingStage.complete]) so stale reminders don't keep nagging.
+  Future<void> markAllRemindersDoneForEvent(int breedingEventId) async {
+    await (update(breedingReminders)
+          ..where((r) =>
+              r.breedingEventId.equals(breedingEventId) &
+              r.completedAt.isNull()))
+        .write(BreedingRemindersCompanion(completedAt: Value(DateTime.now())));
+  }
+
   Stream<List<BreedingReminder>> watchActiveBreedingReminders() =>
       (select(breedingReminders)..where((r) => r.completedAt.isNull())).watch();
 
@@ -520,8 +531,21 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> updateBreedingEvent(BreedingEvent entry) =>
       update(breedingEvents).replace(entry);
 
-  Future<int> deleteBreedingEvent(int id) =>
-      (delete(breedingEvents)..where((b) => b.id.equals(id))).go();
+  /// Deleting an event has no DB-level cascade (breedingReminders/
+  /// breedingLogEntries reference it by id only), so this explicitly clears
+  /// its dependents first — otherwise a reminder would keep showing up
+  /// forever for an event that no longer exists.
+  Future<int> deleteBreedingEvent(int id) {
+    return transaction(() async {
+      await (delete(breedingReminders)
+            ..where((r) => r.breedingEventId.equals(id)))
+          .go();
+      await (delete(breedingLogEntries)
+            ..where((e) => e.breedingEventId.equals(id)))
+          .go();
+      return (delete(breedingEvents)..where((b) => b.id.equals(id))).go();
+    });
+  }
 
   // ---------- Breeding log entries ----------
 

@@ -51,7 +51,7 @@ class ReplenishDueScreen extends StatelessWidget {
                       relatedIds: ids,
                     );
                   }
-                  setSheetState(() {});
+                  if (context.mounted) setSheetState(() {});
                 }
 
                 return ListView(

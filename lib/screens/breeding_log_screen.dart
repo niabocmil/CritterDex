@@ -23,6 +23,11 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
   final _clutchController = TextEditingController();
   final _reminderDaysController = TextEditingController();
   final _reminderNoteController = TextEditingController();
+  // Tracks which event's clutchSize is currently reflected in the
+  // controller, so a stream re-emission triggered by an unrelated update
+  // (advancing stage, setting a reminder, ...) doesn't clobber whatever the
+  // user is mid-way through typing.
+  int? _clutchSyncedForEventId;
 
   @override
   void dispose() {
@@ -62,6 +67,9 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
       breedingEventId: event.id,
       stageAtEntry: Value(next.name),
     ));
+    if (next == BreedingStage.complete) {
+      await db.markAllRemindersDoneForEvent(event.id);
+    }
   }
 
   Future<void> _addNote(AppDatabase db, BreedingEvent event) async {
@@ -72,7 +80,7 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
       note: Value(note),
     ));
     _noteController.clear();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _saveClutchSize(AppDatabase db, BreedingEvent event) async {
@@ -216,6 +224,7 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
     );
     if (confirmed == true) {
       await db.updateBreedingEvent(event.copyWith(failedAt: Value(DateTime.now())));
+      await db.markAllRemindersDoneForEvent(event.id);
     }
   }
 
@@ -231,8 +240,9 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
               body: Center(child: CircularProgressIndicator()));
         }
         final stage = BreedingStage.fromValue(event.stage);
-        if (_clutchController.text.isEmpty && event.clutchSize != null) {
-          _clutchController.text = event.clutchSize.toString();
+        if (_clutchSyncedForEventId != event.id) {
+          _clutchController.text = event.clutchSize?.toString() ?? '';
+          _clutchSyncedForEventId = event.id;
         }
 
         return StreamBuilder<List<Specimen>>(

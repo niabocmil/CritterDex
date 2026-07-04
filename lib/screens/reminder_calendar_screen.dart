@@ -94,6 +94,7 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
                                     onPressed: () async {
                                       await db.markBreedingReminderDone(
                                           item.breedingReminderId!);
+                                      if (!context.mounted) return;
                                       items.remove(item);
                                       setSheetState(() {});
                                     },
@@ -104,6 +105,7 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
                                     onPressed: () async {
                                       await db.deleteBreedingReminder(
                                           item.breedingReminderId!);
+                                      if (!context.mounted) return;
                                       items.remove(item);
                                       setSheetState(() {});
                                     },

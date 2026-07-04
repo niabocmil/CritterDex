@@ -70,6 +70,12 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   int? _motherId;
   int? _fatherId;
   int? _terrariumId;
+  // Loaded once (not via a per-build FutureBuilder) so the Bloodline
+  // dropdowns' initialValue is only baked in once real data is available —
+  // see _ParentDropdown's key.
+  List<Specimen> _allSpecimens = const [];
+  bool _specimensLoaded = false;
+  Map<int, String> _terrariumLabels = const {};
   final _replenishIntervalController = TextEditingController();
   final _replenishNoteController = TextEditingController();
   DateTime? _lastReplenishedAt;
@@ -111,6 +117,29 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _fatherId = widget.prefillFatherId;
       _terrariumId = widget.prefillTerrariumId;
     }
+    _loadBloodlineOptions();
+    _loadTerrariumLabels();
+  }
+
+  Future<void> _loadBloodlineOptions() async {
+    final db = context.read<AppDatabase>();
+    final all = await db.getAllSpecimens();
+    if (!mounted) return;
+    setState(() {
+      _allSpecimens = all;
+      _specimensLoaded = true;
+    });
+  }
+
+  Future<void> _loadTerrariumLabels() async {
+    final db = context.read<AppDatabase>();
+    final terrariums = await db.getAllTerrariums();
+    final shelves = await db.getAllShelves();
+    final tools = await db.getAllTools();
+    if (!mounted) return;
+    setState(() {
+      _terrariumLabels = computeAllTerrariumLabels(shelves, terrariums, tools);
+    });
   }
 
   @override
@@ -132,7 +161,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       context: context,
       builder: (_) => SpecimenIconPickerDialog(selected: _iconType),
     );
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _iconType = result;
         if (result != SpecimenIconType.beetle) {
@@ -153,7 +182,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     final ext = p.extension(picked.path);
     final newPath = p.join(photosDir.path, '${const Uuid().v4()}$ext');
     await File(picked.path).copy(newPath);
-    setState(() => _photoPath = newPath);
+    if (mounted) setState(() => _photoPath = newPath);
   }
 
   Future<void> _pickDate({required bool isBirth}) async {
@@ -164,7 +193,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       firstDate: DateTime(now.year - 50),
       lastDate: now,
     );
-    if (result == null) return;
+    if (result == null || !mounted) return;
     setState(() {
       if (isBirth) {
         _dateOfBirth = result;
@@ -483,35 +512,35 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   }
 
   Widget _buildBloodlineStep() {
-    final db = context.read<AppDatabase>();
-    return FutureBuilder<List<Specimen>>(
-      future: db.getAllSpecimens(),
-      builder: (context, snapshot) {
-        final all = (snapshot.data ?? const [])
-            .where((s) => s.id != widget.existing?.id)
-            .toList();
-        final mothers =
-            all.where((s) => s.sex == SpecimenSex.female.name).toList();
-        final fathers =
-            all.where((s) => s.sex == SpecimenSex.male.name).toList();
-        return Column(
-          children: [
-            _ParentDropdown(
-              label: 'Mother',
-              options: mothers,
-              value: _motherId,
-              onChanged: (id) => setState(() => _motherId = id),
-            ),
-            const SizedBox(height: 12),
-            _ParentDropdown(
-              label: 'Father',
-              options: fathers,
-              value: _fatherId,
-              onChanged: (id) => setState(() => _fatherId = id),
-            ),
-          ],
-        );
-      },
+    final all = _allSpecimens.where((s) => s.id != widget.existing?.id).toList();
+    final mothers =
+        all.where((s) => s.sex == SpecimenSex.female.name).toList();
+    final fathers =
+        all.where((s) => s.sex == SpecimenSex.male.name).toList();
+    return Column(
+      children: [
+        _ParentDropdown(
+          // DropdownButtonFormField's initialValue is a one-shot seed read
+          // only in its State's initState — it never re-syncs on rebuild.
+          // Keying on _specimensLoaded forces the field to remount (and
+          // re-seed) the moment the real specimen list arrives, instead of
+          // being permanently stuck showing "None" from the first
+          // (pre-load) build.
+          key: ValueKey('mother_$_specimensLoaded'),
+          label: 'Mother',
+          options: mothers,
+          value: _motherId,
+          onChanged: (id) => setState(() => _motherId = id),
+        ),
+        const SizedBox(height: 12),
+        _ParentDropdown(
+          key: ValueKey('father_$_specimensLoaded'),
+          label: 'Father',
+          options: fathers,
+          value: _fatherId,
+          onChanged: (id) => setState(() => _fatherId = id),
+        ),
+      ],
     );
   }
 
@@ -656,25 +685,20 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 14),
-        FutureBuilder<Map<int, String>>(
-          future: _loadTerrariumLabels(db),
-          builder: (context, snapshot) {
-            final labels = snapshot.data ?? const <int, String>{};
-            return InkWell(
-              onTap: () async {
-                final id = await showTerrariumPickerSheet(context, db);
-                if (id != _terrariumId) setState(() => _terrariumId = id);
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Terrarium',
-                  suffixIcon: Icon(Icons.search),
-                ),
-                child: Text(
-                    _terrariumId == null ? 'None' : (labels[_terrariumId] ?? '—')),
-              ),
-            );
+        InkWell(
+          onTap: () async {
+            final id = await showTerrariumPickerSheet(context, db);
+            if (id != _terrariumId) setState(() => _terrariumId = id);
           },
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Terrarium',
+              suffixIcon: Icon(Icons.search),
+            ),
+            child: Text(_terrariumId == null
+                ? 'None'
+                : (_terrariumLabels[_terrariumId] ?? '—')),
+          ),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(
@@ -683,7 +707,10 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
               MaterialPageRoute(
                   builder: (_) => const TerrariumFormScreen()),
             );
-            if (id != null) setState(() => _terrariumId = id);
+            if (id != null) {
+              setState(() => _terrariumId = id);
+              await _loadTerrariumLabels();
+            }
           },
           icon: const Icon(Icons.add),
           label: const Text('New terrarium'),
@@ -692,19 +719,13 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     );
   }
 
-  Future<Map<int, String>> _loadTerrariumLabels(AppDatabase db) async {
-    final terrariums = await db.getAllTerrariums();
-    final shelves = await db.getAllShelves();
-    final tools = await db.getAllTools();
-    return computeAllTerrariumLabels(shelves, terrariums, tools);
-  }
-
   String _formatDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
 class _ParentDropdown extends StatelessWidget {
   const _ParentDropdown({
+    super.key,
     required this.label,
     required this.options,
     required this.value,

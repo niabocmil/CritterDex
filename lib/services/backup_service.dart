@@ -31,6 +31,9 @@ class BackupService {
     final specimenLogEntries = await db.select(db.specimenLogEntries).get();
     final specimenMeasurements =
         await db.select(db.specimenMeasurements).get();
+    final breedingReminders = await db.select(db.breedingReminders).get();
+    final activityLogEntries = await db.select(db.activityLogEntries).get();
+    final speciesInfos = await db.select(db.speciesInfos).get();
 
     final data = {
       'version': 1,
@@ -43,6 +46,10 @@ class BackupService {
       'specimenLogEntries': specimenLogEntries.map((e) => e.toJson()).toList(),
       'specimenMeasurements':
           specimenMeasurements.map((e) => e.toJson()).toList(),
+      'breedingReminders': breedingReminders.map((r) => r.toJson()).toList(),
+      'activityLogEntries':
+          activityLogEntries.map((e) => e.toJson()).toList(),
+      'speciesInfos': speciesInfos.map((s) => s.toJson()).toList(),
     };
 
     final archive = Archive();
@@ -104,16 +111,28 @@ class BackupService {
     final specimenMeasurements =
         (data['specimenMeasurements'] as List?)?.cast<Map<String, dynamic>>() ??
             [];
+    // Older backups predating this fix won't have these three keys.
+    final breedingReminders =
+        (data['breedingReminders'] as List?)?.cast<Map<String, dynamic>>() ??
+            [];
+    final activityLogEntries =
+        (data['activityLogEntries'] as List?)?.cast<Map<String, dynamic>>() ??
+            [];
+    final speciesInfos =
+        (data['speciesInfos'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     await db.transaction(() async {
       await db.delete(db.specimenMeasurements).go();
       await db.delete(db.specimenLogEntries).go();
+      await db.delete(db.breedingReminders).go();
       await db.delete(db.breedingLogEntries).go();
       await db.delete(db.breedingEvents).go();
       await db.delete(db.specimens).go();
       await db.delete(db.terrariums).go();
       await db.delete(db.tools).go();
       await db.delete(db.shelves).go();
+      await db.delete(db.activityLogEntries).go();
+      await db.delete(db.speciesInfos).go();
 
       for (final row in shelves) {
         await db.into(db.shelves).insert(Shelf.fromJson(row), mode: InsertMode.insertOrReplace);
@@ -133,11 +152,20 @@ class BackupService {
       for (final row in logEntries) {
         await db.into(db.breedingLogEntries).insert(BreedingLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
       }
+      for (final row in breedingReminders) {
+        await db.into(db.breedingReminders).insert(BreedingReminder.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
       for (final row in specimenLogEntries) {
         await db.into(db.specimenLogEntries).insert(SpecimenLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
       }
       for (final row in specimenMeasurements) {
         await db.into(db.specimenMeasurements).insert(SpecimenMeasurement.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
+      for (final row in activityLogEntries) {
+        await db.into(db.activityLogEntries).insert(ActivityLogEntry.fromJson(row), mode: InsertMode.insertOrReplace);
+      }
+      for (final row in speciesInfos) {
+        await db.into(db.speciesInfos).insert(SpeciesInfo.fromJson(row), mode: InsertMode.insertOrReplace);
       }
     });
 
@@ -170,6 +198,7 @@ class BackupService {
       await db.delete(db.terrariums).go();
       await db.delete(db.tools).go();
       await db.delete(db.shelves).go();
+      await db.delete(db.speciesInfos).go();
     });
 
     final docsDir = await getApplicationDocumentsDirectory();

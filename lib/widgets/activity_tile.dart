@@ -43,12 +43,24 @@ class ActivityTile extends StatelessWidget {
       case ActivityType.terrariumDuplicated:
         final id = entry.entityId;
         if (id == null) return;
-        final terrarium = await db.getTerrariumById(id);
-        if (context.mounted) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => TerrariumFormScreen(existing: terrarium),
-          ));
+        Terrarium? terrarium;
+        try {
+          terrarium = await db.getTerrariumById(id);
+        } catch (_) {
+          // Soft-deleted and since hard-purged (30+ days in the bin) —
+          // the activity log entry itself is kept forever, so this can be
+          // tapped long after the terrarium it refers to is gone.
+          terrarium = null;
         }
+        if (!context.mounted) return;
+        if (terrarium == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('This terrarium no longer exists.')));
+          return;
+        }
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => TerrariumFormScreen(existing: terrarium),
+        ));
         return;
       case ActivityType.breedingEventAdded:
       case ActivityType.breedingReminderSet:
