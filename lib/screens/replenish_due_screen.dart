@@ -112,12 +112,13 @@ class ReplenishDueScreen extends StatelessWidget {
         stream: db.watchAllSpecimens(),
         builder: (context, specimenSnapshot) {
           final specimens = specimenSnapshot.data ?? const <Specimen>[];
-          final dueTerrariumIds = terrariumIdsNeedingReplenish(specimens);
 
           return StreamBuilder<List<Terrarium>>(
             stream: db.watchAllTerrariums(),
             builder: (context, terrariumSnapshot) {
               final terrariums = terrariumSnapshot.data ?? const <Terrarium>[];
+              final dueTerrariumIds = terrariumIdsNeedingReplenish(specimens,
+                  activeTerrariumIds: terrariums.map((t) => t.id).toSet());
               final dueTerrariums =
                   terrariums.where((t) => dueTerrariumIds.contains(t.id)).toList();
 

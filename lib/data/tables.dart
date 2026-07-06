@@ -21,6 +21,12 @@ class Specimens extends Table {
   TextColumn get status => text().withDefault(const Constant('alive'))();
   TextColumn get notes => text().nullable()();
   TextColumn get photoPath => text().nullable()();
+  // Wild caught / captive bred / unknown — only meaningful when this
+  // specimen has no recorded mother/father (a lineage "founder"). Descendant
+  // specimens derive their WF#/CBF# lineage label from their founder
+  // ancestor's origin instead of carrying their own.
+  TextColumn get origin =>
+      text().withDefault(const Constant('unknown'))();
   IntColumn get motherId => integer().nullable().references(Specimens, #id)();
   IntColumn get fatherId => integer().nullable().references(Specimens, #id)();
   IntColumn get terrariumId =>

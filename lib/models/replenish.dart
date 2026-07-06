@@ -20,8 +20,18 @@ bool isReplenishDue(Specimen specimen) =>
 /// Terrarium ids with at least one specimen due for replenishing today.
 /// Counted per terrarium, not per specimen — a terrarium with several
 /// overdue specimens still counts once.
-Set<int> terrariumIdsNeedingReplenish(List<Specimen> specimens) => specimens
-    .where(isReplenishDue)
-    .map((s) => s.terrariumId)
-    .whereType<int>()
-    .toSet();
+///
+/// [activeTerrariumIds] should be every currently-active (non-deleted)
+/// terrarium id. A specimen can keep pointing at a terrarium that's been
+/// moved to the bin or purged — filtering against this set stops that stale
+/// reference from resurrecting a due-count for a terrarium that's gone.
+Set<int> terrariumIdsNeedingReplenish(
+  List<Specimen> specimens, {
+  required Set<int> activeTerrariumIds,
+}) =>
+    specimens
+        .where(isReplenishDue)
+        .map((s) => s.terrariumId)
+        .whereType<int>()
+        .where(activeTerrariumIds.contains)
+        .toSet();

@@ -127,6 +127,25 @@ enum SpecimenSex {
       .firstWhere((e) => e.name == value, orElse: () => SpecimenSex.unknown);
 }
 
+/// Where a specimen with no recorded parents came from — the hobbyist
+/// WC (wild caught) / CB (captive bred) distinction. Only meaningful for
+/// such "founder" specimens; see [lineageLabel] in `lineage_utils.dart` for
+/// how it propagates to descendants as WF#/CBF# labels.
+enum SpecimenOrigin {
+  wildCaught,
+  captiveBred,
+  unknown;
+
+  String get label => switch (this) {
+        SpecimenOrigin.wildCaught => 'Wild caught',
+        SpecimenOrigin.captiveBred => 'Captive bred',
+        SpecimenOrigin.unknown => 'Unknown',
+      };
+
+  static SpecimenOrigin fromValue(String value) => SpecimenOrigin.values
+      .firstWhere((e) => e.name == value, orElse: () => SpecimenOrigin.unknown);
+}
+
 enum SpecimenStatus {
   alive,
   deceased,

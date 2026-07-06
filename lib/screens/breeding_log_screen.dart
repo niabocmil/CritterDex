@@ -516,7 +516,11 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
                       return Column(
                         children: [
                           for (final entry in entries.toList().reversed)
-                            _TimelineTile(entry: entry),
+                            _TimelineTile(
+                              entry: entry,
+                              onDelete: () =>
+                                  db.deleteBreedingLogEntry(entry.id),
+                            ),
                         ],
                       );
                     },
@@ -531,25 +535,68 @@ class _BreedingLogScreenState extends State<BreedingLogScreen> {
   }
 }
 
-class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({required this.entry});
+class _TimelineTile extends StatefulWidget {
+  const _TimelineTile({required this.entry, required this.onDelete});
 
   final BreedingLogEntry entry;
+  final Future<void> Function() onDelete;
+
+  @override
+  State<_TimelineTile> createState() => _TimelineTileState();
+}
+
+class _TimelineTileState extends State<_TimelineTile> {
+  bool _showDelete = false;
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this entry?'),
+        content: const Text(
+            'This timeline entry will be permanently removed.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await widget.onDelete();
+    } else if (mounted) {
+      setState(() => _showDelete = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
     final isStageChange = entry.stageAtEntry != null;
     final label = isStageChange
         ? 'Advanced to ${BreedingStage.fromValue(entry.stageAtEntry!).label}'
         : entry.note ?? '';
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        isStageChange ? Icons.arrow_circle_right_outlined : Icons.notes,
-        color: isStageChange ? Theme.of(context).colorScheme.primary : null,
+    return GestureDetector(
+      onLongPress: () => setState(() => _showDelete = true),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(
+          isStageChange ? Icons.arrow_circle_right_outlined : Icons.notes,
+          color: isStageChange ? Theme.of(context).colorScheme.primary : null,
+        ),
+        title: Text(label),
+        subtitle: Text(DateFormat.yMMMd().add_jm().format(entry.timestamp)),
+        trailing: _showDelete
+            ? IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete',
+                onPressed: _confirmDelete,
+              )
+            : null,
       ),
-      title: Text(label),
-      subtitle: Text(DateFormat.yMMMd().add_jm().format(entry.timestamp)),
     );
   }
 }

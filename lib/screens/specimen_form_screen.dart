@@ -60,6 +60,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
 
   SpecimenIconType _iconType = SpecimenIconType.other;
   SpecimenSex _sex = SpecimenSex.unknown;
+  SpecimenOrigin _origin = SpecimenOrigin.unknown;
   SpecimenStatus _status = SpecimenStatus.alive;
   DateTime? _dateAcquired;
   bool _ageUnknown = true;
@@ -94,6 +95,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _notesController.text = existing.notes ?? '';
       _iconType = SpecimenIconType.fromValue(existing.speciesIconKey);
       _sex = SpecimenSex.fromValue(existing.sex);
+      _origin = SpecimenOrigin.fromValue(existing.origin);
       _status = SpecimenStatus.fromValue(existing.status);
       _dateAcquired = existing.dateAcquired;
       _dateOfBirth = existing.dateOfBirth;
@@ -246,6 +248,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           species: species,
           speciesIconKey: _iconType.name,
           sex: _sex.name,
+          origin: _origin.name,
           status: _status.name,
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
@@ -273,6 +276,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
               species: species,
               speciesIconKey: Value(_iconType.name),
               sex: Value(_sex.name),
+              origin: Value(_origin.name),
               status: Value(_status.name),
               dateAcquired: Value(_dateAcquired),
               dateOfBirth: Value(dob),
@@ -300,6 +304,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           species: species,
           speciesIconKey: Value(_iconType.name),
           sex: Value(_sex.name),
+          origin: Value(_origin.name),
           status: Value(_status.name),
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
@@ -540,6 +545,31 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           value: _fatherId,
           onChanged: (id) => setState(() => _fatherId = id),
         ),
+        if (_motherId == null && _fatherId == null) ...[
+          const SizedBox(height: 18),
+          Align(
+            alignment: Alignment.centerLeft,
+            child:
+                Text('Origin', style: Theme.of(context).textTheme.labelLarge),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'No parents recorded, so this one\'s a lineage founder — used '
+              'to label its future offspring as WF#/CBF# in the app.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<SpecimenOrigin>(
+            segments: SpecimenOrigin.values
+                .map((o) => ButtonSegment(value: o, label: Text(o.label)))
+                .toList(),
+            selected: {_origin},
+            onSelectionChanged: (s) => setState(() => _origin = s.first),
+          ),
+        ],
       ],
     );
   }

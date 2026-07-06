@@ -22,12 +22,16 @@ import 'terrarium_form_screen.dart';
 /// shown together sorted by [timestamp].
 class _TimelineEntry {
   _TimelineEntry.note(SpecimenLogEntry entry)
-      : timestamp = entry.timestamp,
+      : id = entry.id,
+        isMeasurement = false,
+        timestamp = entry.timestamp,
         icon = Icons.notes,
         title = entry.note;
 
   _TimelineEntry.measurement(SpecimenMeasurement entry)
-      : timestamp = entry.timestamp,
+      : id = entry.id,
+        isMeasurement = true,
+        timestamp = entry.timestamp,
         icon = Icons.monitor_weight_outlined,
         title = [
           if (entry.weightGrams != null)
@@ -35,9 +39,74 @@ class _TimelineEntry {
           if (entry.sizeMm != null) '${entry.sizeMm!.toStringAsFixed(1)} mm',
         ].join(' · ');
 
+  final int id;
+  final bool isMeasurement;
   final DateTime timestamp;
   final IconData icon;
   final String title;
+}
+
+/// A timeline row that reveals a delete button on long-press, so a
+/// mistakenly-entered note or measurement can be removed without a
+/// permanently-visible delete affordance cluttering every row.
+class _TimelineTile extends StatefulWidget {
+  const _TimelineTile({required this.entry, required this.onDelete});
+
+  final _TimelineEntry entry;
+  final Future<void> Function() onDelete;
+
+  @override
+  State<_TimelineTile> createState() => _TimelineTileState();
+}
+
+class _TimelineTileState extends State<_TimelineTile> {
+  bool _showDelete = false;
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this entry?'),
+        content: const Text(
+            'This timeline entry will be permanently removed.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await widget.onDelete();
+    } else if (mounted) {
+      setState(() => _showDelete = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry;
+    return GestureDetector(
+      onLongPress: () => setState(() => _showDelete = true),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(entry.icon),
+        title: Text(entry.title),
+        subtitle:
+            Text(DateFormat.yMMMd().add_jm().format(entry.timestamp)),
+        trailing: _showDelete
+            ? IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete',
+                onPressed: _confirmDelete,
+              )
+            : null,
+      ),
+    );
+  }
 }
 
 Future<(Terrarium, String)?> _loadAssignedTerrarium(
@@ -166,6 +235,7 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
               final all = allSnapshot.data ?? const [];
               final byId = {for (final s in all) s.id: s};
               final generation = computeGeneration(specimen.id, byId);
+              final lineage = lineageLabel(specimen.id, byId);
               final parents = directParentsOf(specimen, byId);
               final children = directChildrenOf(specimen.id, all);
 
@@ -237,7 +307,7 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                               ),
                               Chip(
                                 avatar: const Icon(Icons.layers_outlined, size: 16),
-                                label: Text('Generation $generation'),
+                                label: Text(lineage ?? 'Generation $generation'),
                               ),
                               InkWell(
                                 borderRadius: BorderRadius.circular(8),
@@ -532,13 +602,13 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                                   return Column(
                                     children: [
                                       for (final entry in items)
-                                        ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: Icon(entry.icon),
-                                          title: Text(entry.title),
-                                          subtitle: Text(DateFormat.yMMMd()
-                                              .add_jm()
-                                              .format(entry.timestamp)),
+                                        _TimelineTile(
+                                          entry: entry,
+                                          onDelete: () => entry.isMeasurement
+                                              ? db.deleteSpecimenMeasurement(
+                                                  entry.id)
+                                              : db.deleteSpecimenLogEntry(
+                                                  entry.id),
                                         ),
                                     ],
                                   );

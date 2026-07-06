@@ -48,10 +48,19 @@ List<ReminderItem> computeReminders({
   final items = <ReminderItem>[];
 
   final labels = computeAllTerrariumLabels(shelves, terrariums, tools);
+  // [terrariums] already excludes soft-deleted (binned) ones, so intersecting
+  // against it keeps a specimen's stale terrariumId (left over from before
+  // its terrarium was moved to the bin or purged) from resurrecting a
+  // "Replenish ?" reminder for a terrarium that's no longer around.
+  final activeTerrariumIds = terrariums.map((t) => t.id).toSet();
   final specimensByTerrarium = <int, List<Specimen>>{};
   for (final s in specimens) {
     final terrariumId = s.terrariumId;
-    if (terrariumId == null || !isReplenishDue(s)) continue;
+    if (terrariumId == null ||
+        !activeTerrariumIds.contains(terrariumId) ||
+        !isReplenishDue(s)) {
+      continue;
+    }
     specimensByTerrarium.putIfAbsent(terrariumId, () => []).add(s);
   }
   for (final entry in specimensByTerrarium.entries) {
@@ -79,6 +88,7 @@ List<ReminderItem> computeReminders({
   for (final s in specimens) {
     final terrariumId = s.terrariumId;
     if (terrariumId == null || dueTerrariumIds.contains(terrariumId)) continue;
+    if (!activeTerrariumIds.contains(terrariumId)) continue;
     if (s.replenishIntervalDays == null || s.lastReplenishedAt == null) continue;
     if (isReplenishDue(s)) continue;
     upcomingByTerrarium.putIfAbsent(terrariumId, () => []).add(s);

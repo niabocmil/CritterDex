@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -108,6 +108,9 @@ class AppDatabase extends _$AppDatabase {
                 'UPDATE specimens SET size_mm = size_cm * 10 WHERE size_cm IS NOT NULL');
             await m.createTable(specimenMeasurements);
             await _backfillSpecimenMeasurements();
+          }
+          if (from < 9) {
+            await m.addColumn(specimens, specimens.origin);
           }
         },
       );
@@ -463,6 +466,9 @@ class AppDatabase extends _$AppDatabase {
   Future<int> insertSpecimenLogEntry(SpecimenLogEntriesCompanion entry) =>
       into(specimenLogEntries).insert(entry);
 
+  Future<int> deleteSpecimenLogEntry(int id) =>
+      (delete(specimenLogEntries)..where((e) => e.id.equals(id))).go();
+
   // ---------- Specimen measurements (weight/size growth) ----------
 
   Stream<List<SpecimenMeasurement>> watchMeasurementsForSpecimen(
@@ -495,6 +501,12 @@ class AppDatabase extends _$AppDatabase {
       ));
     });
   }
+
+  /// Removes a single measurement row. Doesn't touch the specimen's mirrored
+  /// current weightGrams/sizeMm — those stay as last recorded until another
+  /// measurement is taken.
+  Future<int> deleteSpecimenMeasurement(int id) =>
+      (delete(specimenMeasurements)..where((e) => e.id.equals(id))).go();
 
   // ---------- Breeding events ----------
 
@@ -559,6 +571,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> insertLogEntry(BreedingLogEntriesCompanion entry) =>
       into(breedingLogEntries).insert(entry);
+
+  Future<int> deleteBreedingLogEntry(int id) =>
+      (delete(breedingLogEntries)..where((e) => e.id.equals(id))).go();
 
   // ---------- Shelves ----------
 
@@ -655,8 +670,19 @@ class AppDatabase extends _$AppDatabase {
         .write(const TerrariumsCompanion(deletedAt: Value(null)));
   }
 
-  Future<int> deleteTerrarium(int id) =>
-      (delete(terrariums)..where((t) => t.id.equals(id))).go();
+  /// Permanently removes a terrarium. Any specimen still pointing at it (left
+  /// over from "move to bin" keeping assignments intact for a possible
+  /// restore) gets unassigned first — otherwise it'd keep a dangling
+  /// terrariumId that crashes the specimen detail screen's terrarium lookup
+  /// and keeps surfacing stale replenish reminders for a terrarium that no
+  /// longer exists.
+  Future<int> deleteTerrarium(int id) {
+    return transaction(() async {
+      await (update(specimens)..where((s) => s.terrariumId.equals(id)))
+          .write(const SpecimensCompanion(terrariumId: Value(null)));
+      return (delete(terrariums)..where((t) => t.id.equals(id))).go();
+    });
+  }
 
   Stream<List<Terrarium>> watchDeletedTerrariums() => (select(terrariums)
         ..where((t) => t.deletedAt.isNotNull())
@@ -754,9 +780,24 @@ class AppDatabase extends _$AppDatabase {
   /// after the 30 days have elapsed", not a real-time background job.
   Future<void> purgeExpiredBinItems() async {
     final cutoff = DateTime.now().subtract(const Duration(days: 30));
-    await (delete(specimens)..where((s) => s.deletedAt.isSmallerThanValue(cutoff)))
-        .go();
-    await (delete(terrariums)..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
-        .go();
+    await transaction(() async {
+      await (delete(specimens)..where((s) => s.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
+      final expiredTerrariumIds = await (select(terrariums)
+            ..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+          .map((t) => t.id)
+          .get();
+      if (expiredTerrariumIds.isNotEmpty) {
+        // A surviving specimen can still point at one of these (assignments
+        // are kept while a terrarium sits in the bin, for a possible
+        // restore) — clear it so purging the terrarium for good doesn't
+        // leave a dangling reference behind.
+        await (update(specimens)
+              ..where((s) => s.terrariumId.isIn(expiredTerrariumIds)))
+            .write(const SpecimensCompanion(terrariumId: Value(null)));
+      }
+      await (delete(terrariums)..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+          .go();
+    });
   }
 }

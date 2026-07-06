@@ -97,8 +97,11 @@ class _ShelfListScreenState extends State<ShelfListScreen> {
                     builder: (context, specimenSnapshot) {
                       final specimens =
                           specimenSnapshot.data ?? const <Specimen>[];
-                      final replenishDueCount =
-                          terrariumIdsNeedingReplenish(specimens).length;
+                      final replenishDueCount = terrariumIdsNeedingReplenish(
+                              specimens,
+                              activeTerrariumIds:
+                                  terrariums.map((t) => t.id).toSet())
+                          .length;
 
                       return Column(
                         children: [
