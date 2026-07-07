@@ -44,10 +44,9 @@ const _extraScrollPx = _extraScrollCm * cmToPx;
 const _extraSideCm = 5.0;
 const _extraSidePx = _extraSideCm * cmToPx;
 // InteractiveViewer's scale floor/ceiling: pinch-zoom can go out to half
-// the canvas's normal cm:px size, but never in past it (the fixed ratio in
-// [cmToPx] is already tuned to be comfortably readable).
+// the canvas's normal cm:px size, or in to twice that size.
 const _minScale = 0.5;
-const _maxScale = 1.0;
+const _maxScale = 2.0;
 
 class ShelfVisualization extends StatefulWidget {
   const ShelfVisualization({

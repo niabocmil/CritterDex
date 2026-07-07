@@ -49,10 +49,14 @@ class SpecimenAvatar extends StatelessWidget {
                 color: scheme.onSecondaryContainer,
                 size: radius,
               ),
+            // The source artwork has a lot of internal padding around the
+            // silhouette (unlike the FontAwesome glyphs, which nearly fill
+            // their box), so this needs a noticeably larger box than radius
+            // to read as the same visual size as ResolvedFaIcon above.
             ResolvedAssetIcon(assetPath: final path) => SvgPicture.asset(
                 path,
-                width: radius * 1.4,
-                height: radius * 1.4,
+                width: radius * 2.0,
+                height: radius * 2.0,
                 colorFilter: ColorFilter.mode(
                     scheme.onSecondaryContainer, BlendMode.srcIn),
               ),
