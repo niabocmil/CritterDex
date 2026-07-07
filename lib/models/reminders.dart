@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart' show DateUtils;
 
 import '../data/database.dart';
+import 'growth.dart';
 import 'replenish.dart';
 import 'terrarium_layout.dart';
 
-enum ReminderSource { replenish, breeding }
+enum ReminderSource { replenish, breeding, growth }
 
 /// A single thing the user should pay attention to, computed at display
 /// time (never stored) by merging generalized per-terrarium replenish due
@@ -20,6 +21,7 @@ class ReminderItem {
     this.terrariumId,
     this.breedingReminderId,
     this.breedingEventId,
+    this.specimenId,
   });
 
   final ReminderSource source;
@@ -34,6 +36,7 @@ class ReminderItem {
   final int? terrariumId;
   final int? breedingReminderId;
   final int? breedingEventId;
+  final int? specimenId;
 }
 
 List<ReminderItem> computeReminders({
@@ -109,6 +112,32 @@ List<ReminderItem> computeReminders({
           : '${candidates.length} specimens',
       isMissed: false,
       terrariumId: terrariumId,
+    ));
+  }
+
+  for (final s in specimens) {
+    if (s.deletedAt != null || !isGrowthEntryDue(s)) continue;
+    items.add(ReminderItem(
+      source: ReminderSource.growth,
+      dueDate: today,
+      title: 'Log growth entry — ${s.name?.isNotEmpty == true ? s.name! : s.species}',
+      subtitle: '${-growthEntryDaysLeft(s)} day${-growthEntryDaysLeft(s) == 1 ? '' : 's'} since last entry',
+      isMissed: growthEntryDaysLeft(s) < 0,
+      specimenId: s.id,
+    ));
+  }
+  for (final s in specimens) {
+    if (s.deletedAt != null) continue;
+    if (s.growthReminderIntervalDays == null || s.lastGrowthEntryAt == null) continue;
+    if (isGrowthEntryDue(s)) continue;
+    final daysLeft = growthEntryDaysLeft(s);
+    items.add(ReminderItem(
+      source: ReminderSource.growth,
+      dueDate: today.add(Duration(days: daysLeft)),
+      title: 'Log growth entry — ${s.name?.isNotEmpty == true ? s.name! : s.species}',
+      subtitle: null,
+      isMissed: false,
+      specimenId: s.id,
     ));
   }
 

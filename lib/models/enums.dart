@@ -75,6 +75,15 @@ enum BeetleLifeStage {
         BeetleLifeStage.adult => 'Adult',
       };
 
+  BeetleLifeStage? get next => switch (this) {
+        BeetleLifeStage.egg => BeetleLifeStage.l1,
+        BeetleLifeStage.l1 => BeetleLifeStage.l2,
+        BeetleLifeStage.l2 => BeetleLifeStage.l3,
+        BeetleLifeStage.l3 => BeetleLifeStage.pupa,
+        BeetleLifeStage.pupa => BeetleLifeStage.adult,
+        BeetleLifeStage.adult => null,
+      };
+
   static BeetleLifeStage? fromValue(String? value) {
     if (value == null) return null;
     return BeetleLifeStage.values

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/database.dart';
+import '../models/enums.dart';
 
 /// Dual-line growth chart for a specimen's weight/size history. Weight
 /// (grams) and size (millimetres) are plotted on one shared Y axis/value
@@ -43,6 +44,13 @@ class GrowthChart extends StatelessWidget {
 
     final weightColor = Theme.of(context).colorScheme.primary;
     final sizeColor = Theme.of(context).colorScheme.tertiary;
+    final stageColor = Theme.of(context).colorScheme.error;
+
+    final stageMarkers = [
+      for (final m in measurements)
+        if (m.lifeStageAtEntry != null)
+          (x: xFor(m.timestamp), stage: BeetleLifeStage.fromValue(m.lifeStageAtEntry)!),
+    ];
 
     final weightSpots = [
       for (final p in weightPoints) FlSpot(xFor(p.key), p.value),
@@ -60,8 +68,13 @@ class GrowthChart extends StatelessWidget {
               _LegendDot(color: weightColor, label: 'Weight (g)'),
               const SizedBox(width: 16),
             ],
-            if (sizePoints.isNotEmpty)
+            if (sizePoints.isNotEmpty) ...[
               _LegendDot(color: sizeColor, label: 'Size (mm)'),
+            ],
+            if (stageMarkers.isNotEmpty) ...[
+              const SizedBox(width: 16),
+              _LegendDot(color: stageColor, label: 'Molt'),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -143,6 +156,23 @@ class GrowthChart extends StatelessWidget {
                     dotData: const FlDotData(show: true),
                   ),
               ],
+              extraLinesData: ExtraLinesData(
+                verticalLines: [
+                  for (final marker in stageMarkers)
+                    VerticalLine(
+                      x: marker.x,
+                      color: stageColor,
+                      strokeWidth: 1,
+                      dashArray: const [4, 4],
+                      label: VerticalLineLabel(
+                        show: true,
+                        alignment: Alignment.topCenter,
+                        style: TextStyle(fontSize: 10, color: stageColor),
+                        labelResolver: (_) => marker.stage.label,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

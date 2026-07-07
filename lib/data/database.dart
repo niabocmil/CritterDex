@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +124,12 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 12) {
             await m.addColumn(speciesInfos, speciesInfos.gbifUrl);
+          }
+          if (from < 13) {
+            await m.addColumn(specimens, specimens.growthReminderIntervalDays);
+            await m.addColumn(specimens, specimens.lastGrowthEntryAt);
+            await m.addColumn(
+                specimenMeasurements, specimenMeasurements.lifeStageAtEntry);
           }
         },
       );
@@ -512,25 +518,36 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
-  /// Records a new weight/size measurement and mirrors it onto the
-  /// specimen's own current weightGrams/sizeMm fields, so chips elsewhere in
-  /// the app that show "current" values stay in sync without re-reading the
-  /// measurement history.
+  /// Records a new growth entry (weight/size and, optionally, a life-stage
+  /// advance) and mirrors it onto the specimen's own current
+  /// weightGrams/sizeMm/lifeStage fields, so chips elsewhere in the app that
+  /// show "current" values stay in sync without re-reading the measurement
+  /// history. [lastGrowthEntryAt] is always stamped with now, regardless of
+  /// which fields were actually filled in, since this call represents "the
+  /// keeper checked in on this specimen today" for reminder purposes.
   Future<void> recordSpecimenMeasurement(
     Specimen specimen, {
     double? weightGrams,
     double? sizeMm,
+    bool advanceLifeStage = false,
   }) async {
+    final nextStage = advanceLifeStage
+        ? BeetleLifeStage.fromValue(specimen.lifeStage)?.next
+        : null;
     await transaction(() async {
       await into(specimenMeasurements).insert(SpecimenMeasurementsCompanion.insert(
         specimenId: specimen.id,
         weightGrams: Value(weightGrams),
         sizeMm: Value(sizeMm),
+        lifeStageAtEntry: Value(nextStage?.name),
       ));
       await update(specimens).replace(specimen.copyWith(
         weightGrams:
             weightGrams != null ? Value(weightGrams) : const Value.absent(),
         sizeMm: sizeMm != null ? Value(sizeMm) : const Value.absent(),
+        lifeStage:
+            nextStage != null ? Value(nextStage.name) : const Value.absent(),
+        lastGrowthEntryAt: Value(DateTime.now()),
       ));
     });
   }

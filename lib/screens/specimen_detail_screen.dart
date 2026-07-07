@@ -26,24 +26,31 @@ class _TimelineEntry {
         isMeasurement = false,
         timestamp = entry.timestamp,
         icon = Icons.notes,
-        title = entry.note;
+        title = entry.note,
+        isStageChange = false;
 
   _TimelineEntry.measurement(SpecimenMeasurement entry)
       : id = entry.id,
         isMeasurement = true,
         timestamp = entry.timestamp,
-        icon = Icons.monitor_weight_outlined,
+        icon = entry.lifeStageAtEntry != null
+            ? Icons.arrow_circle_right_outlined
+            : Icons.monitor_weight_outlined,
         title = [
+          if (entry.lifeStageAtEntry != null)
+            'Molted to ${BeetleLifeStage.fromValue(entry.lifeStageAtEntry)!.label}',
           if (entry.weightGrams != null)
             '${entry.weightGrams!.toStringAsFixed(1)} g',
           if (entry.sizeMm != null) '${entry.sizeMm!.toStringAsFixed(1)} mm',
-        ].join(' · ');
+        ].join(' · '),
+        isStageChange = entry.lifeStageAtEntry != null;
 
   final int id;
   final bool isMeasurement;
   final DateTime timestamp;
   final IconData icon;
   final String title;
+  final bool isStageChange;
 }
 
 /// A timeline row that reveals a delete button on long-press, so a
@@ -93,7 +100,12 @@ class _TimelineTileState extends State<_TimelineTile> {
       onLongPress: () => setState(() => _showDelete = true),
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: Icon(entry.icon),
+        leading: Icon(
+          entry.icon,
+          color: entry.isStageChange
+              ? Theme.of(context).colorScheme.primary
+              : null,
+        ),
         title: Text(entry.title),
         subtitle:
             Text(DateFormat.yMMMd().add_jm().format(entry.timestamp)),
@@ -166,48 +178,79 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
         text: specimen.weightGrams?.toString() ?? '');
     final sizeController =
         TextEditingController(text: specimen.sizeMm?.toString() ?? '');
+    final currentStage = BeetleLifeStage.fromValue(specimen.lifeStage);
+    final nextStage = currentStage?.next;
+    var advance = false;
     try {
       final result = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Record weight & size'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightController,
-                decoration: const InputDecoration(labelText: 'Weight (g)'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: const Text('Record growth entry'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: weightController,
+                  decoration: const InputDecoration(labelText: 'Weight (g)'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: sizeController,
+                  decoration: const InputDecoration(labelText: 'Size (mm)'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+                if (specimen.speciesIconKey == SpecimenIconType.beetle.name) ...[
+                  const SizedBox(height: 12),
+                  if (nextStage != null)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: advance,
+                      onChanged: (v) =>
+                          setDialogState(() => advance = v ?? false),
+                      title: Text('Advance to ${nextStage.label}'),
+                      subtitle: Text('Currently ${currentStage!.label}'),
+                    )
+                  else if (currentStage != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Life stage: ${currentStage.label} (final stage)',
+                          style: Theme.of(ctx).textTheme.bodySmall),
+                    )
+                  else
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                          'Set an initial life stage via Edit to enable stage tracking',
+                          style: Theme.of(ctx).textTheme.bodySmall),
+                    ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: sizeController,
-                decoration: const InputDecoration(labelText: 'Size (mm)'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Save'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Save'),
-            ),
-          ],
         ),
       );
       if (result != true) return;
       final weight = double.tryParse(weightController.text.trim());
       final size = double.tryParse(sizeController.text.trim());
-      if (weight == null && size == null) return;
+      if (weight == null && size == null && !advance) return;
       await db.recordSpecimenMeasurement(specimen,
-          weightGrams: weight, sizeMm: size);
+          weightGrams: weight, sizeMm: size, advanceLifeStage: advance);
     } finally {
       weightController.dispose();
       sizeController.dispose();
@@ -394,7 +437,7 @@ class _SpecimenDetailScreenState extends State<SpecimenDetailScreen> {
                                   onPressed: () =>
                                       _recordMeasurement(context, db, specimen),
                                   icon: const Icon(Icons.monitor_weight_outlined),
-                                  label: const Text('Record weight & size'),
+                                  label: const Text('Record growth entry'),
                                 ),
                               ),
                             ],

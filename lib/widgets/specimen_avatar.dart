@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/enums.dart';
@@ -48,10 +49,12 @@ class SpecimenAvatar extends StatelessWidget {
                 color: scheme.onSecondaryContainer,
                 size: radius,
               ),
-            ResolvedAssetIcon(assetPath: final path) => Image.asset(
+            ResolvedAssetIcon(assetPath: final path) => SvgPicture.asset(
                 path,
                 width: radius * 1.4,
                 height: radius * 1.4,
+                colorFilter: ColorFilter.mode(
+                    scheme.onSecondaryContainer, BlendMode.srcIn),
               ),
           },
         ),

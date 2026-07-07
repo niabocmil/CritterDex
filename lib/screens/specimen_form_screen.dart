@@ -86,6 +86,8 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   final _replenishIntervalController = TextEditingController();
   final _replenishNoteController = TextEditingController();
   DateTime? _lastReplenishedAt;
+  final _growthReminderIntervalController = TextEditingController();
+  DateTime? _lastGrowthEntryAt;
   bool _saving = false;
 
   bool get _isEditing => widget.existing != null;
@@ -120,6 +122,9 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           existing.replenishIntervalDays?.toString() ?? '';
       _replenishNoteController.text = existing.replenishNote ?? '';
       _lastReplenishedAt = existing.lastReplenishedAt;
+      _growthReminderIntervalController.text =
+          existing.growthReminderIntervalDays?.toString() ?? '';
+      _lastGrowthEntryAt = existing.lastGrowthEntryAt;
     } else {
       _speciesController.text = widget.prefillSpecies ?? '';
       _iconType = widget.prefillIcon ?? SpecimenIconType.other;
@@ -164,6 +169,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     _foundingGenerationController.dispose();
     _replenishIntervalController.dispose();
     _replenishNoteController.dispose();
+    _growthReminderIntervalController.dispose();
     super.dispose();
   }
 
@@ -254,6 +260,14 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       // Seed the countdown anchor immediately so it's meaningful right away.
       lastReplenishedAt = _dateAcquired ?? DateTime.now();
     }
+    final growthReminderIntervalDays =
+        int.tryParse(_growthReminderIntervalController.text.trim());
+    var lastGrowthEntryAt = _lastGrowthEntryAt;
+    if (!_isEditing &&
+        growthReminderIntervalDays != null &&
+        lastGrowthEntryAt == null) {
+      lastGrowthEntryAt = _dateAcquired ?? DateTime.now();
+    }
     final dob = _ageUnknown ? null : _dateOfBirth;
 
     try {
@@ -277,6 +291,8 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           replenishIntervalDays: Value(replenishIntervalDays),
           replenishNote: Value(replenishNote),
           lastReplenishedAt: Value(lastReplenishedAt),
+          growthReminderIntervalDays: Value(growthReminderIntervalDays),
+          lastGrowthEntryAt: Value(lastGrowthEntryAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
           motherId: Value(_motherId),
@@ -306,6 +322,8 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
               replenishIntervalDays: Value(replenishIntervalDays),
               replenishNote: Value(replenishNote),
               lastReplenishedAt: Value(lastReplenishedAt),
+              growthReminderIntervalDays: Value(growthReminderIntervalDays),
+              lastGrowthEntryAt: Value(lastGrowthEntryAt),
               notes: Value(notes),
               motherId: Value(_motherId),
               fatherId: Value(_fatherId),
@@ -335,6 +353,8 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           replenishIntervalDays: Value(replenishIntervalDays),
           replenishNote: Value(replenishNote),
           lastReplenishedAt: Value(lastReplenishedAt),
+          growthReminderIntervalDays: Value(growthReminderIntervalDays),
+          lastGrowthEntryAt: Value(lastGrowthEntryAt),
           notes: Value(notes),
           photoPath: Value(_photoPath),
           motherId: Value(_motherId),
@@ -751,6 +771,29 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
                 hintText: 'e.g. "change substrate, mist daily"'),
             minLines: 1,
             maxLines: 3,
+          ),
+        ],
+        const SizedBox(height: 14),
+        Text('Growth check-in reminder',
+            style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _growthReminderIntervalController,
+          decoration: const InputDecoration(
+              labelText: 'Remind me every (days)',
+              hintText: 'Leave blank to not track'),
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_growthReminderIntervalController.text.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            _lastGrowthEntryAt == null
+                ? 'Starts counting once you save'
+                : 'Last growth entry: ${_formatDate(_lastGrowthEntryAt!)}',
+            style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 14),

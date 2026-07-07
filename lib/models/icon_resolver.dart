@@ -26,9 +26,10 @@ class ResolvedFaIcon extends ResolvedIcon {
   final IconBadge? badge;
 }
 
-/// Not produced anywhere today — exists purely so the call sites already
-/// branch on [ResolvedIcon]'s type, ready for real per-species/family
-/// artwork later without touching anything but this file.
+/// Real per-family artwork (an SVG asset), tinted at render time the same
+/// way [ResolvedFaIcon] is — the source files are plain monochrome traces,
+/// so a colorFilter recolors them cleanly instead of showing flat black
+/// regardless of theme.
 class ResolvedAssetIcon extends ResolvedIcon {
   const ResolvedAssetIcon(this.assetPath, {this.badge});
   final String assetPath;
@@ -81,6 +82,19 @@ ResolvedIcon _resolveBeetleIcon(BeetleFamily? family, BeetleLifeStage? lifeStage
       return ResolvedFaIcon(FontAwesomeIcons.bugSlash, badge: _familyBadge(family));
     case BeetleLifeStage.adult:
     case null:
-      return ResolvedFaIcon(FontAwesomeIcons.bug, badge: _familyBadge(family));
+      // Real artwork only exists for the adult silhouette — a family is
+      // known but the life stage isn't recorded (null) still reads fine as
+      // an adult, same as the generic bug icon did before this existed.
+      return switch (family) {
+        BeetleFamily.stag => const ResolvedAssetIcon(
+            'assets/icons/stag_beetle.svg',
+            badge: IconBadge(letter: 'S', colorRole: ColorRole.tertiary),
+          ),
+        BeetleFamily.dynastinae => const ResolvedAssetIcon(
+            'assets/icons/rhinoceros_beetle.svg',
+            badge: IconBadge(letter: 'D', colorRole: ColorRole.secondary),
+          ),
+        null => const ResolvedFaIcon(FontAwesomeIcons.bug),
+      };
   }
 }

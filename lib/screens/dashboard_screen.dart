@@ -11,6 +11,7 @@ import 'breeding_log_screen.dart';
 import 'collected_species_screen.dart';
 import 'reminder_calendar_screen.dart';
 import 'replenish_due_screen.dart';
+import 'specimen_detail_screen.dart';
 import 'specimen_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -99,6 +100,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   final missedBreeding = reminders
                                       .where((r) =>
                                           r.source == ReminderSource.breeding &&
+                                          r.isMissed)
+                                      .toList();
+                                  final missedGrowth = reminders
+                                      .where((r) =>
+                                          r.source == ReminderSource.growth &&
                                           r.isMissed)
                                       .toList();
                                   final upcomingWindow =
@@ -232,6 +238,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 builder: (_) => BreedingLogScreen(
                                                     breedingEventId:
                                                         r.breedingEventId!),
+                                              )),
+                                            ),
+                                          ),
+                                        ),
+                                      for (final r in missedGrowth)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 10),
+                                          child: Card(
+                                            color: scheme.errorContainer,
+                                            child: ListTile(
+                                              leading: Icon(Icons.error_outline,
+                                                  color: scheme.error),
+                                              title: Text(r.title,
+                                                  style: TextStyle(
+                                                      color: scheme.error)),
+                                              subtitle: r.subtitle == null
+                                                  ? null
+                                                  : Text(r.subtitle!,
+                                                      style: TextStyle(
+                                                          color: scheme.error)),
+                                              trailing: Icon(Icons.chevron_right,
+                                                  color: scheme.error),
+                                              onTap: () => Navigator.of(context)
+                                                  .push(MaterialPageRoute(
+                                                builder: (_) =>
+                                                    SpecimenDetailScreen(
+                                                        specimenId:
+                                                            r.specimenId!),
                                               )),
                                             ),
                                           ),

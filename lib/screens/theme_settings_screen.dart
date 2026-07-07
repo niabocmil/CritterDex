@@ -2,11 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 
+import '../services/daily_reminder_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 
-class ThemeSettingsScreen extends StatelessWidget {
+class ThemeSettingsScreen extends StatefulWidget {
   const ThemeSettingsScreen({super.key});
+
+  @override
+  State<ThemeSettingsScreen> createState() => _ThemeSettingsScreenState();
+}
+
+class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
+  bool? _dailyNotificationsEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationSetting();
+  }
+
+  Future<void> _loadNotificationSetting() async {
+    final enabled = await DailyReminderService.isEnabled();
+    if (mounted) setState(() => _dailyNotificationsEnabled = enabled);
+  }
+
+  Future<void> _setNotificationsEnabled(bool value) async {
+    setState(() => _dailyNotificationsEnabled = value);
+    await DailyReminderService.setEnabled(value);
+  }
 
   Future<void> _openCustomize(
       BuildContext context, ThemeController controller) async {
@@ -205,6 +229,19 @@ class ThemeSettingsScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text('Notifications', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Card(
+            child: SwitchListTile(
+              secondary: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Daily reminder notification'),
+              value: _dailyNotificationsEnabled ?? true,
+              onChanged: _dailyNotificationsEnabled == null
+                  ? null
+                  : _setNotificationsEnabled,
             ),
           ),
         ],

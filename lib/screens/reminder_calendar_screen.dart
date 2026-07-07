@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../models/reminders.dart';
 import 'breeding_log_screen.dart';
 import 'replenish_due_screen.dart';
+import 'specimen_detail_screen.dart';
 
 enum _CalendarView { month, week }
 
@@ -75,9 +76,11 @@ class _ReminderCalendarScreenState extends State<ReminderCalendarScreen> {
                           ? Theme.of(context).colorScheme.errorContainer
                           : null,
                       child: ListTile(
-                        leading: Icon(item.source == ReminderSource.replenish
-                            ? Icons.water_drop_outlined
-                            : Icons.favorite_outline),
+                        leading: Icon(switch (item.source) {
+                          ReminderSource.replenish => Icons.water_drop_outlined,
+                          ReminderSource.growth => Icons.monitor_weight_outlined,
+                          ReminderSource.breeding => Icons.favorite_outline,
+                        }),
                         title: Text(item.title),
                         subtitle: item.subtitle == null ? null : Text(item.subtitle!),
                         onTap: () {
@@ -283,6 +286,9 @@ void _openReminder(BuildContext context, ReminderItem item) {
   if (item.source == ReminderSource.replenish) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ReplenishDueScreen()));
+  } else if (item.source == ReminderSource.growth && item.specimenId != null) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SpecimenDetailScreen(specimenId: item.specimenId!)));
   } else if (item.breedingEventId != null) {
     Navigator.of(context).push(MaterialPageRoute(
         builder: (_) =>
@@ -341,9 +347,11 @@ class _WeekDayRow extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(
-                          item.source == ReminderSource.replenish
-                              ? Icons.water_drop_outlined
-                              : Icons.favorite_outline,
+                          switch (item.source) {
+                            ReminderSource.replenish => Icons.water_drop_outlined,
+                            ReminderSource.growth => Icons.monitor_weight_outlined,
+                            ReminderSource.breeding => Icons.favorite_outline,
+                          },
                           size: 18,
                           color: item.isMissed ? scheme.error : null,
                         ),

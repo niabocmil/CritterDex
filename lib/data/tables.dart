@@ -18,6 +18,12 @@ class Specimens extends Table {
   IntColumn get replenishIntervalDays => integer().nullable()();
   DateTimeColumn get lastReplenishedAt => dateTime().nullable()();
   TextColumn get replenishNote => text().nullable()();
+  // Per-specimen growth check-in cadence — how often the keeper wants to be
+  // reminded to log a new growth entry (weight/size/life stage). Null means
+  // not tracked, same nullable-pair convention as replenishIntervalDays /
+  // lastReplenishedAt above.
+  IntColumn get growthReminderIntervalDays => integer().nullable()();
+  DateTimeColumn get lastGrowthEntryAt => dateTime().nullable()();
   TextColumn get status => text().withDefault(const Constant('alive'))();
   TextColumn get notes => text().nullable()();
   TextColumn get photoPath => text().nullable()();
@@ -73,6 +79,10 @@ class SpecimenMeasurements extends Table {
       dateTime().withDefault(currentDateAndTime)();
   RealColumn get weightGrams => real().nullable()();
   RealColumn get sizeMm => real().nullable()();
+  // Set only when this entry also advanced the specimen's life stage (stores
+  // BeetleLifeStage.name) — mirrors BreedingLogEntries.stageAtEntry's
+  // "nullable unless this entry is a stage change" convention.
+  TextColumn get lifeStageAtEntry => text().nullable()();
 }
 
 class BreedingEvents extends Table {

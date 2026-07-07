@@ -1,8 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for the GBIF/Wikipedia species lookups and photo downloads.
+         Debug builds get this granted automatically regardless of whether
+         it's declared here, which is why its absence wasn't caught by
+         testing debug builds — release builds strictly require it. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- For the daily "anything due today?" notification: POST_NOTIFICATIONS
+         lets the app show it at all (Android 13+); the other two support the
+         background alarm that fires once a day, recomputes from the current
+         database, and only actually shows a notification if something's due
+         (see DailyReminderService). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:label="critter_dex"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules">
@@ -33,6 +46,24 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- android_alarm_manager_plus: runs the daily reminder-check alarm
+             in the background (even with the app closed) and reschedules it
+             after a device reboot, since AlarmManager alarms don't survive one. -->
+        <service
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false"/>
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmBroadcastReceiver"
+            android:exported="false"/>
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootBroadcastReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

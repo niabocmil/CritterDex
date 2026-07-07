@@ -1685,6 +1685,29 @@ class $SpecimensTable extends Specimens
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _growthReminderIntervalDaysMeta =
+      const VerificationMeta('growthReminderIntervalDays');
+  @override
+  late final GeneratedColumn<int> growthReminderIntervalDays =
+      GeneratedColumn<int>(
+        'growth_reminder_interval_days',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastGrowthEntryAtMeta = const VerificationMeta(
+    'lastGrowthEntryAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastGrowthEntryAt =
+      GeneratedColumn<DateTime>(
+        'last_growth_entry_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -1827,6 +1850,8 @@ class $SpecimensTable extends Specimens
     replenishIntervalDays,
     lastReplenishedAt,
     replenishNote,
+    growthReminderIntervalDays,
+    lastGrowthEntryAt,
     status,
     notes,
     photoPath,
@@ -1955,6 +1980,24 @@ class $SpecimensTable extends Specimens
         replenishNote.isAcceptableOrUnknown(
           data['replenish_note']!,
           _replenishNoteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('growth_reminder_interval_days')) {
+      context.handle(
+        _growthReminderIntervalDaysMeta,
+        growthReminderIntervalDays.isAcceptableOrUnknown(
+          data['growth_reminder_interval_days']!,
+          _growthReminderIntervalDaysMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_growth_entry_at')) {
+      context.handle(
+        _lastGrowthEntryAtMeta,
+        lastGrowthEntryAt.isAcceptableOrUnknown(
+          data['last_growth_entry_at']!,
+          _lastGrowthEntryAtMeta,
         ),
       );
     }
@@ -2098,6 +2141,14 @@ class $SpecimensTable extends Specimens
         DriftSqlType.string,
         data['${effectivePrefix}replenish_note'],
       ),
+      growthReminderIntervalDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}growth_reminder_interval_days'],
+      ),
+      lastGrowthEntryAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_growth_entry_at'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -2166,6 +2217,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   final int? replenishIntervalDays;
   final DateTime? lastReplenishedAt;
   final String? replenishNote;
+  final int? growthReminderIntervalDays;
+  final DateTime? lastGrowthEntryAt;
   final String status;
   final String? notes;
   final String? photoPath;
@@ -2192,6 +2245,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     this.replenishIntervalDays,
     this.lastReplenishedAt,
     this.replenishNote,
+    this.growthReminderIntervalDays,
+    this.lastGrowthEntryAt,
     required this.status,
     this.notes,
     this.photoPath,
@@ -2240,6 +2295,14 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     }
     if (!nullToAbsent || replenishNote != null) {
       map['replenish_note'] = Variable<String>(replenishNote);
+    }
+    if (!nullToAbsent || growthReminderIntervalDays != null) {
+      map['growth_reminder_interval_days'] = Variable<int>(
+        growthReminderIntervalDays,
+      );
+    }
+    if (!nullToAbsent || lastGrowthEntryAt != null) {
+      map['last_growth_entry_at'] = Variable<DateTime>(lastGrowthEntryAt);
     }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || notes != null) {
@@ -2303,6 +2366,13 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       replenishNote: replenishNote == null && nullToAbsent
           ? const Value.absent()
           : Value(replenishNote),
+      growthReminderIntervalDays:
+          growthReminderIntervalDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(growthReminderIntervalDays),
+      lastGrowthEntryAt: lastGrowthEntryAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastGrowthEntryAt),
       status: Value(status),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
@@ -2355,6 +2425,12 @@ class Specimen extends DataClass implements Insertable<Specimen> {
         json['lastReplenishedAt'],
       ),
       replenishNote: serializer.fromJson<String?>(json['replenishNote']),
+      growthReminderIntervalDays: serializer.fromJson<int?>(
+        json['growthReminderIntervalDays'],
+      ),
+      lastGrowthEntryAt: serializer.fromJson<DateTime?>(
+        json['lastGrowthEntryAt'],
+      ),
       status: serializer.fromJson<String>(json['status']),
       notes: serializer.fromJson<String?>(json['notes']),
       photoPath: serializer.fromJson<String?>(json['photoPath']),
@@ -2388,6 +2464,10 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       'replenishIntervalDays': serializer.toJson<int?>(replenishIntervalDays),
       'lastReplenishedAt': serializer.toJson<DateTime?>(lastReplenishedAt),
       'replenishNote': serializer.toJson<String?>(replenishNote),
+      'growthReminderIntervalDays': serializer.toJson<int?>(
+        growthReminderIntervalDays,
+      ),
+      'lastGrowthEntryAt': serializer.toJson<DateTime?>(lastGrowthEntryAt),
       'status': serializer.toJson<String>(status),
       'notes': serializer.toJson<String?>(notes),
       'photoPath': serializer.toJson<String?>(photoPath),
@@ -2417,6 +2497,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     Value<int?> replenishIntervalDays = const Value.absent(),
     Value<DateTime?> lastReplenishedAt = const Value.absent(),
     Value<String?> replenishNote = const Value.absent(),
+    Value<int?> growthReminderIntervalDays = const Value.absent(),
+    Value<DateTime?> lastGrowthEntryAt = const Value.absent(),
     String? status,
     Value<String?> notes = const Value.absent(),
     Value<String?> photoPath = const Value.absent(),
@@ -2449,6 +2531,12 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     replenishNote: replenishNote.present
         ? replenishNote.value
         : this.replenishNote,
+    growthReminderIntervalDays: growthReminderIntervalDays.present
+        ? growthReminderIntervalDays.value
+        : this.growthReminderIntervalDays,
+    lastGrowthEntryAt: lastGrowthEntryAt.present
+        ? lastGrowthEntryAt.value
+        : this.lastGrowthEntryAt,
     status: status ?? this.status,
     notes: notes.present ? notes.value : this.notes,
     photoPath: photoPath.present ? photoPath.value : this.photoPath,
@@ -2495,6 +2583,12 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       replenishNote: data.replenishNote.present
           ? data.replenishNote.value
           : this.replenishNote,
+      growthReminderIntervalDays: data.growthReminderIntervalDays.present
+          ? data.growthReminderIntervalDays.value
+          : this.growthReminderIntervalDays,
+      lastGrowthEntryAt: data.lastGrowthEntryAt.present
+          ? data.lastGrowthEntryAt.value
+          : this.lastGrowthEntryAt,
       status: data.status.present ? data.status.value : this.status,
       notes: data.notes.present ? data.notes.value : this.notes,
       photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
@@ -2532,6 +2626,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ..write('replenishIntervalDays: $replenishIntervalDays, ')
           ..write('lastReplenishedAt: $lastReplenishedAt, ')
           ..write('replenishNote: $replenishNote, ')
+          ..write('growthReminderIntervalDays: $growthReminderIntervalDays, ')
+          ..write('lastGrowthEntryAt: $lastGrowthEntryAt, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
@@ -2563,6 +2659,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     replenishIntervalDays,
     lastReplenishedAt,
     replenishNote,
+    growthReminderIntervalDays,
+    lastGrowthEntryAt,
     status,
     notes,
     photoPath,
@@ -2593,6 +2691,8 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           other.replenishIntervalDays == this.replenishIntervalDays &&
           other.lastReplenishedAt == this.lastReplenishedAt &&
           other.replenishNote == this.replenishNote &&
+          other.growthReminderIntervalDays == this.growthReminderIntervalDays &&
+          other.lastGrowthEntryAt == this.lastGrowthEntryAt &&
           other.status == this.status &&
           other.notes == this.notes &&
           other.photoPath == this.photoPath &&
@@ -2621,6 +2721,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
   final Value<int?> replenishIntervalDays;
   final Value<DateTime?> lastReplenishedAt;
   final Value<String?> replenishNote;
+  final Value<int?> growthReminderIntervalDays;
+  final Value<DateTime?> lastGrowthEntryAt;
   final Value<String> status;
   final Value<String?> notes;
   final Value<String?> photoPath;
@@ -2647,6 +2749,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.replenishIntervalDays = const Value.absent(),
     this.lastReplenishedAt = const Value.absent(),
     this.replenishNote = const Value.absent(),
+    this.growthReminderIntervalDays = const Value.absent(),
+    this.lastGrowthEntryAt = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
@@ -2674,6 +2778,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.replenishIntervalDays = const Value.absent(),
     this.lastReplenishedAt = const Value.absent(),
     this.replenishNote = const Value.absent(),
+    this.growthReminderIntervalDays = const Value.absent(),
+    this.lastGrowthEntryAt = const Value.absent(),
     this.status = const Value.absent(),
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
@@ -2701,6 +2807,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Expression<int>? replenishIntervalDays,
     Expression<DateTime>? lastReplenishedAt,
     Expression<String>? replenishNote,
+    Expression<int>? growthReminderIntervalDays,
+    Expression<DateTime>? lastGrowthEntryAt,
     Expression<String>? status,
     Expression<String>? notes,
     Expression<String>? photoPath,
@@ -2729,6 +2837,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
         'replenish_interval_days': replenishIntervalDays,
       if (lastReplenishedAt != null) 'last_replenished_at': lastReplenishedAt,
       if (replenishNote != null) 'replenish_note': replenishNote,
+      if (growthReminderIntervalDays != null)
+        'growth_reminder_interval_days': growthReminderIntervalDays,
+      if (lastGrowthEntryAt != null) 'last_growth_entry_at': lastGrowthEntryAt,
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (photoPath != null) 'photo_path': photoPath,
@@ -2759,6 +2870,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Value<int?>? replenishIntervalDays,
     Value<DateTime?>? lastReplenishedAt,
     Value<String?>? replenishNote,
+    Value<int?>? growthReminderIntervalDays,
+    Value<DateTime?>? lastGrowthEntryAt,
     Value<String>? status,
     Value<String?>? notes,
     Value<String?>? photoPath,
@@ -2787,6 +2900,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           replenishIntervalDays ?? this.replenishIntervalDays,
       lastReplenishedAt: lastReplenishedAt ?? this.lastReplenishedAt,
       replenishNote: replenishNote ?? this.replenishNote,
+      growthReminderIntervalDays:
+          growthReminderIntervalDays ?? this.growthReminderIntervalDays,
+      lastGrowthEntryAt: lastGrowthEntryAt ?? this.lastGrowthEntryAt,
       status: status ?? this.status,
       notes: notes ?? this.notes,
       photoPath: photoPath ?? this.photoPath,
@@ -2849,6 +2965,14 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     if (replenishNote.present) {
       map['replenish_note'] = Variable<String>(replenishNote.value);
     }
+    if (growthReminderIntervalDays.present) {
+      map['growth_reminder_interval_days'] = Variable<int>(
+        growthReminderIntervalDays.value,
+      );
+    }
+    if (lastGrowthEntryAt.present) {
+      map['last_growth_entry_at'] = Variable<DateTime>(lastGrowthEntryAt.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
@@ -2904,6 +3028,8 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           ..write('replenishIntervalDays: $replenishIntervalDays, ')
           ..write('lastReplenishedAt: $lastReplenishedAt, ')
           ..write('replenishNote: $replenishNote, ')
+          ..write('growthReminderIntervalDays: $growthReminderIntervalDays, ')
+          ..write('lastGrowthEntryAt: $lastGrowthEntryAt, ')
           ..write('status: $status, ')
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
@@ -5096,6 +5222,17 @@ class $SpecimenMeasurementsTable extends SpecimenMeasurements
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lifeStageAtEntryMeta = const VerificationMeta(
+    'lifeStageAtEntry',
+  );
+  @override
+  late final GeneratedColumn<String> lifeStageAtEntry = GeneratedColumn<String>(
+    'life_stage_at_entry',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5103,6 +5240,7 @@ class $SpecimenMeasurementsTable extends SpecimenMeasurements
     timestamp,
     weightGrams,
     sizeMm,
+    lifeStageAtEntry,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5148,6 +5286,15 @@ class $SpecimenMeasurementsTable extends SpecimenMeasurements
         sizeMm.isAcceptableOrUnknown(data['size_mm']!, _sizeMmMeta),
       );
     }
+    if (data.containsKey('life_stage_at_entry')) {
+      context.handle(
+        _lifeStageAtEntryMeta,
+        lifeStageAtEntry.isAcceptableOrUnknown(
+          data['life_stage_at_entry']!,
+          _lifeStageAtEntryMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -5177,6 +5324,10 @@ class $SpecimenMeasurementsTable extends SpecimenMeasurements
         DriftSqlType.double,
         data['${effectivePrefix}size_mm'],
       ),
+      lifeStageAtEntry: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}life_stage_at_entry'],
+      ),
     );
   }
 
@@ -5193,12 +5344,14 @@ class SpecimenMeasurement extends DataClass
   final DateTime timestamp;
   final double? weightGrams;
   final double? sizeMm;
+  final String? lifeStageAtEntry;
   const SpecimenMeasurement({
     required this.id,
     required this.specimenId,
     required this.timestamp,
     this.weightGrams,
     this.sizeMm,
+    this.lifeStageAtEntry,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5211,6 +5364,9 @@ class SpecimenMeasurement extends DataClass
     }
     if (!nullToAbsent || sizeMm != null) {
       map['size_mm'] = Variable<double>(sizeMm);
+    }
+    if (!nullToAbsent || lifeStageAtEntry != null) {
+      map['life_stage_at_entry'] = Variable<String>(lifeStageAtEntry);
     }
     return map;
   }
@@ -5226,6 +5382,9 @@ class SpecimenMeasurement extends DataClass
       sizeMm: sizeMm == null && nullToAbsent
           ? const Value.absent()
           : Value(sizeMm),
+      lifeStageAtEntry: lifeStageAtEntry == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lifeStageAtEntry),
     );
   }
 
@@ -5240,6 +5399,7 @@ class SpecimenMeasurement extends DataClass
       timestamp: serializer.fromJson<DateTime>(json['timestamp']),
       weightGrams: serializer.fromJson<double?>(json['weightGrams']),
       sizeMm: serializer.fromJson<double?>(json['sizeMm']),
+      lifeStageAtEntry: serializer.fromJson<String?>(json['lifeStageAtEntry']),
     );
   }
   @override
@@ -5251,6 +5411,7 @@ class SpecimenMeasurement extends DataClass
       'timestamp': serializer.toJson<DateTime>(timestamp),
       'weightGrams': serializer.toJson<double?>(weightGrams),
       'sizeMm': serializer.toJson<double?>(sizeMm),
+      'lifeStageAtEntry': serializer.toJson<String?>(lifeStageAtEntry),
     };
   }
 
@@ -5260,12 +5421,16 @@ class SpecimenMeasurement extends DataClass
     DateTime? timestamp,
     Value<double?> weightGrams = const Value.absent(),
     Value<double?> sizeMm = const Value.absent(),
+    Value<String?> lifeStageAtEntry = const Value.absent(),
   }) => SpecimenMeasurement(
     id: id ?? this.id,
     specimenId: specimenId ?? this.specimenId,
     timestamp: timestamp ?? this.timestamp,
     weightGrams: weightGrams.present ? weightGrams.value : this.weightGrams,
     sizeMm: sizeMm.present ? sizeMm.value : this.sizeMm,
+    lifeStageAtEntry: lifeStageAtEntry.present
+        ? lifeStageAtEntry.value
+        : this.lifeStageAtEntry,
   );
   SpecimenMeasurement copyWithCompanion(SpecimenMeasurementsCompanion data) {
     return SpecimenMeasurement(
@@ -5278,6 +5443,9 @@ class SpecimenMeasurement extends DataClass
           ? data.weightGrams.value
           : this.weightGrams,
       sizeMm: data.sizeMm.present ? data.sizeMm.value : this.sizeMm,
+      lifeStageAtEntry: data.lifeStageAtEntry.present
+          ? data.lifeStageAtEntry.value
+          : this.lifeStageAtEntry,
     );
   }
 
@@ -5288,14 +5456,21 @@ class SpecimenMeasurement extends DataClass
           ..write('specimenId: $specimenId, ')
           ..write('timestamp: $timestamp, ')
           ..write('weightGrams: $weightGrams, ')
-          ..write('sizeMm: $sizeMm')
+          ..write('sizeMm: $sizeMm, ')
+          ..write('lifeStageAtEntry: $lifeStageAtEntry')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, specimenId, timestamp, weightGrams, sizeMm);
+  int get hashCode => Object.hash(
+    id,
+    specimenId,
+    timestamp,
+    weightGrams,
+    sizeMm,
+    lifeStageAtEntry,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5304,7 +5479,8 @@ class SpecimenMeasurement extends DataClass
           other.specimenId == this.specimenId &&
           other.timestamp == this.timestamp &&
           other.weightGrams == this.weightGrams &&
-          other.sizeMm == this.sizeMm);
+          other.sizeMm == this.sizeMm &&
+          other.lifeStageAtEntry == this.lifeStageAtEntry);
 }
 
 class SpecimenMeasurementsCompanion
@@ -5314,12 +5490,14 @@ class SpecimenMeasurementsCompanion
   final Value<DateTime> timestamp;
   final Value<double?> weightGrams;
   final Value<double?> sizeMm;
+  final Value<String?> lifeStageAtEntry;
   const SpecimenMeasurementsCompanion({
     this.id = const Value.absent(),
     this.specimenId = const Value.absent(),
     this.timestamp = const Value.absent(),
     this.weightGrams = const Value.absent(),
     this.sizeMm = const Value.absent(),
+    this.lifeStageAtEntry = const Value.absent(),
   });
   SpecimenMeasurementsCompanion.insert({
     this.id = const Value.absent(),
@@ -5327,6 +5505,7 @@ class SpecimenMeasurementsCompanion
     this.timestamp = const Value.absent(),
     this.weightGrams = const Value.absent(),
     this.sizeMm = const Value.absent(),
+    this.lifeStageAtEntry = const Value.absent(),
   }) : specimenId = Value(specimenId);
   static Insertable<SpecimenMeasurement> custom({
     Expression<int>? id,
@@ -5334,6 +5513,7 @@ class SpecimenMeasurementsCompanion
     Expression<DateTime>? timestamp,
     Expression<double>? weightGrams,
     Expression<double>? sizeMm,
+    Expression<String>? lifeStageAtEntry,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -5341,6 +5521,7 @@ class SpecimenMeasurementsCompanion
       if (timestamp != null) 'timestamp': timestamp,
       if (weightGrams != null) 'weight_grams': weightGrams,
       if (sizeMm != null) 'size_mm': sizeMm,
+      if (lifeStageAtEntry != null) 'life_stage_at_entry': lifeStageAtEntry,
     });
   }
 
@@ -5350,6 +5531,7 @@ class SpecimenMeasurementsCompanion
     Value<DateTime>? timestamp,
     Value<double?>? weightGrams,
     Value<double?>? sizeMm,
+    Value<String?>? lifeStageAtEntry,
   }) {
     return SpecimenMeasurementsCompanion(
       id: id ?? this.id,
@@ -5357,6 +5539,7 @@ class SpecimenMeasurementsCompanion
       timestamp: timestamp ?? this.timestamp,
       weightGrams: weightGrams ?? this.weightGrams,
       sizeMm: sizeMm ?? this.sizeMm,
+      lifeStageAtEntry: lifeStageAtEntry ?? this.lifeStageAtEntry,
     );
   }
 
@@ -5378,6 +5561,9 @@ class SpecimenMeasurementsCompanion
     if (sizeMm.present) {
       map['size_mm'] = Variable<double>(sizeMm.value);
     }
+    if (lifeStageAtEntry.present) {
+      map['life_stage_at_entry'] = Variable<String>(lifeStageAtEntry.value);
+    }
     return map;
   }
 
@@ -5388,7 +5574,8 @@ class SpecimenMeasurementsCompanion
           ..write('specimenId: $specimenId, ')
           ..write('timestamp: $timestamp, ')
           ..write('weightGrams: $weightGrams, ')
-          ..write('sizeMm: $sizeMm')
+          ..write('sizeMm: $sizeMm, ')
+          ..write('lifeStageAtEntry: $lifeStageAtEntry')
           ..write(')'))
         .toString();
   }
@@ -8201,6 +8388,8 @@ typedef $$SpecimensTableCreateCompanionBuilder =
       Value<int?> replenishIntervalDays,
       Value<DateTime?> lastReplenishedAt,
       Value<String?> replenishNote,
+      Value<int?> growthReminderIntervalDays,
+      Value<DateTime?> lastGrowthEntryAt,
       Value<String> status,
       Value<String?> notes,
       Value<String?> photoPath,
@@ -8229,6 +8418,8 @@ typedef $$SpecimensTableUpdateCompanionBuilder =
       Value<int?> replenishIntervalDays,
       Value<DateTime?> lastReplenishedAt,
       Value<String?> replenishNote,
+      Value<int?> growthReminderIntervalDays,
+      Value<DateTime?> lastGrowthEntryAt,
       Value<String> status,
       Value<String?> notes,
       Value<String?> photoPath,
@@ -8420,6 +8611,16 @@ class $$SpecimensTableFilterComposer
 
   ColumnFilters<String> get replenishNote => $composableBuilder(
     column: $table.replenishNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get growthReminderIntervalDays => $composableBuilder(
+    column: $table.growthReminderIntervalDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastGrowthEntryAt => $composableBuilder(
+    column: $table.lastGrowthEntryAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8662,6 +8863,16 @@ class $$SpecimensTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get growthReminderIntervalDays => $composableBuilder(
+    column: $table.growthReminderIntervalDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastGrowthEntryAt => $composableBuilder(
+    column: $table.lastGrowthEntryAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -8836,6 +9047,16 @@ class $$SpecimensTableAnnotationComposer
 
   GeneratedColumn<String> get replenishNote => $composableBuilder(
     column: $table.replenishNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get growthReminderIntervalDays => $composableBuilder(
+    column: $table.growthReminderIntervalDays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastGrowthEntryAt => $composableBuilder(
+    column: $table.lastGrowthEntryAt,
     builder: (column) => column,
   );
 
@@ -9037,6 +9258,8 @@ class $$SpecimensTableTableManager
                 Value<int?> replenishIntervalDays = const Value.absent(),
                 Value<DateTime?> lastReplenishedAt = const Value.absent(),
                 Value<String?> replenishNote = const Value.absent(),
+                Value<int?> growthReminderIntervalDays = const Value.absent(),
+                Value<DateTime?> lastGrowthEntryAt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
@@ -9063,6 +9286,8 @@ class $$SpecimensTableTableManager
                 replenishIntervalDays: replenishIntervalDays,
                 lastReplenishedAt: lastReplenishedAt,
                 replenishNote: replenishNote,
+                growthReminderIntervalDays: growthReminderIntervalDays,
+                lastGrowthEntryAt: lastGrowthEntryAt,
                 status: status,
                 notes: notes,
                 photoPath: photoPath,
@@ -9091,6 +9316,8 @@ class $$SpecimensTableTableManager
                 Value<int?> replenishIntervalDays = const Value.absent(),
                 Value<DateTime?> lastReplenishedAt = const Value.absent(),
                 Value<String?> replenishNote = const Value.absent(),
+                Value<int?> growthReminderIntervalDays = const Value.absent(),
+                Value<DateTime?> lastGrowthEntryAt = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
@@ -9117,6 +9344,8 @@ class $$SpecimensTableTableManager
                 replenishIntervalDays: replenishIntervalDays,
                 lastReplenishedAt: lastReplenishedAt,
                 replenishNote: replenishNote,
+                growthReminderIntervalDays: growthReminderIntervalDays,
+                lastGrowthEntryAt: lastGrowthEntryAt,
                 status: status,
                 notes: notes,
                 photoPath: photoPath,
@@ -11218,6 +11447,7 @@ typedef $$SpecimenMeasurementsTableCreateCompanionBuilder =
       Value<DateTime> timestamp,
       Value<double?> weightGrams,
       Value<double?> sizeMm,
+      Value<String?> lifeStageAtEntry,
     });
 typedef $$SpecimenMeasurementsTableUpdateCompanionBuilder =
     SpecimenMeasurementsCompanion Function({
@@ -11226,6 +11456,7 @@ typedef $$SpecimenMeasurementsTableUpdateCompanionBuilder =
       Value<DateTime> timestamp,
       Value<double?> weightGrams,
       Value<double?> sizeMm,
+      Value<String?> lifeStageAtEntry,
     });
 
 final class $$SpecimenMeasurementsTableReferences
@@ -11288,6 +11519,11 @@ class $$SpecimenMeasurementsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get lifeStageAtEntry => $composableBuilder(
+    column: $table.lifeStageAtEntry,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$SpecimensTableFilterComposer get specimenId {
     final $$SpecimensTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -11341,6 +11577,11 @@ class $$SpecimenMeasurementsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lifeStageAtEntry => $composableBuilder(
+    column: $table.lifeStageAtEntry,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SpecimensTableOrderingComposer get specimenId {
     final $$SpecimensTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11387,6 +11628,11 @@ class $$SpecimenMeasurementsTableAnnotationComposer
 
   GeneratedColumn<double> get sizeMm =>
       $composableBuilder(column: $table.sizeMm, builder: (column) => column);
+
+  GeneratedColumn<String> get lifeStageAtEntry => $composableBuilder(
+    column: $table.lifeStageAtEntry,
+    builder: (column) => column,
+  );
 
   $$SpecimensTableAnnotationComposer get specimenId {
     final $$SpecimensTableAnnotationComposer composer = $composerBuilder(
@@ -11453,12 +11699,14 @@ class $$SpecimenMeasurementsTableTableManager
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<double?> weightGrams = const Value.absent(),
                 Value<double?> sizeMm = const Value.absent(),
+                Value<String?> lifeStageAtEntry = const Value.absent(),
               }) => SpecimenMeasurementsCompanion(
                 id: id,
                 specimenId: specimenId,
                 timestamp: timestamp,
                 weightGrams: weightGrams,
                 sizeMm: sizeMm,
+                lifeStageAtEntry: lifeStageAtEntry,
               ),
           createCompanionCallback:
               ({
@@ -11467,12 +11715,14 @@ class $$SpecimenMeasurementsTableTableManager
                 Value<DateTime> timestamp = const Value.absent(),
                 Value<double?> weightGrams = const Value.absent(),
                 Value<double?> sizeMm = const Value.absent(),
+                Value<String?> lifeStageAtEntry = const Value.absent(),
               }) => SpecimenMeasurementsCompanion.insert(
                 id: id,
                 specimenId: specimenId,
                 timestamp: timestamp,
                 weightGrams: weightGrams,
                 sizeMm: sizeMm,
+                lifeStageAtEntry: lifeStageAtEntry,
               ),
           withReferenceMapper: (p0) => p0
               .map(
