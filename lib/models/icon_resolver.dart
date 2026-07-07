@@ -93,10 +93,11 @@ ResolvedIcon _resolveBeetleIcon(BeetleFamily? family, BeetleLifeStage? lifeStage
         BeetleFamily.stag => const ResolvedAssetIcon(
             'assets/icons/stag_beetle.svg',
             badge: IconBadge(letter: 'S', colorRole: ColorRole.tertiary),
-            sizeMultiplier: 1.15,
+            sizeMultiplier: 1.38,
           ),
         BeetleFamily.dynastinae => const ResolvedAssetIcon(
             'assets/icons/rhinoceros_beetle.svg',
+            sizeMultiplier: 1.2,
             badge: IconBadge(letter: 'D', colorRole: ColorRole.secondary),
           ),
         null => const ResolvedFaIcon(FontAwesomeIcons.bug),

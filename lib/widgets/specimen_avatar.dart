@@ -52,15 +52,27 @@ class SpecimenAvatar extends StatelessWidget {
             // The source artwork has a lot of internal padding around the
             // silhouette (unlike the FontAwesome glyphs, which nearly fill
             // their box), so this needs a noticeably larger box than radius
-            // to read as the same visual size as ResolvedFaIcon above.
-            // sizeMultiplier applies further per-asset tuning on top of that.
+            // to read as the same visual size as ResolvedFaIcon above. The
+            // box is already at CircleAvatar's own diameter (its Container
+            // applies a *tight* max constraint equal to 2*radius, via
+            // Center's loosened-but-still-capped constraints) — sizing the
+            // SvgPicture any bigger than that gets silently clamped back
+            // down in layout, so sizeMultiplier is applied as a Transform.scale
+            // (a paint-time operation, not subject to that layout clamp)
+            // instead of baking it into the width/height. ClipOval keeps the
+            // now-oversized paint from spilling outside the circular avatar.
             ResolvedAssetIcon(assetPath: final path, sizeMultiplier: final m) =>
-              SvgPicture.asset(
-                path,
-                width: radius * 2.0 * m,
-                height: radius * 2.0 * m,
-                colorFilter: ColorFilter.mode(
-                    scheme.onSecondaryContainer, BlendMode.srcIn),
+              ClipOval(
+                child: Transform.scale(
+                  scale: m,
+                  child: SvgPicture.asset(
+                    path,
+                    width: radius * 2.0,
+                    height: radius * 2.0,
+                    colorFilter: ColorFilter.mode(
+                        scheme.onSecondaryContainer, BlendMode.srcIn),
+                  ),
+                ),
               ),
           },
         ),
