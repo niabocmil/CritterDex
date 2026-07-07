@@ -57,6 +57,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
   final _weightController = TextEditingController();
   final _sizeController = TextEditingController();
   final _notesController = TextEditingController();
+  final _foundingGenerationController = TextEditingController();
 
   SpecimenIconType _iconType = SpecimenIconType.other;
   SpecimenSex _sex = SpecimenSex.unknown;
@@ -96,6 +97,8 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
       _iconType = SpecimenIconType.fromValue(existing.speciesIconKey);
       _sex = SpecimenSex.fromValue(existing.sex);
       _origin = SpecimenOrigin.fromValue(existing.origin);
+      _foundingGenerationController.text =
+          existing.foundingGeneration == 0 ? '' : '${existing.foundingGeneration}';
       _status = SpecimenStatus.fromValue(existing.status);
       _dateAcquired = existing.dateAcquired;
       _dateOfBirth = existing.dateOfBirth;
@@ -153,6 +156,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     _weightController.dispose();
     _sizeController.dispose();
     _notesController.dispose();
+    _foundingGenerationController.dispose();
     _replenishIntervalController.dispose();
     _replenishNoteController.dispose();
     super.dispose();
@@ -232,6 +236,14 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     final replenishNote = _replenishNoteController.text.trim().isEmpty
         ? null
         : _replenishNoteController.text.trim();
+    // A true wild-caught individual is always generation 0 by definition;
+    // the "already labelled" generation field only applies to a captive-bred
+    // or unknown-origin founder acquired with a known starting generation.
+    final parsedFoundingGeneration =
+        int.tryParse(_foundingGenerationController.text.trim()) ?? 0;
+    final foundingGeneration = _origin == SpecimenOrigin.wildCaught
+        ? 0
+        : (parsedFoundingGeneration < 0 ? 0 : parsedFoundingGeneration);
     var lastReplenishedAt = _lastReplenishedAt;
     if (!_isEditing && replenishIntervalDays != null && lastReplenishedAt == null) {
       // Seed the countdown anchor immediately so it's meaningful right away.
@@ -249,6 +261,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           speciesIconKey: _iconType.name,
           sex: _sex.name,
           origin: _origin.name,
+          foundingGeneration: foundingGeneration,
           status: _status.name,
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
@@ -277,6 +290,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
               speciesIconKey: Value(_iconType.name),
               sex: Value(_sex.name),
               origin: Value(_origin.name),
+              foundingGeneration: Value(foundingGeneration),
               status: Value(_status.name),
               dateAcquired: Value(_dateAcquired),
               dateOfBirth: Value(dob),
@@ -305,6 +319,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           speciesIconKey: Value(_iconType.name),
           sex: Value(_sex.name),
           origin: Value(_origin.name),
+          foundingGeneration: Value(foundingGeneration),
           status: Value(_status.name),
           dateAcquired: Value(_dateAcquired),
           dateOfBirth: Value(dob),
@@ -569,6 +584,17 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
             selected: {_origin},
             onSelectionChanged: (s) => setState(() => _origin = s.first),
           ),
+          if (_origin != SpecimenOrigin.wildCaught) ...[
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _foundingGenerationController,
+              decoration: const InputDecoration(
+                labelText: 'Already labelled generation (optional)',
+                hintText: 'e.g. bought or given already labelled "CBF2" — enter 2',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
         ],
       ],
     );

@@ -27,6 +27,14 @@ class Specimens extends Table {
   // ancestor's origin instead of carrying their own.
   TextColumn get origin =>
       text().withDefault(const Constant('unknown'))();
+  // A founder's already-known generation number, for a specimen bought or
+  // given away already labelled (e.g. a friend hands over something they
+  // call "CBF2"): there are no parents to record in-app, but it's not
+  // actually generation 0 either. 0 for a true wild-caught individual or an
+  // ordinary unlabelled founder. Ignored for non-founders, whose generation
+  // is always derived from their recorded parents.
+  IntColumn get foundingGeneration =>
+      integer().withDefault(const Constant(0))();
   IntColumn get motherId => integer().nullable().references(Specimens, #id)();
   IntColumn get fatherId => integer().nullable().references(Specimens, #id)();
   IntColumn get terrariumId =>

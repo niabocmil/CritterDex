@@ -1725,6 +1725,17 @@ class $SpecimensTable extends Specimens
     requiredDuringInsert: false,
     defaultValue: const Constant('unknown'),
   );
+  static const VerificationMeta _foundingGenerationMeta =
+      const VerificationMeta('foundingGeneration');
+  @override
+  late final GeneratedColumn<int> foundingGeneration = GeneratedColumn<int>(
+    'founding_generation',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _motherIdMeta = const VerificationMeta(
     'motherId',
   );
@@ -1820,6 +1831,7 @@ class $SpecimensTable extends Specimens
     notes,
     photoPath,
     origin,
+    foundingGeneration,
     motherId,
     fatherId,
     terrariumId,
@@ -1970,6 +1982,15 @@ class $SpecimensTable extends Specimens
         origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
       );
     }
+    if (data.containsKey('founding_generation')) {
+      context.handle(
+        _foundingGenerationMeta,
+        foundingGeneration.isAcceptableOrUnknown(
+          data['founding_generation']!,
+          _foundingGenerationMeta,
+        ),
+      );
+    }
     if (data.containsKey('mother_id')) {
       context.handle(
         _motherIdMeta,
@@ -2093,6 +2114,10 @@ class $SpecimensTable extends Specimens
         DriftSqlType.string,
         data['${effectivePrefix}origin'],
       )!,
+      foundingGeneration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}founding_generation'],
+      )!,
       motherId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}mother_id'],
@@ -2145,6 +2170,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
   final String? notes;
   final String? photoPath;
   final String origin;
+  final int foundingGeneration;
   final int? motherId;
   final int? fatherId;
   final int? terrariumId;
@@ -2170,6 +2196,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     this.notes,
     this.photoPath,
     required this.origin,
+    required this.foundingGeneration,
     this.motherId,
     this.fatherId,
     this.terrariumId,
@@ -2222,6 +2249,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       map['photo_path'] = Variable<String>(photoPath);
     }
     map['origin'] = Variable<String>(origin);
+    map['founding_generation'] = Variable<int>(foundingGeneration);
     if (!nullToAbsent || motherId != null) {
       map['mother_id'] = Variable<int>(motherId);
     }
@@ -2283,6 +2311,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ? const Value.absent()
           : Value(photoPath),
       origin: Value(origin),
+      foundingGeneration: Value(foundingGeneration),
       motherId: motherId == null && nullToAbsent
           ? const Value.absent()
           : Value(motherId),
@@ -2330,6 +2359,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       notes: serializer.fromJson<String?>(json['notes']),
       photoPath: serializer.fromJson<String?>(json['photoPath']),
       origin: serializer.fromJson<String>(json['origin']),
+      foundingGeneration: serializer.fromJson<int>(json['foundingGeneration']),
       motherId: serializer.fromJson<int?>(json['motherId']),
       fatherId: serializer.fromJson<int?>(json['fatherId']),
       terrariumId: serializer.fromJson<int?>(json['terrariumId']),
@@ -2362,6 +2392,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       'notes': serializer.toJson<String?>(notes),
       'photoPath': serializer.toJson<String?>(photoPath),
       'origin': serializer.toJson<String>(origin),
+      'foundingGeneration': serializer.toJson<int>(foundingGeneration),
       'motherId': serializer.toJson<int?>(motherId),
       'fatherId': serializer.toJson<int?>(fatherId),
       'terrariumId': serializer.toJson<int?>(terrariumId),
@@ -2390,6 +2421,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     Value<String?> notes = const Value.absent(),
     Value<String?> photoPath = const Value.absent(),
     String? origin,
+    int? foundingGeneration,
     Value<int?> motherId = const Value.absent(),
     Value<int?> fatherId = const Value.absent(),
     Value<int?> terrariumId = const Value.absent(),
@@ -2421,6 +2453,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     notes: notes.present ? notes.value : this.notes,
     photoPath: photoPath.present ? photoPath.value : this.photoPath,
     origin: origin ?? this.origin,
+    foundingGeneration: foundingGeneration ?? this.foundingGeneration,
     motherId: motherId.present ? motherId.value : this.motherId,
     fatherId: fatherId.present ? fatherId.value : this.fatherId,
     terrariumId: terrariumId.present ? terrariumId.value : this.terrariumId,
@@ -2466,6 +2499,9 @@ class Specimen extends DataClass implements Insertable<Specimen> {
       notes: data.notes.present ? data.notes.value : this.notes,
       photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
       origin: data.origin.present ? data.origin.value : this.origin,
+      foundingGeneration: data.foundingGeneration.present
+          ? data.foundingGeneration.value
+          : this.foundingGeneration,
       motherId: data.motherId.present ? data.motherId.value : this.motherId,
       fatherId: data.fatherId.present ? data.fatherId.value : this.fatherId,
       terrariumId: data.terrariumId.present
@@ -2500,6 +2536,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
           ..write('origin: $origin, ')
+          ..write('foundingGeneration: $foundingGeneration, ')
           ..write('motherId: $motherId, ')
           ..write('fatherId: $fatherId, ')
           ..write('terrariumId: $terrariumId, ')
@@ -2530,6 +2567,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
     notes,
     photoPath,
     origin,
+    foundingGeneration,
     motherId,
     fatherId,
     terrariumId,
@@ -2559,6 +2597,7 @@ class Specimen extends DataClass implements Insertable<Specimen> {
           other.notes == this.notes &&
           other.photoPath == this.photoPath &&
           other.origin == this.origin &&
+          other.foundingGeneration == this.foundingGeneration &&
           other.motherId == this.motherId &&
           other.fatherId == this.fatherId &&
           other.terrariumId == this.terrariumId &&
@@ -2586,6 +2625,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
   final Value<String?> notes;
   final Value<String?> photoPath;
   final Value<String> origin;
+  final Value<int> foundingGeneration;
   final Value<int?> motherId;
   final Value<int?> fatherId;
   final Value<int?> terrariumId;
@@ -2611,6 +2651,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
     this.origin = const Value.absent(),
+    this.foundingGeneration = const Value.absent(),
     this.motherId = const Value.absent(),
     this.fatherId = const Value.absent(),
     this.terrariumId = const Value.absent(),
@@ -2637,6 +2678,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     this.notes = const Value.absent(),
     this.photoPath = const Value.absent(),
     this.origin = const Value.absent(),
+    this.foundingGeneration = const Value.absent(),
     this.motherId = const Value.absent(),
     this.fatherId = const Value.absent(),
     this.terrariumId = const Value.absent(),
@@ -2663,6 +2705,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Expression<String>? notes,
     Expression<String>? photoPath,
     Expression<String>? origin,
+    Expression<int>? foundingGeneration,
     Expression<int>? motherId,
     Expression<int>? fatherId,
     Expression<int>? terrariumId,
@@ -2690,6 +2733,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       if (notes != null) 'notes': notes,
       if (photoPath != null) 'photo_path': photoPath,
       if (origin != null) 'origin': origin,
+      if (foundingGeneration != null) 'founding_generation': foundingGeneration,
       if (motherId != null) 'mother_id': motherId,
       if (fatherId != null) 'father_id': fatherId,
       if (terrariumId != null) 'terrarium_id': terrariumId,
@@ -2719,6 +2763,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     Value<String?>? notes,
     Value<String?>? photoPath,
     Value<String>? origin,
+    Value<int>? foundingGeneration,
     Value<int?>? motherId,
     Value<int?>? fatherId,
     Value<int?>? terrariumId,
@@ -2746,6 +2791,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
       notes: notes ?? this.notes,
       photoPath: photoPath ?? this.photoPath,
       origin: origin ?? this.origin,
+      foundingGeneration: foundingGeneration ?? this.foundingGeneration,
       motherId: motherId ?? this.motherId,
       fatherId: fatherId ?? this.fatherId,
       terrariumId: terrariumId ?? this.terrariumId,
@@ -2815,6 +2861,9 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
     if (origin.present) {
       map['origin'] = Variable<String>(origin.value);
     }
+    if (foundingGeneration.present) {
+      map['founding_generation'] = Variable<int>(foundingGeneration.value);
+    }
     if (motherId.present) {
       map['mother_id'] = Variable<int>(motherId.value);
     }
@@ -2859,6 +2908,7 @@ class SpecimensCompanion extends UpdateCompanion<Specimen> {
           ..write('notes: $notes, ')
           ..write('photoPath: $photoPath, ')
           ..write('origin: $origin, ')
+          ..write('foundingGeneration: $foundingGeneration, ')
           ..write('motherId: $motherId, ')
           ..write('fatherId: $fatherId, ')
           ..write('terrariumId: $terrariumId, ')
@@ -7905,6 +7955,7 @@ typedef $$SpecimensTableCreateCompanionBuilder =
       Value<String?> notes,
       Value<String?> photoPath,
       Value<String> origin,
+      Value<int> foundingGeneration,
       Value<int?> motherId,
       Value<int?> fatherId,
       Value<int?> terrariumId,
@@ -7932,6 +7983,7 @@ typedef $$SpecimensTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<String?> photoPath,
       Value<String> origin,
+      Value<int> foundingGeneration,
       Value<int?> motherId,
       Value<int?> fatherId,
       Value<int?> terrariumId,
@@ -8138,6 +8190,11 @@ class $$SpecimensTableFilterComposer
 
   ColumnFilters<String> get origin => $composableBuilder(
     column: $table.origin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get foundingGeneration => $composableBuilder(
+    column: $table.foundingGeneration,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8375,6 +8432,11 @@ class $$SpecimensTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get foundingGeneration => $composableBuilder(
+    column: $table.foundingGeneration,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sourceBreedingEventId => $composableBuilder(
     column: $table.sourceBreedingEventId,
     builder: (column) => ColumnOrderings(column),
@@ -8538,6 +8600,11 @@ class $$SpecimensTableAnnotationComposer
 
   GeneratedColumn<String> get origin =>
       $composableBuilder(column: $table.origin, builder: (column) => column);
+
+  GeneratedColumn<int> get foundingGeneration => $composableBuilder(
+    column: $table.foundingGeneration,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get sourceBreedingEventId => $composableBuilder(
     column: $table.sourceBreedingEventId,
@@ -8724,6 +8791,7 @@ class $$SpecimensTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
                 Value<String> origin = const Value.absent(),
+                Value<int> foundingGeneration = const Value.absent(),
                 Value<int?> motherId = const Value.absent(),
                 Value<int?> fatherId = const Value.absent(),
                 Value<int?> terrariumId = const Value.absent(),
@@ -8749,6 +8817,7 @@ class $$SpecimensTableTableManager
                 notes: notes,
                 photoPath: photoPath,
                 origin: origin,
+                foundingGeneration: foundingGeneration,
                 motherId: motherId,
                 fatherId: fatherId,
                 terrariumId: terrariumId,
@@ -8776,6 +8845,7 @@ class $$SpecimensTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> photoPath = const Value.absent(),
                 Value<String> origin = const Value.absent(),
+                Value<int> foundingGeneration = const Value.absent(),
                 Value<int?> motherId = const Value.absent(),
                 Value<int?> fatherId = const Value.absent(),
                 Value<int?> terrariumId = const Value.absent(),
@@ -8801,6 +8871,7 @@ class $$SpecimensTableTableManager
                 notes: notes,
                 photoPath: photoPath,
                 origin: origin,
+                foundingGeneration: foundingGeneration,
                 motherId: motherId,
                 fatherId: fatherId,
                 terrariumId: terrariumId,
