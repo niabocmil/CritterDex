@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -102,8 +103,13 @@ class _CategoryCard extends StatelessWidget {
               switch (icon) {
                 ResolvedFaIcon(icon: final i) =>
                   FaIcon(i, size: 28, color: scheme.primary),
-                ResolvedAssetIcon(assetPath: final path) =>
-                  Image.asset(path, width: 32, height: 32),
+                ResolvedAssetIcon(assetPath: final path) => SvgPicture.asset(
+                    path,
+                    width: 32,
+                    height: 32,
+                    colorFilter:
+                        ColorFilter.mode(scheme.primary, BlendMode.srcIn),
+                  ),
               },
               const SizedBox(height: 10),
               Text(label,

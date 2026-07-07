@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/enums.dart';
@@ -78,7 +79,14 @@ class _IconTile extends StatelessWidget {
               size: 26,
               color: isSelected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
             ),
-          ResolvedAssetIcon(assetPath: final path) => Image.asset(path, width: 30, height: 30),
+          ResolvedAssetIcon(assetPath: final path) => SvgPicture.asset(
+              path,
+              width: 30,
+              height: 30,
+              colorFilter: ColorFilter.mode(
+                  isSelected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+                  BlendMode.srcIn),
+            ),
         },
       ),
     );

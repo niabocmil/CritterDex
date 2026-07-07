@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
@@ -151,8 +152,16 @@ class TerrariumSlot extends StatelessWidget {
         switch (resolved) {
           ResolvedFaIcon(icon: final icon) =>
             FaIcon(icon, size: 16, color: onBaseColor),
-          ResolvedAssetIcon(assetPath: final path) =>
-            Image.asset(path, width: 18, height: 18),
+          // Image.asset can't decode SVG XML (it only understands raster
+          // formats) — it was silently failing to render anything at all
+          // for stag/rhino specimens here. SvgPicture.asset is the correct
+          // widget for this, same as everywhere else these assets are used.
+          ResolvedAssetIcon(assetPath: final path) => SvgPicture.asset(
+              path,
+              width: 18,
+              height: 18,
+              colorFilter: ColorFilter.mode(onBaseColor, BlendMode.srcIn),
+            ),
         },
         Text(
           s.name?.isNotEmpty == true ? s.name! : s.species,
