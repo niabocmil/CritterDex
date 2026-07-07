@@ -216,9 +216,15 @@ class BreedingReminders extends Table {
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
 
-/// Reference info about a species as a concept (not any one specimen) —
-/// one row per species name, created the first time the user fills any of
-/// this in from the Collected Species section.
+/// Reference info about a species as a concept (not any one specimen) — one
+/// row per species name. A row's mere existence is this app's "species
+/// unlocked" ledger: it's created the moment the first specimen of that
+/// species is ever saved (see `AppDatabase.discoverSpeciesIfNew`), which is
+/// also when [description]/[region]/[lengthRangeText]/[temperatureRangeText]/
+/// [photoPath]/[sourceUrl]/[gbifUrl] get a best-effort automatic fill from
+/// open wiki/taxonomic lookups. [specialNotes] (care/husbandry specifics
+/// with no real wiki equivalent) is the one field that stays manual-only,
+/// same as before this table also became the discovery ledger.
 @DataClassName('SpeciesInfo')
 class SpeciesInfos extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -228,4 +234,17 @@ class SpeciesInfos extends Table {
   TextColumn get region => text().nullable()();
   TextColumn get lengthRangeText => text().nullable()();
   TextColumn get temperatureRangeText => text().nullable()();
+  // Locally-cached copy of the wiki's thumbnail image (same "download once,
+  // store a local path" convention as Specimens.photoPath) — never re-fetched
+  // automatically, only via the species page's manual "Refresh from wiki".
+  TextColumn get photoPath => text().nullable()();
+  // The wiki article URL the description/photo/region came from, shown as a
+  // credit/attribution link (Wikipedia's CC BY-SA license expects this).
+  TextColumn get sourceUrl => text().nullable()();
+  // GBIF's own species page for this name (resolved via their taxonomic
+  // name-match API), shown as a second reference link alongside Wikipedia.
+  TextColumn get gbifUrl => text().nullable()();
+  DateTimeColumn get wikiFetchedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
 }

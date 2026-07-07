@@ -6286,6 +6286,63 @@ class $SpeciesInfosTable extends SpeciesInfos
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _photoPathMeta = const VerificationMeta(
+    'photoPath',
+  );
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+    'photo_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceUrlMeta = const VerificationMeta(
+    'sourceUrl',
+  );
+  @override
+  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
+    'source_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _gbifUrlMeta = const VerificationMeta(
+    'gbifUrl',
+  );
+  @override
+  late final GeneratedColumn<String> gbifUrl = GeneratedColumn<String>(
+    'gbif_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _wikiFetchedAtMeta = const VerificationMeta(
+    'wikiFetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> wikiFetchedAt =
+      GeneratedColumn<DateTime>(
+        'wiki_fetched_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -6295,6 +6352,11 @@ class $SpeciesInfosTable extends SpeciesInfos
     region,
     lengthRangeText,
     temperatureRangeText,
+    photoPath,
+    sourceUrl,
+    gbifUrl,
+    wikiFetchedAt,
+    createdAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6364,6 +6426,39 @@ class $SpeciesInfosTable extends SpeciesInfos
         ),
       );
     }
+    if (data.containsKey('photo_path')) {
+      context.handle(
+        _photoPathMeta,
+        photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta),
+      );
+    }
+    if (data.containsKey('source_url')) {
+      context.handle(
+        _sourceUrlMeta,
+        sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
+      );
+    }
+    if (data.containsKey('gbif_url')) {
+      context.handle(
+        _gbifUrlMeta,
+        gbifUrl.isAcceptableOrUnknown(data['gbif_url']!, _gbifUrlMeta),
+      );
+    }
+    if (data.containsKey('wiki_fetched_at')) {
+      context.handle(
+        _wikiFetchedAtMeta,
+        wikiFetchedAt.isAcceptableOrUnknown(
+          data['wiki_fetched_at']!,
+          _wikiFetchedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
     return context;
   }
 
@@ -6401,6 +6496,26 @@ class $SpeciesInfosTable extends SpeciesInfos
         DriftSqlType.string,
         data['${effectivePrefix}temperature_range_text'],
       ),
+      photoPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}photo_path'],
+      ),
+      sourceUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_url'],
+      ),
+      gbifUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gbif_url'],
+      ),
+      wikiFetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}wiki_fetched_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
     );
   }
 
@@ -6418,6 +6533,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
   final String? region;
   final String? lengthRangeText;
   final String? temperatureRangeText;
+  final String? photoPath;
+  final String? sourceUrl;
+  final String? gbifUrl;
+  final DateTime? wikiFetchedAt;
+  final DateTime createdAt;
   const SpeciesInfo({
     required this.id,
     required this.speciesName,
@@ -6426,6 +6546,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
     this.region,
     this.lengthRangeText,
     this.temperatureRangeText,
+    this.photoPath,
+    this.sourceUrl,
+    this.gbifUrl,
+    this.wikiFetchedAt,
+    required this.createdAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6447,6 +6572,19 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
     if (!nullToAbsent || temperatureRangeText != null) {
       map['temperature_range_text'] = Variable<String>(temperatureRangeText);
     }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    if (!nullToAbsent || sourceUrl != null) {
+      map['source_url'] = Variable<String>(sourceUrl);
+    }
+    if (!nullToAbsent || gbifUrl != null) {
+      map['gbif_url'] = Variable<String>(gbifUrl);
+    }
+    if (!nullToAbsent || wikiFetchedAt != null) {
+      map['wiki_fetched_at'] = Variable<DateTime>(wikiFetchedAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
 
@@ -6469,6 +6607,19 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
       temperatureRangeText: temperatureRangeText == null && nullToAbsent
           ? const Value.absent()
           : Value(temperatureRangeText),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      sourceUrl: sourceUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceUrl),
+      gbifUrl: gbifUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gbifUrl),
+      wikiFetchedAt: wikiFetchedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(wikiFetchedAt),
+      createdAt: Value(createdAt),
     );
   }
 
@@ -6487,6 +6638,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
       temperatureRangeText: serializer.fromJson<String?>(
         json['temperatureRangeText'],
       ),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
+      gbifUrl: serializer.fromJson<String?>(json['gbifUrl']),
+      wikiFetchedAt: serializer.fromJson<DateTime?>(json['wikiFetchedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
   @override
@@ -6500,6 +6656,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
       'region': serializer.toJson<String?>(region),
       'lengthRangeText': serializer.toJson<String?>(lengthRangeText),
       'temperatureRangeText': serializer.toJson<String?>(temperatureRangeText),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'sourceUrl': serializer.toJson<String?>(sourceUrl),
+      'gbifUrl': serializer.toJson<String?>(gbifUrl),
+      'wikiFetchedAt': serializer.toJson<DateTime?>(wikiFetchedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
@@ -6511,6 +6672,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
     Value<String?> region = const Value.absent(),
     Value<String?> lengthRangeText = const Value.absent(),
     Value<String?> temperatureRangeText = const Value.absent(),
+    Value<String?> photoPath = const Value.absent(),
+    Value<String?> sourceUrl = const Value.absent(),
+    Value<String?> gbifUrl = const Value.absent(),
+    Value<DateTime?> wikiFetchedAt = const Value.absent(),
+    DateTime? createdAt,
   }) => SpeciesInfo(
     id: id ?? this.id,
     speciesName: speciesName ?? this.speciesName,
@@ -6523,6 +6689,13 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
     temperatureRangeText: temperatureRangeText.present
         ? temperatureRangeText.value
         : this.temperatureRangeText,
+    photoPath: photoPath.present ? photoPath.value : this.photoPath,
+    sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
+    gbifUrl: gbifUrl.present ? gbifUrl.value : this.gbifUrl,
+    wikiFetchedAt: wikiFetchedAt.present
+        ? wikiFetchedAt.value
+        : this.wikiFetchedAt,
+    createdAt: createdAt ?? this.createdAt,
   );
   SpeciesInfo copyWithCompanion(SpeciesInfosCompanion data) {
     return SpeciesInfo(
@@ -6543,6 +6716,13 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
       temperatureRangeText: data.temperatureRangeText.present
           ? data.temperatureRangeText.value
           : this.temperatureRangeText,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
+      gbifUrl: data.gbifUrl.present ? data.gbifUrl.value : this.gbifUrl,
+      wikiFetchedAt: data.wikiFetchedAt.present
+          ? data.wikiFetchedAt.value
+          : this.wikiFetchedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
 
@@ -6555,7 +6735,12 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
           ..write('specialNotes: $specialNotes, ')
           ..write('region: $region, ')
           ..write('lengthRangeText: $lengthRangeText, ')
-          ..write('temperatureRangeText: $temperatureRangeText')
+          ..write('temperatureRangeText: $temperatureRangeText, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('gbifUrl: $gbifUrl, ')
+          ..write('wikiFetchedAt: $wikiFetchedAt, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -6569,6 +6754,11 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
     region,
     lengthRangeText,
     temperatureRangeText,
+    photoPath,
+    sourceUrl,
+    gbifUrl,
+    wikiFetchedAt,
+    createdAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -6580,7 +6770,12 @@ class SpeciesInfo extends DataClass implements Insertable<SpeciesInfo> {
           other.specialNotes == this.specialNotes &&
           other.region == this.region &&
           other.lengthRangeText == this.lengthRangeText &&
-          other.temperatureRangeText == this.temperatureRangeText);
+          other.temperatureRangeText == this.temperatureRangeText &&
+          other.photoPath == this.photoPath &&
+          other.sourceUrl == this.sourceUrl &&
+          other.gbifUrl == this.gbifUrl &&
+          other.wikiFetchedAt == this.wikiFetchedAt &&
+          other.createdAt == this.createdAt);
 }
 
 class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
@@ -6591,6 +6786,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
   final Value<String?> region;
   final Value<String?> lengthRangeText;
   final Value<String?> temperatureRangeText;
+  final Value<String?> photoPath;
+  final Value<String?> sourceUrl;
+  final Value<String?> gbifUrl;
+  final Value<DateTime?> wikiFetchedAt;
+  final Value<DateTime> createdAt;
   const SpeciesInfosCompanion({
     this.id = const Value.absent(),
     this.speciesName = const Value.absent(),
@@ -6599,6 +6799,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
     this.region = const Value.absent(),
     this.lengthRangeText = const Value.absent(),
     this.temperatureRangeText = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
+    this.gbifUrl = const Value.absent(),
+    this.wikiFetchedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
   });
   SpeciesInfosCompanion.insert({
     this.id = const Value.absent(),
@@ -6608,6 +6813,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
     this.region = const Value.absent(),
     this.lengthRangeText = const Value.absent(),
     this.temperatureRangeText = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
+    this.gbifUrl = const Value.absent(),
+    this.wikiFetchedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
   }) : speciesName = Value(speciesName);
   static Insertable<SpeciesInfo> custom({
     Expression<int>? id,
@@ -6617,6 +6827,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
     Expression<String>? region,
     Expression<String>? lengthRangeText,
     Expression<String>? temperatureRangeText,
+    Expression<String>? photoPath,
+    Expression<String>? sourceUrl,
+    Expression<String>? gbifUrl,
+    Expression<DateTime>? wikiFetchedAt,
+    Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -6627,6 +6842,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
       if (lengthRangeText != null) 'length_range_text': lengthRangeText,
       if (temperatureRangeText != null)
         'temperature_range_text': temperatureRangeText,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (sourceUrl != null) 'source_url': sourceUrl,
+      if (gbifUrl != null) 'gbif_url': gbifUrl,
+      if (wikiFetchedAt != null) 'wiki_fetched_at': wikiFetchedAt,
+      if (createdAt != null) 'created_at': createdAt,
     });
   }
 
@@ -6638,6 +6858,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
     Value<String?>? region,
     Value<String?>? lengthRangeText,
     Value<String?>? temperatureRangeText,
+    Value<String?>? photoPath,
+    Value<String?>? sourceUrl,
+    Value<String?>? gbifUrl,
+    Value<DateTime?>? wikiFetchedAt,
+    Value<DateTime>? createdAt,
   }) {
     return SpeciesInfosCompanion(
       id: id ?? this.id,
@@ -6647,6 +6872,11 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
       region: region ?? this.region,
       lengthRangeText: lengthRangeText ?? this.lengthRangeText,
       temperatureRangeText: temperatureRangeText ?? this.temperatureRangeText,
+      photoPath: photoPath ?? this.photoPath,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      gbifUrl: gbifUrl ?? this.gbifUrl,
+      wikiFetchedAt: wikiFetchedAt ?? this.wikiFetchedAt,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -6676,6 +6906,21 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
         temperatureRangeText.value,
       );
     }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (sourceUrl.present) {
+      map['source_url'] = Variable<String>(sourceUrl.value);
+    }
+    if (gbifUrl.present) {
+      map['gbif_url'] = Variable<String>(gbifUrl.value);
+    }
+    if (wikiFetchedAt.present) {
+      map['wiki_fetched_at'] = Variable<DateTime>(wikiFetchedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
     return map;
   }
 
@@ -6688,7 +6933,12 @@ class SpeciesInfosCompanion extends UpdateCompanion<SpeciesInfo> {
           ..write('specialNotes: $specialNotes, ')
           ..write('region: $region, ')
           ..write('lengthRangeText: $lengthRangeText, ')
-          ..write('temperatureRangeText: $temperatureRangeText')
+          ..write('temperatureRangeText: $temperatureRangeText, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('gbifUrl: $gbifUrl, ')
+          ..write('wikiFetchedAt: $wikiFetchedAt, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -11880,6 +12130,11 @@ typedef $$SpeciesInfosTableCreateCompanionBuilder =
       Value<String?> region,
       Value<String?> lengthRangeText,
       Value<String?> temperatureRangeText,
+      Value<String?> photoPath,
+      Value<String?> sourceUrl,
+      Value<String?> gbifUrl,
+      Value<DateTime?> wikiFetchedAt,
+      Value<DateTime> createdAt,
     });
 typedef $$SpeciesInfosTableUpdateCompanionBuilder =
     SpeciesInfosCompanion Function({
@@ -11890,6 +12145,11 @@ typedef $$SpeciesInfosTableUpdateCompanionBuilder =
       Value<String?> region,
       Value<String?> lengthRangeText,
       Value<String?> temperatureRangeText,
+      Value<String?> photoPath,
+      Value<String?> sourceUrl,
+      Value<String?> gbifUrl,
+      Value<DateTime?> wikiFetchedAt,
+      Value<DateTime> createdAt,
     });
 
 class $$SpeciesInfosTableFilterComposer
@@ -11933,6 +12193,31 @@ class $$SpeciesInfosTableFilterComposer
 
   ColumnFilters<String> get temperatureRangeText => $composableBuilder(
     column: $table.temperatureRangeText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gbifUrl => $composableBuilder(
+    column: $table.gbifUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get wikiFetchedAt => $composableBuilder(
+    column: $table.wikiFetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -11980,6 +12265,31 @@ class $$SpeciesInfosTableOrderingComposer
     column: $table.temperatureRangeText,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+    column: $table.photoPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gbifUrl => $composableBuilder(
+    column: $table.gbifUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get wikiFetchedAt => $composableBuilder(
+    column: $table.wikiFetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SpeciesInfosTableAnnotationComposer
@@ -12021,6 +12331,23 @@ class $$SpeciesInfosTableAnnotationComposer
     column: $table.temperatureRangeText,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get gbifUrl =>
+      $composableBuilder(column: $table.gbifUrl, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get wikiFetchedAt => $composableBuilder(
+    column: $table.wikiFetchedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 }
 
 class $$SpeciesInfosTableTableManager
@@ -12061,6 +12388,11 @@ class $$SpeciesInfosTableTableManager
                 Value<String?> region = const Value.absent(),
                 Value<String?> lengthRangeText = const Value.absent(),
                 Value<String?> temperatureRangeText = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> gbifUrl = const Value.absent(),
+                Value<DateTime?> wikiFetchedAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
               }) => SpeciesInfosCompanion(
                 id: id,
                 speciesName: speciesName,
@@ -12069,6 +12401,11 @@ class $$SpeciesInfosTableTableManager
                 region: region,
                 lengthRangeText: lengthRangeText,
                 temperatureRangeText: temperatureRangeText,
+                photoPath: photoPath,
+                sourceUrl: sourceUrl,
+                gbifUrl: gbifUrl,
+                wikiFetchedAt: wikiFetchedAt,
+                createdAt: createdAt,
               ),
           createCompanionCallback:
               ({
@@ -12079,6 +12416,11 @@ class $$SpeciesInfosTableTableManager
                 Value<String?> region = const Value.absent(),
                 Value<String?> lengthRangeText = const Value.absent(),
                 Value<String?> temperatureRangeText = const Value.absent(),
+                Value<String?> photoPath = const Value.absent(),
+                Value<String?> sourceUrl = const Value.absent(),
+                Value<String?> gbifUrl = const Value.absent(),
+                Value<DateTime?> wikiFetchedAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
               }) => SpeciesInfosCompanion.insert(
                 id: id,
                 speciesName: speciesName,
@@ -12087,6 +12429,11 @@ class $$SpeciesInfosTableTableManager
                 region: region,
                 lengthRangeText: lengthRangeText,
                 temperatureRangeText: temperatureRangeText,
+                photoPath: photoPath,
+                sourceUrl: sourceUrl,
+                gbifUrl: gbifUrl,
+                wikiFetchedAt: wikiFetchedAt,
+                createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

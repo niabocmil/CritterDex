@@ -182,7 +182,8 @@ enum ActivityType {
   statusChanged,
   replenished,
   breedingEventAdded,
-  breedingReminderSet;
+  breedingReminderSet,
+  speciesDiscovered;
 
   String get label => switch (this) {
         ActivityType.specimenAdded => 'Specimen added',
@@ -194,6 +195,7 @@ enum ActivityType {
         ActivityType.replenished => 'Replenished',
         ActivityType.breedingEventAdded => 'Breeding log started',
         ActivityType.breedingReminderSet => 'Reminder set',
+        ActivityType.speciesDiscovered => 'Species unlocked',
       };
 
   IconData get icon => switch (this) {
@@ -206,6 +208,7 @@ enum ActivityType {
         ActivityType.replenished => Icons.water_drop_outlined,
         ActivityType.breedingEventAdded => Icons.favorite_outline,
         ActivityType.breedingReminderSet => Icons.notifications_outlined,
+        ActivityType.speciesDiscovered => Icons.emoji_events_outlined,
       };
 
   static ActivityType fromValue(String value) => ActivityType.values
@@ -216,13 +219,15 @@ enum ActivityCategory {
   specimen,
   terrarium,
   breedingLog,
-  reminder;
+  reminder,
+  species;
 
   String get label => switch (this) {
         ActivityCategory.specimen => 'Specimen',
         ActivityCategory.terrarium => 'Terrarium',
         ActivityCategory.breedingLog => 'Breeding log',
         ActivityCategory.reminder => 'Reminder',
+        ActivityCategory.species => 'Species',
       };
 }
 
@@ -239,5 +244,6 @@ extension ActivityTypeCategory on ActivityType {
           ActivityCategory.terrarium,
         ActivityType.breedingEventAdded => ActivityCategory.breedingLog,
         ActivityType.breedingReminderSet => ActivityCategory.reminder,
+        ActivityType.speciesDiscovered => ActivityCategory.species,
       };
 }

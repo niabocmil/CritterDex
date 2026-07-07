@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -43,11 +44,11 @@ class _SpeciesInfoFormScreenState extends State<SpeciesInfoFormScreen> {
   Future<void> _save(AppDatabase db) async {
     await db.upsertSpeciesInfo(
       widget.species,
-      description: _orNull(_descriptionController.text),
-      specialNotes: _orNull(_specialNotesController.text),
-      region: _orNull(_regionController.text),
-      lengthRangeText: _orNull(_lengthRangeController.text),
-      temperatureRangeText: _orNull(_temperatureRangeController.text),
+      description: Value(_orNull(_descriptionController.text)),
+      specialNotes: Value(_orNull(_specialNotesController.text)),
+      region: Value(_orNull(_regionController.text)),
+      lengthRangeText: Value(_orNull(_lengthRangeController.text)),
+      temperatureRangeText: Value(_orNull(_temperatureRangeController.text)),
     );
     if (mounted) Navigator.of(context).pop();
   }

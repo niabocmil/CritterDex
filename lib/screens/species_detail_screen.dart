@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/database.dart';
 import '../models/enums.dart';
+import '../services/species_lookup_service.dart';
 import '../widgets/specimen_avatar.dart';
 import 'specimen_detail_screen.dart';
 import 'species_info_form_screen.dart';
@@ -21,6 +25,22 @@ class SpeciesDetailScreen extends StatefulWidget {
 
 class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
   bool _showAllSpecimens = false;
+  bool _refreshingWiki = false;
+
+  Future<void> _refreshFromWiki(AppDatabase db) async {
+    setState(() => _refreshingWiki = true);
+    try {
+      final found =
+          await SpeciesLookupService().fillFromWiki(db, widget.species);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(found
+              ? 'Updated from Wikipedia'
+              : 'No match found on Wikipedia')));
+    } finally {
+      if (mounted) setState(() => _refreshingWiki = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +117,20 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
                         child: Text(widget.species,
                             style: Theme.of(context).textTheme.headlineSmall),
                       ),
+                      _refreshingWiki
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.refresh),
+                              tooltip: 'Refresh from wiki',
+                              onPressed: () => _refreshFromWiki(db),
+                            ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined),
                         tooltip: 'Edit species info',
@@ -107,6 +141,20 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
                       ),
                     ],
                   ),
+                  if (info?.photoPath != null) ...[
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.file(
+                        File(info!.photoPath!),
+                        width: double.infinity,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   _InfoRow(label: 'Description', value: info?.description),
                   _InfoRow(label: "What's special", value: info?.specialNotes),
@@ -116,6 +164,19 @@ class _SpeciesDetailScreenState extends State<SpeciesDetailScreen> {
                   _InfoRow(
                       label: 'Temperature range',
                       value: info?.temperatureRangeText),
+                  if (info?.sourceUrl != null || info?.gbifUrl != null) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 4,
+                      children: [
+                        if (info?.sourceUrl != null)
+                          _SourceLink(label: 'Source: Wikipedia', url: info!.sourceUrl!),
+                        if (info?.gbifUrl != null)
+                          _SourceLink(label: 'Source: GBIF', url: info!.gbifUrl!),
+                      ],
+                    ),
+                  ],
                   const Divider(height: 32),
                   Text('Best records',
                       style: Theme.of(context).textTheme.titleMedium),
@@ -192,6 +253,33 @@ class _InfoRow extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurfaceVariant)),
           Text(value?.isNotEmpty == true ? value! : 'Not recorded yet'),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceLink extends StatelessWidget {
+  const _SourceLink({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.open_in_new, size: 14, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurfaceVariant,
+                  decoration: TextDecoration.underline)),
         ],
       ),
     );

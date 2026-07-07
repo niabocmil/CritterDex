@@ -38,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +114,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 10) {
             await m.addColumn(specimens, specimens.foundingGeneration);
+          }
+          if (from < 11) {
+            await m.addColumn(speciesInfos, speciesInfos.photoPath);
+            await m.addColumn(speciesInfos, speciesInfos.sourceUrl);
+            await m.addColumn(speciesInfos, speciesInfos.wikiFetchedAt);
+            await m.addColumn(speciesInfos, speciesInfos.createdAt);
+            await _backfillSpeciesDiscoveryLedger();
+          }
+          if (from < 12) {
+            await m.addColumn(speciesInfos, speciesInfos.gbifUrl);
           }
         },
       );
@@ -304,6 +314,26 @@ class AppDatabase extends _$AppDatabase {
         weightGrams: Value(s.weightGrams),
         sizeMm: Value(s.sizeMm),
       ));
+    }
+  }
+
+  /// One-time v10 -> v11 migration helper: a [SpeciesInfo] row's mere
+  /// existence now doubles as this app's "species already discovered"
+  /// ledger (see [_discoverSpecies]). Without this backfill, every species
+  /// the user already owned before upgrading would look brand new the next
+  /// time any of its specimens gets saved, flooding them with "unlocked"
+  /// celebrations for beetles they've had for ages. Seeds a bare row (no
+  /// wiki data — that's only ever fetched at genuine discovery time) for
+  /// every distinct species name that doesn't already have one.
+  Future<void> _backfillSpeciesDiscoveryLedger() async {
+    final existing = await select(speciesInfos).get();
+    final known = existing.map((i) => i.speciesName.trim().toLowerCase()).toSet();
+    final allSpecimens = await select(specimens).get();
+    for (final s in allSpecimens) {
+      final normalized = s.species.trim().toLowerCase();
+      if (normalized.isEmpty || !known.add(normalized)) continue;
+      await into(speciesInfos)
+          .insert(SpeciesInfosCompanion.insert(speciesName: s.species.trim()));
     }
   }
 
@@ -746,26 +776,49 @@ class AppDatabase extends _$AppDatabase {
       (select(speciesInfos)..where((s) => s.speciesName.equals(species)))
           .getSingleOrNull();
 
+  Future<SpeciesInfo?> getSpeciesInfoById(int id) =>
+      (select(speciesInfos)..where((s) => s.id.equals(id))).getSingleOrNull();
+
   Stream<SpeciesInfo?> watchSpeciesInfo(String species) =>
       (select(speciesInfos)..where((s) => s.speciesName.equals(species)))
           .watchSingleOrNull();
 
+  Stream<List<SpeciesInfo>> watchAllSpeciesInfo() => (select(speciesInfos)
+        ..orderBy([(s) => OrderingTerm.desc(s.createdAt)]))
+      .watch();
+
+  /// Partial-update upsert: every field defaults to [Value.absent], meaning
+  /// "leave whatever's already there alone" rather than "clear it to null".
+  /// [SpeciesInfoFormScreen] passes all fields explicitly (a full-form save,
+  /// its controllers are always seeded from the current row so nothing is
+  /// lost); [SpeciesLookupService.fillFromWiki] only passes whichever fields
+  /// this particular fetch actually found something for, safely leaving
+  /// manually-entered specialNotes — and anything else the fetch came up
+  /// empty on — untouched.
   Future<void> upsertSpeciesInfo(
     String species, {
-    String? description,
-    String? specialNotes,
-    String? region,
-    String? lengthRangeText,
-    String? temperatureRangeText,
+    Value<String?> description = const Value.absent(),
+    Value<String?> specialNotes = const Value.absent(),
+    Value<String?> region = const Value.absent(),
+    Value<String?> lengthRangeText = const Value.absent(),
+    Value<String?> temperatureRangeText = const Value.absent(),
+    Value<String?> photoPath = const Value.absent(),
+    Value<String?> sourceUrl = const Value.absent(),
+    Value<String?> gbifUrl = const Value.absent(),
+    Value<DateTime?> wikiFetchedAt = const Value.absent(),
   }) async {
     final existing = await getSpeciesInfo(species);
     final companion = SpeciesInfosCompanion(
       speciesName: Value(species),
-      description: Value(description),
-      specialNotes: Value(specialNotes),
-      region: Value(region),
-      lengthRangeText: Value(lengthRangeText),
-      temperatureRangeText: Value(temperatureRangeText),
+      description: description,
+      specialNotes: specialNotes,
+      region: region,
+      lengthRangeText: lengthRangeText,
+      temperatureRangeText: temperatureRangeText,
+      photoPath: photoPath,
+      sourceUrl: sourceUrl,
+      gbifUrl: gbifUrl,
+      wikiFetchedAt: wikiFetchedAt,
     );
     if (existing == null) {
       await into(speciesInfos).insert(companion);
@@ -773,6 +826,31 @@ class AppDatabase extends _$AppDatabase {
       await (update(speciesInfos)..where((s) => s.id.equals(existing.id)))
           .write(companion);
     }
+  }
+
+  /// A [SpeciesInfo] row's mere existence is this app's "species already
+  /// discovered" ledger (see class doc on [SpeciesInfos]). If [species] has
+  /// never been recorded before (case/whitespace-insensitive), this seeds
+  /// its bare ledger row, logs a [ActivityType.speciesDiscovered] entry, and
+  /// returns true so the caller can show the "unlocked" celebration and
+  /// kick off a best-effort wiki fetch to fill the row in. Returns false
+  /// (no-op) if it's already known, or if [species] is blank.
+  Future<bool> discoverSpeciesIfNew(String species) async {
+    final trimmed = species.trim();
+    if (trimmed.isEmpty) return false;
+    final normalized = trimmed.toLowerCase();
+    final all = await select(speciesInfos).get();
+    if (all.any((i) => i.speciesName.trim().toLowerCase() == normalized)) {
+      return false;
+    }
+    final id = await into(speciesInfos)
+        .insert(SpeciesInfosCompanion.insert(speciesName: trimmed));
+    await logActivity(
+      type: ActivityType.speciesDiscovered,
+      title: 'Unlocked $trimmed',
+      entityId: id,
+    );
+    return true;
   }
 
   // ---------- Bin ----------

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
@@ -11,9 +12,13 @@ import 'package:uuid/uuid.dart';
 import '../data/database.dart';
 import '../models/enums.dart';
 import '../models/terrarium_layout.dart';
+import '../services/species_lookup_service.dart';
 import '../widgets/specimen_avatar.dart';
 import '../widgets/specimen_icon_picker_dialog.dart';
+import '../widgets/species_search_field.dart';
+import '../widgets/species_unlocked_dialog.dart';
 import '../widgets/terrarium_picker_sheet.dart';
+import 'species_detail_screen.dart';
 import 'terrarium_form_screen.dart';
 
 /// Single-flow 4-step specimen creation/editing, also reused for batch
@@ -338,7 +343,39 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
           sourceBreedingEventId: Value(widget.sourceBreedingEventId),
         ));
       }
-      if (mounted) Navigator.of(context).pop(true);
+      final isNewSpecies = await db.discoverSpeciesIfNew(species);
+      if (isNewSpecies) {
+        // Fire-and-forget: the celebration below never waits on this, and
+        // the species page picks up the result reactively whenever it
+        // finishes (or silently stays "Not recorded yet" if it finds
+        // nothing / there's no connectivity).
+        unawaited(SpeciesLookupService().fillFromWiki(db, species));
+      }
+      if (mounted) {
+        // Captured before any popping — a NavigatorState stays valid to
+        // push/pop on even after the route that fetched it is gone, unlike
+        // the BuildContext itself.
+        final navigator = Navigator.of(context);
+        var wantsSpeciesView = false;
+        if (isNewSpecies) {
+          wantsSpeciesView = await SpeciesUnlockedDialog.show(
+            context,
+            species: species,
+            iconType: _iconType,
+            beetleFamily: _beetleFamily,
+            lifeStage: _lifeStage,
+          );
+        }
+        if (mounted) navigator.pop(true);
+        // Pushed only *after* popping the form itself — otherwise this
+        // screen's own pop (above) would immediately close it again, since
+        // both share the same navigator.
+        if (wantsSpeciesView) {
+          navigator.push(MaterialPageRoute(
+            builder: (_) => SpeciesDetailScreen(species: species),
+          ));
+        }
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -512,10 +549,7 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
             decoration: const InputDecoration(labelText: 'Name / nickname'),
           ),
         const SizedBox(height: 14),
-        TextFormField(
-          controller: _speciesController,
-          decoration: const InputDecoration(labelText: 'Species *'),
-        ),
+        SpeciesSearchField(controller: _speciesController),
         const SizedBox(height: 18),
         Text('Sex', style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),

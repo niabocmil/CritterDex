@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'achievements_screen.dart';
 import 'all_activities_screen.dart';
 import 'backup_settings_screen.dart';
 import 'bin_screen.dart';
@@ -59,6 +60,17 @@ class MoreMenuScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.emoji_events_outlined),
+              title: const Text('Achievements'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AchievementsScreen(),
+              )),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             child: ListTile(
               leading: const Icon(Icons.palette_outlined),

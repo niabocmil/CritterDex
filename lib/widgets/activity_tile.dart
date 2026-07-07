@@ -6,6 +6,7 @@ import '../data/database.dart';
 import '../models/enums.dart';
 import '../screens/batch_activity_screen.dart';
 import '../screens/breeding_log_screen.dart';
+import '../screens/species_detail_screen.dart';
 import '../screens/specimen_detail_screen.dart';
 import '../screens/terrarium_form_screen.dart';
 
@@ -74,6 +75,20 @@ class ActivityTile extends StatelessWidget {
       case ActivityType.terrariumsBatchAdded:
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => BatchActivityScreen(entry: entry),
+        ));
+        return;
+      case ActivityType.speciesDiscovered:
+        final id = entry.entityId;
+        if (id == null) return;
+        final info = await db.getSpeciesInfoById(id);
+        if (!context.mounted) return;
+        if (info == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('This species entry no longer exists.')));
+          return;
+        }
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => SpeciesDetailScreen(species: info.speciesName),
         ));
         return;
     }
