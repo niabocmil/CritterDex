@@ -31,9 +31,13 @@ class ResolvedFaIcon extends ResolvedIcon {
 /// so a colorFilter recolors them cleanly instead of showing flat black
 /// regardless of theme.
 class ResolvedAssetIcon extends ResolvedIcon {
-  const ResolvedAssetIcon(this.assetPath, {this.badge});
+  const ResolvedAssetIcon(this.assetPath, {this.badge, this.sizeMultiplier = 1.0});
   final String assetPath;
   final IconBadge? badge;
+  // Per-asset fine-tuning on top of SpecimenAvatar's base render size, for
+  // artwork whose silhouette fills its canvas noticeably more/less than the
+  // others (they don't share a source, so their internal padding varies).
+  final double sizeMultiplier;
 }
 
 /// Single entry point for "what icon represents this specimen" — every
@@ -89,6 +93,7 @@ ResolvedIcon _resolveBeetleIcon(BeetleFamily? family, BeetleLifeStage? lifeStage
         BeetleFamily.stag => const ResolvedAssetIcon(
             'assets/icons/stag_beetle.svg',
             badge: IconBadge(letter: 'S', colorRole: ColorRole.tertiary),
+            sizeMultiplier: 1.15,
           ),
         BeetleFamily.dynastinae => const ResolvedAssetIcon(
             'assets/icons/rhinoceros_beetle.svg',
