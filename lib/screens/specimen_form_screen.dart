@@ -236,14 +236,14 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
     final replenishNote = _replenishNoteController.text.trim().isEmpty
         ? null
         : _replenishNoteController.text.trim();
-    // A true wild-caught individual is always generation 0 by definition;
-    // the "already labelled" generation field only applies to a captive-bred
-    // or unknown-origin founder acquired with a known starting generation.
+    // A founder acquired already labelled (e.g. a friend's "this is WF1" or
+    // "CBF2", or someone starting to use the app with beetles they've had
+    // for a while) isn't necessarily generation 0 even though it has no
+    // recorded parents in-app.
     final parsedFoundingGeneration =
         int.tryParse(_foundingGenerationController.text.trim()) ?? 0;
-    final foundingGeneration = _origin == SpecimenOrigin.wildCaught
-        ? 0
-        : (parsedFoundingGeneration < 0 ? 0 : parsedFoundingGeneration);
+    final foundingGeneration =
+        parsedFoundingGeneration < 0 ? 0 : parsedFoundingGeneration;
     var lastReplenishedAt = _lastReplenishedAt;
     if (!_isEditing && replenishIntervalDays != null && lastReplenishedAt == null) {
       // Seed the countdown anchor immediately so it's meaningful right away.
@@ -584,17 +584,16 @@ class _SpecimenFormScreenState extends State<SpecimenFormScreen> {
             selected: {_origin},
             onSelectionChanged: (s) => setState(() => _origin = s.first),
           ),
-          if (_origin != SpecimenOrigin.wildCaught) ...[
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _foundingGenerationController,
-              decoration: const InputDecoration(
-                labelText: 'Already labelled generation (optional)',
-                hintText: 'e.g. bought or given already labelled "CBF2" — enter 2',
-              ),
-              keyboardType: TextInputType.number,
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _foundingGenerationController,
+            decoration: const InputDecoration(
+              labelText: 'Already labelled generation (optional)',
+              hintText:
+                  'e.g. bought/given already labelled "WF1" or "CBF2" — enter 1 or 2',
             ),
-          ],
+            keyboardType: TextInputType.number,
+          ),
         ],
       ],
     );
